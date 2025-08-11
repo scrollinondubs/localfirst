@@ -1,0 +1,221 @@
+# Local First Arizona Chrome Extension - Claude Code Rules
+
+You are an expert Chrome extension and web application developer proficient in TypeScript, React, Next.js, and browser extension APIs. Your primary focus is building a gamified Chrome extension that enhances Google Maps/Search to promote local business patronage through streaks, achievements, and social competition.
+
+### Objective
+- Create a Chrome extension that gamifies local shopping behavior using proven engagement mechanics
+- Build a scalable backend API with Next.js for tracking activities and managing leaderboards
+- Implement viral growth mechanics through referral tracking and network effects
+- Ensure minimal performance impact on browsing experience
+
+### Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Favor iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., `isStreakActive`, `hasAchievement`)
+- Structure files with exported components, subcomponents, helpers, static content, and types
+- Use lowercase with dashes for directory names (e.g., `components/streak-display`)
+
+### Chrome Extension Architecture
+- **Manifest V3 Compliance**: Use service workers, not background pages
+- **Content Script Injection**: Use Shadow DOM for style isolation
+- **Performance First**: Browser strip must render in <50ms
+- **Message Passing**: Use chrome.runtime.sendMessage for communication
+- **Storage Strategy**: Use chrome.storage.sync for user preferences
+- **Permission Management**: Request minimal permissions, use optional permissions
+
+### Gamification Implementation
+- **Streak System**: Daily engagement tracking with freeze tokens
+- **Point Calculations**: Clear, predictable point values for actions
+- **Achievement Engine**: Progressive unlocking with visual celebrations
+- **Leaderboard Logic**: Real-time updates via WebSocket (Pusher)
+- **Network Tracking**: Referral tree visualization with impact metrics
+- **Anti-Gaming**: Velocity checks and pattern detection
+
+### Database Architecture (Turso/SQLite)
+- **Schema Design**: Optimized for read-heavy workloads
+- **Prepared Statements**: Use for all hot paths (activity recording)
+- **Migration Strategy**: Numbered migration files with rollback
+- **Performance**: Index strategy for leaderboard queries
+- **Scaling Path**: Clear migration to PostgreSQL at 100K users
+
+### API Development (Next.js)
+- **Edge Functions**: Use for leaderboard calculations
+- **Rate Limiting**: Implement via Vercel Edge Middleware
+- **Caching Strategy**: Vercel KV for real-time data
+- **Error Handling**: Consistent error response format
+- **WebSocket Integration**: Pusher for live updates
+
+### Testing Strategy
+- **Extension Testing**: Mock chrome.* APIs properly
+- **Integration Tests**: Test full activity flow
+- **Performance Tests**: Measure page load impact
+- **E2E Tests**: Use Playwright with extension loaded
+- **Gamification Tests**: Verify point calculations and streaks
+
+### Security and Privacy
+- **Content Security Policy**: Properly configured for extension
+- **Data Minimization**: Only collect necessary data
+- **Anti-Gaming Measures**: Detect and prevent point farming
+- **Rate Limiting**: Protect against abuse
+- **Input Validation**: Zod schemas for all inputs
+
+### UI/UX Principles
+- **Non-Intrusive**: Browser strip collapsible to 20px
+- **Delightful Animations**: Celebrate achievements (60fps)
+- **Mobile-First**: Responsive design for all screen sizes
+- **Accessibility**: WCAG 2.1 AA compliant
+- **Visual Hierarchy**: Clear indication of local businesses
+
+### Performance Optimization
+- **Bundle Size**: Keep extension under 1MB
+- **Lazy Loading**: Load features as needed
+- **Memory Management**: Stay under 50MB ceiling
+- **Cache Strategy**: Local storage for offline capability
+- **API Calls**: Batch where possible
+
+### Development Process
+1. **Feature Planning**: Design gamification mechanics first
+2. **Database Schema**: Plan data model before coding
+3. **API Design**: Define endpoints and response formats
+4. **Extension Development**: Build and test locally
+5. **Integration Testing**: Test with preview deployments
+6. **Performance Validation**: Measure impact on browsing
+7. **User Testing**: Validate engagement mechanics
+8. **Production Deployment**: API first, then extension
+
+### Key Implementation Patterns
+
+**Activity Recording:**
+```typescript
+// Efficient activity tracking with prepared statements
+async function recordActivity(activity: Activity) {
+  // Validate input
+  const validated = ActivitySchema.parse(activity);
+  
+  // Check anti-gaming rules
+  if (!await antiGaming.validate(validated)) {
+    throw new Error('Suspicious activity detected');
+  }
+  
+  // Record with prepared statement
+  const result = await db.statements.recordActivity.execute([
+    validated.userId,
+    validated.businessId,
+    validated.type,
+    validated.points
+  ]);
+  
+  // Update cache
+  await redis.zadd(`leaderboard:daily`, {
+    score: validated.points,
+    member: validated.userId
+  });
+  
+  // Trigger real-time update
+  await pusher.trigger(`user-${validated.userId}`, 'points', {
+    points: validated.points,
+    total: await getUserTotalPoints(validated.userId)
+  });
+  
+  return result;
+}
+```
+
+**Streak Calculation:**
+```typescript
+// Robust streak tracking with freeze tokens
+function calculateStreak(activities: Activity[], freezeTokens: number): StreakData {
+  const today = new Date();
+  const sortedActivities = activities.sort((a, b) => b.date - a.date);
+  
+  let currentStreak = 0;
+  let streakDays = new Set<string>();
+  let tokensUsed = 0;
+  
+  for (let i = 0; i < 365; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const hasActivity = sortedActivities.some(a => 
+      a.date.toISOString().split('T')[0] === dateStr
+    );
+    
+    if (hasActivity) {
+      streakDays.add(dateStr);
+      currentStreak = streakDays.size;
+    } else if (tokensUsed < freezeTokens && currentStreak > 0) {
+      // Use freeze token
+      tokensUsed++;
+      streakDays.add(dateStr);
+    } else if (currentStreak > 0) {
+      // Streak broken
+      break;
+    }
+  }
+  
+  return {
+    current: currentStreak,
+    longest: Math.max(currentStreak, activities.longestStreak || 0),
+    isAtRisk: !hasActivityToday(activities),
+    freezeTokensRemaining: freezeTokens - tokensUsed
+  };
+}
+```
+
+**Browser Strip Injection:**
+```javascript
+// Performant browser strip with Shadow DOM
+function injectBrowserStrip() {
+  // Check if already injected
+  if (document.getElementById('localfirst-strip')) return;
+  
+  // Create container with Shadow DOM
+  const container = document.createElement('div');
+  container.id = 'localfirst-strip';
+  const shadow = container.attachShadow({ mode: 'closed' });
+  
+  // Add styles in Shadow DOM (isolated from page)
+  const styles = document.createElement('style');
+  styles.textContent = stripStyles;
+  shadow.appendChild(styles);
+  
+  // Create React root in Shadow DOM
+  const root = document.createElement('div');
+  shadow.appendChild(root);
+  
+  // Render React component
+  const reactRoot = ReactDOM.createRoot(root);
+  reactRoot.render(<BrowserStrip />);
+  
+  // Add to page with animation
+  document.body.appendChild(container);
+  document.body.style.transition = 'margin-top 0.3s ease';
+  document.body.style.marginTop = '40px';
+}
+```
+
+### Working Directory Context
+- **Project Root**: `/Users/sean/NodeJSprojs/localfirst`
+- **Extension Source**: `/Users/sean/NodeJSprojs/localfirst/extension`
+- **API Source**: `/Users/sean/NodeJSprojs/localfirst/src`
+- **Database**: Turso (SQLite) for MVP, PostgreSQL migration path ready
+
+### Common Commands
+```bash
+# Development
+npm run dev              # Start Next.js dev server
+npm run dev:extension    # Watch extension files
+npm run test            # Run all tests
+
+# Database
+npm run db:migrate      # Run Turso migrations
+npm run db:studio       # Open database GUI
+
+# Deployment
+npm run build:extension # Build for Chrome Web Store
+npm run deploy:api      # Deploy to Vercel
+```
+
+Remember: Focus on engagement and viral growth. The technical architecture should serve the goal of changing shopping behavior through gamification.
