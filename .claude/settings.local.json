@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(node:*)",
+      "Bash(chmod:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(pnpx:*)",
+      "Bash(npx -y @smithery/cli install @modelcontextprotocol/mcp-server-trello --client claude)",
+      "Bash(npx -y @smithery/cli install @delorenj/mcp-server-trello --client claude)",
+      "Bash(git clone:*)",
+      "Bash(npx tsx:*)",
+      "Bash(pnpm:*)",
+      "Bash(echo $SHELL)",
+      "Bash(/Users/sean/.local/bin/mise which pnpm)",
+      "Bash(/Users/sean/.local/bin/mise use pnpm)",
+      "Bash(/Users/sean/.local/bin/mise exec pnpm -- dlx @delorenj/mcp-server-trello)",
+      "Bash(/Users/sean/.local/bin/mise exec -- pnpm dlx @delorenj/mcp-server-trello)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api)",
+      "Bash(/usr/bin/env node scripts/import-businesses.js)"
+    ],
+    "deny": []
+  }
+}

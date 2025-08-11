@@ -1,0 +1,32 @@
+{
+  "name": "local-first-extension",
+  "version": "1.0.0",
+  "description": "Local First Arizona Chrome Extension and Backend API",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "install": "npm install --workspaces",
+    "dev": "npm run dev:api & npm run dev:dashboard & npm run dev:extension",
+    "dev:api": "npm run dev --workspace=packages/api",
+    "dev:dashboard": "npm run dev --workspace=packages/dashboard",
+    "dev:extension": "npm run dev --workspace=packages/extension",
+    "build": "npm run build --workspaces",
+    "build:api": "npm run build --workspace=packages/api",
+    "build:dashboard": "npm run build --workspace=packages/dashboard",
+    "build:extension": "npm run build --workspace=packages/extension",
+    "db:setup": "npm run db:setup --workspace=packages/api",
+    "db:migrate": "npm run db:migrate --workspace=packages/api",
+    "db:seed": "npm run db:seed --workspace=packages/api",
+    "test": "npm run test --workspaces",
+    "test:api": "npm run test --workspace=packages/api",
+    "test:extension": "npm run test --workspace=packages/extension"
+  },
+  "keywords": ["chrome-extension", "local-business", "arizona", "maps"],
+  "author": "Local First Arizona",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "eslint": "^8.0.0"
+  }
+}

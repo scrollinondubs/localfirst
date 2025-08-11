@@ -1,0 +1,65 @@
+import { sql } from 'drizzle-orm';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+
+// Businesses table
+export const businesses = sqliteTable('businesses', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  address: text('address').notNull(),
+  latitude: real('latitude').notNull(),
+  longitude: real('longitude').notNull(),
+  phone: text('phone'),
+  website: text('website'),
+  category: text('category').notNull(),
+  lfaMember: integer('lfa_member', { mode: 'boolean' }).default(false),
+  memberSince: text('member_since'), // Date as ISO string
+  verified: integer('verified', { mode: 'boolean' }).default(false),
+  status: text('status').default('active'), // active, inactive, pending
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Chain businesses blocklist
+export const chainBusinesses = sqliteTable('chain_businesses', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  patterns: text('patterns'), // JSON array of name patterns to match
+  category: text('category'),
+  parentCompany: text('parent_company'),
+  confidenceScore: integer('confidence_score').default(100), // 0-100 matching confidence
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Analytics events
+export const analyticsEvents = sqliteTable('analytics_events', {
+  id: text('id').primaryKey(),
+  extensionId: text('extension_id'), // anonymous extension identifier
+  eventType: text('event_type').notNull(), // view, click, filter_toggle, etc.
+  businessId: text('business_id'),
+  metadata: text('metadata'), // JSON additional data
+  timestamp: text('timestamp').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// User sessions (for analytics aggregation)
+export const userSessions = sqliteTable('user_sessions', {
+  id: text('id').primaryKey(),
+  extensionId: text('extension_id').notNull(),
+  sessionStart: text('session_start').default(sql`CURRENT_TIMESTAMP`),
+  sessionEnd: text('session_end'),
+  totalInteractions: integer('total_interactions').default(0),
+  businessesViewed: integer('businesses_viewed').default(0),
+  filtersToggled: integer('filters_toggled').default(0)
+});
+
+// LFA sync tracking
+export const syncLogs = sqliteTable('sync_logs', {
+  id: text('id').primaryKey(),
+  syncType: text('sync_type').notNull(), // businesses, chains, full
+  status: text('status').notNull(), // success, error, partial
+  recordsProcessed: integer('records_processed'),
+  recordsUpdated: integer('records_updated'),
+  recordsAdded: integer('records_added'),
+  errorDetails: text('error_details'),
+  startedAt: text('started_at').default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text('completed_at')
+});
