@@ -25,7 +25,19 @@
       "Bash(mkdir:*)",
       "Bash(cp:*)",
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api)",
-      "Bash(/usr/bin/env node scripts/import-businesses.js)"
+      "Bash(/usr/bin/env node scripts/import-businesses.js)",
+      "mcp__linear-server__list_projects",
+      "mcp__linear-server__create_issue",
+      "mcp__linear-server__list_teams",
+      "mcp__linear-server__update_issue",
+      "mcp__linear-server__list_issues",
+      "Bash(npm run:*)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node /Users/sean/NodeJSprojs/localfirst/packages/api/scripts/setup-db.js)",
+      "mcp__sqlite__db_info",
+      "mcp__sqlite__list_tables",
+      "Bash(sqlite3:*)",
+      "Bash(curl:*)",
+      "mcp__linear-server__get_issue"
     ],
     "deny": []
   }
