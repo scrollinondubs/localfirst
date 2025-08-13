@@ -90,6 +90,8 @@ class MapsModifier {
       const response = await chrome.runtime.sendMessage({ action: 'getSettings' });
       if (response && response.success) {
         this.settings = { ...CONFIG.DEFAULT_SETTINGS, ...response.data };
+        // Force strict mode override any stored moderate setting
+        this.settings.filterLevel = 'strict';
         this.isEnabled = this.settings.enabled;
         console.log('MapsModifier: Settings loaded', this.settings);
       }
@@ -410,22 +412,175 @@ class MapsModifier {
    */
   async loadNearbyBusinesses(location) {
     try {
-      const response = await chrome.runtime.sendMessage({
-        action: 'getNearbyBusinesses',
-        data: {
-          lat: location.lat,
-          lng: location.lng,
-          radius: CONFIG.FILTERING.DEFAULT_RADIUS,
+      // For now, create a simple local alternatives system
+      // In production, this would connect to a local business database
+      const mockLocalBusinesses = [
+        // Central Phoenix
+        {
+          id: 'local_1',
+          name: 'Phoenix Public Market',
+          category: 'grocery',
+          address: '721 N Central Ave, Phoenix, AZ',
+          latitude: 33.4734,
+          longitude: -112.0740,
+          verified: true
+        },
+        {
+          id: 'local_2', 
+          name: 'Arizona Natural Market',
+          category: 'grocery',
+          address: '3045 N 16th St, Phoenix, AZ',
+          latitude: 33.4851,
+          longitude: -112.0379,
+          verified: false
+        },
+        {
+          id: 'local_3',
+          name: 'Desert Roots Market',
+          category: 'grocery', 
+          address: '1750 E Bell Rd, Phoenix, AZ',
+          latitude: 33.6390,
+          longitude: -112.0277,
+          verified: true
+        },
+        
+        // West Valley
+        {
+          id: 'local_4',
+          name: 'West Valley Fresh Market',
+          category: 'grocery',
+          address: '7500 W Thomas Rd, Phoenix, AZ',
+          latitude: 33.4806,
+          longitude: -112.2300,
+          verified: true
+        },
+        {
+          id: 'local_5',
+          name: 'Avondale Organic Co-op',
+          category: 'grocery',
+          address: '11025 W McDowell Rd, Avondale, AZ',
+          latitude: 33.4650,
+          longitude: -112.3490,
+          verified: false
+        },
+        {
+          id: 'local_6',
+          name: 'Goodyear Farm Fresh',
+          category: 'grocery',
+          address: '14500 W Indian School Rd, Goodyear, AZ',
+          latitude: 33.4942,
+          longitude: -112.3951,
+          verified: true
+        },
+        
+        // East Valley
+        {
+          id: 'local_7',
+          name: 'Ahwatukee Organic Foods',
+          category: 'grocery',
+          address: '4045 E Chandler Blvd, Phoenix, AZ',
+          latitude: 33.3061,
+          longitude: -111.9973,
+          verified: false
+        },
+        {
+          id: 'local_8',
+          name: 'Scottsdale Fresh Market',
+          category: 'grocery',
+          address: '7014 E Camelback Rd, Scottsdale, AZ',
+          latitude: 33.5026,
+          longitude: -111.9306,
+          verified: true
+        },
+        {
+          id: 'local_9',
+          name: 'Tempe Community Market',
+          category: 'grocery',
+          address: '1919 E Baseline Rd, Tempe, AZ',
+          latitude: 33.3781,
+          longitude: -111.9048,
+          verified: true
+        },
+        {
+          id: 'local_10',
+          name: 'Mesa Natural Foods',
+          category: 'grocery',
+          address: '1065 N Country Club Dr, Mesa, AZ',
+          latitude: 33.4295,
+          longitude: -111.8568,
+          verified: false
+        },
+        
+        // North Phoenix/Deer Valley
+        {
+          id: 'local_11',
+          name: 'Deer Valley Market',
+          category: 'grocery',
+          address: '2102 W Union Hills Dr, Phoenix, AZ',
+          latitude: 33.6500,
+          longitude: -112.1050,
+          verified: true
+        },
+        {
+          id: 'local_12',
+          name: 'North Phoenix Co-op',
+          category: 'grocery',
+          address: '17235 N Cave Creek Rd, Phoenix, AZ',
+          latitude: 33.6480,
+          longitude: -112.0295,
+          verified: false
+        },
+        
+        // South Phoenix
+        {
+          id: 'local_13',
+          name: 'South Mountain Market',
+          category: 'grocery',
+          address: '5532 S Central Ave, Phoenix, AZ',
+          latitude: 33.3950,
+          longitude: -112.0740,
+          verified: true
+        },
+        {
+          id: 'local_14',
+          name: 'Laveen Village Market',
+          category: 'grocery',
+          address: '5130 W Baseline Rd, Laveen, AZ',
+          latitude: 33.3781,
+          longitude: -112.1750,
+          verified: false
         }
+      ];
+
+      console.log('MapsModifier: Location for nearby businesses:', location);
+      console.log('MapsModifier: Mock local businesses available:', mockLocalBusinesses.length);
+      
+      // Use all businesses - filtering will be done by map bounds in findLocalAlternatives
+      const nearbyBusinesses = mockLocalBusinesses.filter(business => {
+        return business.latitude && business.longitude;
       });
 
-      if (response && response.success) {
-        businessMatcher.updateLocalBusinesses(response.data.businesses);
-        console.log(`MapsModifier: Loaded ${response.data.businesses.length} nearby businesses`);
-      }
+      businessMatcher.updateLocalBusinesses(nearbyBusinesses);
+      console.log(`MapsModifier: Loaded ${nearbyBusinesses.length} nearby local businesses:`, nearbyBusinesses);
+      
     } catch (error) {
       console.error('MapsModifier: Failed to load nearby businesses:', error);
     }
+  }
+
+  /**
+   * Calculate distance between two points (Haversine formula)
+   */
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   /**
@@ -458,14 +613,21 @@ class MapsModifier {
 
         // Show alternatives if enabled
         if (this.settings.showAlternatives && currentLocation) {
+          console.log('MapsModifier: Looking for alternatives for', chainResult.matchedChain.name, 'at location', currentLocation);
           const alternatives = businessMatcher.findLocalAlternatives(
             chainResult.matchedChain, 
             currentLocation
           );
+          console.log('MapsModifier: Found', alternatives.length, 'alternatives:', alternatives);
 
           if (alternatives.length > 0) {
+            console.log('MapsModifier: Showing alternatives for', chainResult.matchedChain.name);
             uiInjector.showLocalAlternatives(business.element, chainResult.matchedChain, alternatives);
+          } else {
+            console.log('MapsModifier: No alternatives found for', chainResult.matchedChain.name);
           }
+        } else {
+          console.log('MapsModifier: Not showing alternatives - showAlternatives:', this.settings.showAlternatives, 'currentLocation:', currentLocation);
         }
 
         // Track chain filtering
