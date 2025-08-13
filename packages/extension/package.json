@@ -11,10 +11,10 @@
     "package": "zip -r local-first-arizona-extension.zip dist/",
     "clean": "rm -rf dist/"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@types/chrome": "^0.0.268",
     "vite": "^5.0.0",
     "vitest": "^1.0.0",
-    "@types/chrome": "^0.0.268"
+    "wrangler": "^4.29.1"
   }
 }

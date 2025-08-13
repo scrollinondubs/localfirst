@@ -12,6 +12,7 @@
   
   "host_permissions": [
     "https://maps.google.com/*",
+    "https://www.google.com/maps/*",
     "http://localhost:8787/*",
     "https://api-localfirst-az.your-domain.workers.dev/*"
   ],
@@ -23,7 +24,10 @@
   
   "content_scripts": [
     {
-      "matches": ["https://maps.google.com/*"],
+      "matches": [
+        "https://maps.google.com/*",
+        "https://www.google.com/maps/*"
+      ],
       "js": ["content.js"],
       "css": ["assets/styles/content.css"],
       "run_at": "document_idle"
@@ -54,7 +58,9 @@
         "assets/badges/*",
         "assets/styles/*"
       ],
-      "matches": ["https://maps.google.com/*"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

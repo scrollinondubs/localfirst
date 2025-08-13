@@ -40,7 +40,15 @@
       "mcp__linear-server__get_issue",
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api npm run dev)",
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" wrangler dev src/index.js --port 8787)",
-      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node temp-server.js)"
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node temp-server.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension npm run build)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_close"
     ],
     "deny": []
   }
