@@ -117,7 +117,7 @@ export class BusinessMatcher {
   /**
    * Find local alternatives in the same category
    */
-  findLocalAlternatives(chainBusiness, location, maxResults = 3) {
+  findLocalAlternatives(chainBusiness, location, maxResults = 8) {
     console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location, 'localBusinesses:', this.localBusinesses.length);
     if (!chainBusiness || !location || this.localBusinesses.length === 0) {
       console.log('BusinessMatcher: Early return - missing data');
@@ -322,18 +322,43 @@ export class BusinessMatcher {
    * Get latitude delta from zoom level (approximate)
    */
   getLatDeltaFromZoom(zoom) {
-    // Rough approximation: higher zoom = smaller area
-    return 180 / Math.pow(2, zoom + 1);
+    // More generous bounds - expand the area for finding alternatives
+    // Base calculation with expansion factor
+    const baseDelta = 180 / Math.pow(2, zoom + 1);
+    
+    // Expand bounds based on zoom level to ensure we find alternatives
+    if (zoom >= 12) {
+      // City level - expand significantly (3x)
+      return baseDelta * 3;
+    } else if (zoom >= 10) {
+      // Metro area level - expand moderately (2x)
+      return baseDelta * 2;
+    } else {
+      // Regional level - expand slightly (1.5x)
+      return baseDelta * 1.5;
+    }
   }
 
   /**
    * Get longitude delta from zoom level and latitude
    */
   getLngDeltaFromZoom(zoom, lat) {
-    // Longitude lines converge at poles, so adjust by latitude
+    // More generous bounds - expand the area for finding alternatives
     const latRadians = (lat * Math.PI) / 180;
     const cosLat = Math.cos(latRadians);
-    return (360 / Math.pow(2, zoom + 1)) * cosLat;
+    const baseDelta = (360 / Math.pow(2, zoom + 1)) * cosLat;
+    
+    // Expand bounds based on zoom level to ensure we find alternatives
+    if (zoom >= 12) {
+      // City level - expand significantly (3x)
+      return baseDelta * 3;
+    } else if (zoom >= 10) {
+      // Metro area level - expand moderately (2x)
+      return baseDelta * 2;
+    } else {
+      // Regional level - expand slightly (1.5x)
+      return baseDelta * 1.5;
+    }
   }
 
   /**

@@ -18,105 +18,35 @@ window.LFA_EXTENSION_LOADED = true;
 // Add a persistent green bar at the top with filter controls
 const statusBar = document.createElement('div');
 statusBar.id = 'lfa-status-bar';
-// Dynamic positioning based on sidebar width
+// Fixed positioning based on Google Maps standard layout
 const updateStatusBarPosition = () => {
   try {
     const windowWidth = window.innerWidth;
-    console.log('StatusBar DEBUG: Window width:', windowWidth);
+    console.log('StatusBar: Setting fixed position for window width:', windowWidth);
     
-    // Debug: List all possible sidebar selectors
-    const potentialSelectors = [
-      '#searchboxinput',
-      '[role="main"]',
-      '.section-layout-sidebar',
-      '[data-value="Search nearby"]',
-      '.section-result',
-      '#pane',
-      '.widget-pane',
-      '.widget-pane-content',
-      '#left-pane',
-      '.left-panel',
-      '.sidebar'
-    ];
-    
-    console.log('StatusBar DEBUG: Testing sidebar selectors...');
-    potentialSelectors.forEach(selector => {
-      const elements = document.querySelectorAll(selector);
-      console.log(`StatusBar DEBUG: ${selector} found ${elements.length} elements:`, elements);
-      if (elements.length > 0) {
-        elements.forEach((el, i) => {
-          const rect = el.getBoundingClientRect();
-          console.log(`  Element ${i}: width=${rect.width}, right=${rect.right}, left=${rect.left}`);
-        });
-      }
-    });
-    
-    // Try multiple approaches to find the sidebar
-    let sidebar = null;
-    let sidebarMethod = 'fallback';
-    
-    // Method 1: Search box parent navigation
-    const searchBox = document.querySelector('#searchboxinput');
-    if (searchBox) {
-      sidebar = searchBox.closest('[role="main"]') || 
-                searchBox.closest('#pane') ||
-                searchBox.closest('.widget-pane');
-      if (sidebar) sidebarMethod = 'searchbox-parent';
-    }
-    
-    // Method 2: Direct pane selectors
-    if (!sidebar) {
-      sidebar = document.querySelector('#pane') || 
-                document.querySelector('.widget-pane') ||
-                document.querySelector('.widget-pane-content');
-      if (sidebar) sidebarMethod = 'direct-pane';
-    }
-    
-    // Method 3: Layout containers
-    if (!sidebar) {
-      sidebar = document.querySelector('.section-layout-sidebar') ||
-                document.querySelector('[data-value="Search nearby"]')?.closest('div');
-      if (sidebar) sidebarMethod = 'layout-container';
-    }
-    
-    let leftPos = 408; // fallback
+    // Use standard Google Maps sidebar width of 408px for desktop
+    // This is consistent across most Google Maps layouts
+    let leftPos = 408;
     let statusBarWidth = windowWidth - leftPos;
     
-    if (sidebar) {
-      const sidebarRect = sidebar.getBoundingClientRect();
-      leftPos = Math.max(sidebarRect.right, 350); // Ensure minimum offset
+    // Responsive adjustments only for very small screens
+    if (windowWidth < 500) {
+      // Very small screens - show full width
+      leftPos = 0;
+      statusBarWidth = windowWidth;
+    } else if (windowWidth < 800) {
+      // Small screens - proportional
+      leftPos = Math.floor(windowWidth * 0.45);
       statusBarWidth = windowWidth - leftPos;
-      
-      console.log(`StatusBar DEBUG: Found sidebar using method '${sidebarMethod}':`);
-      console.log(`  Sidebar rect:`, sidebarRect);
-      console.log(`  Calculated leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
-    } else {
-      console.log('StatusBar DEBUG: No sidebar found, using responsive fallback');
-      
-      // Improved responsive fallback based on common Google Maps layouts
-      if (windowWidth < 768) {
-        // Mobile: sidebar takes full width, so position bar at top
-        leftPos = 0;
-        statusBarWidth = windowWidth;
-      } else if (windowWidth < 1200) {
-        // Tablet: sidebar is about 35% of width
-        leftPos = Math.floor(windowWidth * 0.35);
-        statusBarWidth = windowWidth - leftPos;
-      } else {
-        // Desktop: sidebar is typically 400-450px
-        leftPos = 450;
-        statusBarWidth = windowWidth - leftPos;
-      }
-      
-      console.log(`StatusBar DEBUG: Responsive fallback (${windowWidth}px) leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
     }
+    // For desktop (800px+), stick with 408px which matches Google Maps layout
     
     // Apply the positioning
     statusBar.style.left = leftPos + 'px';
     statusBar.style.width = statusBarWidth + 'px';
-    statusBar.style.right = 'auto'; // Remove right positioning
+    statusBar.style.right = 'auto';
     
-    console.log(`StatusBar DEBUG: Applied styles - left: ${leftPos}px, width: ${statusBarWidth}px`);
+    console.log(`StatusBar: Applied fixed position - left: ${leftPos}px, width: ${statusBarWidth}px`);
     
   } catch (error) {
     console.error('Error updating status bar position:', error);

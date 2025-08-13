@@ -423,7 +423,10 @@ class MapsModifier {
           address: '721 N Central Ave, Phoenix, AZ',
           latitude: 33.4734,
           longitude: -112.0740,
-          verified: true
+          verified: true,
+          placeId: 'ChIJN1t_tDeuAIERAGYS_wLBZiw', // Example Phoenix Public Market Place ID
+          phone: '(602) 252-2204',
+          website: 'https://phoenixpublicmarket.com'
         },
         {
           id: 'local_2', 
@@ -432,7 +435,9 @@ class MapsModifier {
           address: '3045 N 16th St, Phoenix, AZ',
           latitude: 33.4851,
           longitude: -112.0379,
-          verified: false
+          verified: false,
+          placeId: 'ChIJc_eKY7arAIERAMZe7WqHFaE', // Example place ID
+          phone: '(602) 279-3344'
         },
         {
           id: 'local_3',
@@ -441,7 +446,10 @@ class MapsModifier {
           address: '1750 E Bell Rd, Phoenix, AZ',
           latitude: 33.6390,
           longitude: -112.0277,
-          verified: true
+          verified: true,
+          placeId: 'ChIJwZHKP2CqAIERaGBt_2oYQfI', // Example place ID
+          phone: '(602) 867-3663',
+          website: 'https://desertrootsmarket.com'
         },
         
         // West Valley
@@ -452,7 +460,9 @@ class MapsModifier {
           address: '7500 W Thomas Rd, Phoenix, AZ',
           latitude: 33.4806,
           longitude: -112.2300,
-          verified: true
+          verified: true,
+          placeId: 'ChIJwVHKQ3CqAIERfGEt_2pYQfI',
+          phone: '(623) 846-2245'
         },
         {
           id: 'local_5',
@@ -461,7 +471,9 @@ class MapsModifier {
           address: '11025 W McDowell Rd, Avondale, AZ',
           latitude: 33.4650,
           longitude: -112.3490,
-          verified: false
+          verified: false,
+          placeId: 'ChIJ-XHKa3CqAIERbGEt_2qYQfI',
+          phone: '(623) 935-4483'
         },
         {
           id: 'local_6',
@@ -470,7 +482,10 @@ class MapsModifier {
           address: '14500 W Indian School Rd, Goodyear, AZ',
           latitude: 33.4942,
           longitude: -112.3951,
-          verified: true
+          verified: true,
+          placeId: 'ChIJzXHKb3CqAIERcGEt_2rYQfI',
+          phone: '(623) 932-1234',
+          website: 'https://goodyearfarmfresh.com'
         },
         
         // East Valley
@@ -481,7 +496,9 @@ class MapsModifier {
           address: '4045 E Chandler Blvd, Phoenix, AZ',
           latitude: 33.3061,
           longitude: -111.9973,
-          verified: false
+          verified: false,
+          placeId: 'ChIJyXHKc3CqAIERdGEt_2sYQfI',
+          phone: '(480) 753-2214'
         },
         {
           id: 'local_8',
@@ -490,7 +507,10 @@ class MapsModifier {
           address: '7014 E Camelback Rd, Scottsdale, AZ',
           latitude: 33.5026,
           longitude: -111.9306,
-          verified: true
+          verified: true,
+          placeId: 'ChIJxXHKd3CqAIEReGEt_2tYQfI',
+          phone: '(480) 941-5566',
+          website: 'https://scottsdalefresh.com'
         },
         {
           id: 'local_9',
@@ -499,7 +519,10 @@ class MapsModifier {
           address: '1919 E Baseline Rd, Tempe, AZ',
           latitude: 33.3781,
           longitude: -111.9048,
-          verified: true
+          verified: true,
+          placeId: 'ChIJwXHKe3CqAIERfGEt_2uYQfI',
+          phone: '(480) 967-4455',
+          website: 'https://tempemarket.org'
         },
         {
           id: 'local_10',
@@ -508,7 +531,9 @@ class MapsModifier {
           address: '1065 N Country Club Dr, Mesa, AZ',
           latitude: 33.4295,
           longitude: -111.8568,
-          verified: false
+          verified: false,
+          placeId: 'ChIJvXHKf3CqAIERgGEt_2vYQfI',
+          phone: '(480) 832-7799'
         },
         
         // North Phoenix/Deer Valley
@@ -519,7 +544,10 @@ class MapsModifier {
           address: '2102 W Union Hills Dr, Phoenix, AZ',
           latitude: 33.6500,
           longitude: -112.1050,
-          verified: true
+          verified: true,
+          placeId: 'ChIJuXHKg3CqAIERhGEt_2wYQfI',
+          phone: '(602) 867-3344',
+          website: 'https://deervalleymarket.com'
         },
         {
           id: 'local_12',
@@ -528,7 +556,9 @@ class MapsModifier {
           address: '17235 N Cave Creek Rd, Phoenix, AZ',
           latitude: 33.6480,
           longitude: -112.0295,
-          verified: false
+          verified: false,
+          placeId: 'ChIJtXHKh3CqAIERiGEt_2xYQfI',
+          phone: '(602) 482-5566'
         },
         
         // South Phoenix
@@ -539,7 +569,10 @@ class MapsModifier {
           address: '5532 S Central Ave, Phoenix, AZ',
           latitude: 33.3950,
           longitude: -112.0740,
-          verified: true
+          verified: true,
+          placeId: 'ChIJsXHKi3CqAIERjGEt_2yYQfI',
+          phone: '(602) 276-1234',
+          website: 'https://southmountainmarket.com'
         },
         {
           id: 'local_14',
@@ -548,7 +581,9 @@ class MapsModifier {
           address: '5130 W Baseline Rd, Laveen, AZ',
           latitude: 33.3781,
           longitude: -112.1750,
-          verified: false
+          verified: false,
+          placeId: 'ChIJrXHKj3CqAIERkGEt_2zYQfI',
+          phone: '(602) 237-8899'
         }
       ];
 
