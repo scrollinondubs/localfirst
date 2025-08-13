@@ -50,8 +50,8 @@
     // Default Settings
     DEFAULT_SETTINGS: {
       enabled: true,
-      filterLevel: "moderate",
-      // strict, moderate, light
+      filterLevel: "strict",
+      // strict, moderate, light - default to aggressive filtering
       showBadges: true,
       showAlternatives: true,
       anonymousAnalytics: true
@@ -356,8 +356,28 @@
           // Content within results
           "[data-result-index]",
           // Indexed results
-          ".section-layout-root"
+          ".section-layout-root",
           // Layout root sections
+          ".hfpxzc",
+          // Modern Google Maps business card class
+          ".Nv2PK",
+          // Another modern Maps class
+          ".bJzME",
+          // Search result container
+          ".lI9IFe",
+          // Business listing container
+          'div[jsaction*="mouseover"]',
+          // Interactive elements
+          "div[data-value][data-dtype]",
+          // Data elements with values
+          '[data-value="Directions"][role="button"]',
+          // Map pins with directions
+          'button[data-value="Directions"]',
+          // Map direction buttons
+          ".section-result-action-container button",
+          // Action buttons in results
+          'div[role="button"][aria-label*="directions"]'
+          // Accessible direction buttons
         ],
         // Business name elements
         businessNames: [
@@ -371,7 +391,17 @@
           '[data-value="Directions"] h3',
           ".x3AX1-LfntMc-header-title",
           // Specific Maps title class
-          '[jsaction*="pane.kp.place"] h1'
+          '[jsaction*="pane.kp.place"] h1',
+          ".hfpxzc .qBF1Pd",
+          // Modern Maps business name
+          ".hfpxzc .NrDZNb",
+          // Alternative modern Maps business name
+          ".bJzME .qBF1Pd",
+          // Search result business name
+          '.lI9IFe span[role="heading"]',
+          // Business listing heading
+          'span[data-value][data-dtype="d3bn"] span'
+          // Business name with specific data attributes
         ],
         // Business address elements
         businessAddresses: [
@@ -423,12 +453,24 @@
       const processedNames = /* @__PURE__ */ new Set();
       try {
         const containers = this.findBusinessContainers();
+        console.log(`BusinessDetector: Found ${containers.length} potential containers`);
+        containers.slice(0, 3).forEach((container, i) => {
+          var _a;
+          console.log(`Container ${i}:`, {
+            tagName: container.tagName,
+            className: container.className,
+            textContent: (_a = container.textContent) == null ? void 0 : _a.slice(0, 100),
+            hasDirections: !!container.querySelector('[data-value="Directions"]'),
+            hasHeadings: container.querySelectorAll('h1, h2, h3, h4, [role="heading"]').length
+          });
+        });
         for (const container of containers) {
           if (this.processedElements.has(container)) {
             continue;
           }
           const businessInfo = this.extractBusinessInfo(container);
           if (businessInfo && businessInfo.name && !processedNames.has(businessInfo.name)) {
+            console.log(`BusinessDetector: Found business: ${businessInfo.name}`);
             businesses.push({
               ...businessInfo,
               element: container,
@@ -436,6 +478,8 @@
             });
             processedNames.add(businessInfo.name);
             this.processedElements.add(container);
+          } else if (businessInfo) {
+            console.log(`BusinessDetector: Skipped business (no name or duplicate): ${businessInfo.name || "unnamed"}`);
           }
         }
         console.log(`BusinessDetector: Found ${businesses.length} businesses`);
@@ -460,9 +504,48 @@
           }
         }
       }
-      return Array.from(containers).filter((container) => {
+      console.log(`BusinessDetector: Found ${containers.size} containers from selectors`);
+      if (containers.size === 0) {
+        console.log("BusinessDetector: No containers found, trying fallback approach");
+        this.addFallbackContainers(containers);
+      }
+      const filteredContainers = Array.from(containers).filter((container) => {
         return this.isLikelyBusinessContainer(container);
       });
+      console.log(`BusinessDetector: After filtering, ${filteredContainers.length} containers remain`);
+      return filteredContainers;
+    }
+    /**
+     * Fallback method to find business containers when normal selectors fail
+     */
+    addFallbackContainers(containers) {
+      const businessKeywords = ["safeway", "walmart", "frys", "target", "mcdonald", "starbucks", "cvs"];
+      for (const keyword of businessKeywords) {
+        try {
+          const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+          );
+          let node;
+          while (node = walker.nextNode()) {
+            if (node.textContent.toLowerCase().includes(keyword)) {
+              const element = node.parentElement;
+              if (element) {
+                containers.add(element);
+                const container = element.closest('[role="article"], div[jsaction], div[data-result-index], .hfpxzc, [data-value="Directions"]');
+                if (container) {
+                  containers.add(container);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`BusinessDetector: Error searching for keyword "${keyword}":`, error);
+        }
+      }
+      console.log(`BusinessDetector: Fallback found ${containers.size} total containers`);
     }
     /**
      * Check if an element is likely a business container
@@ -959,6 +1042,7 @@
         if (settings.hideChains) {
           element.classList.add("lfa-chain-hidden");
           this.injectedElements.set(element, { type: "chain-hidden", chainInfo });
+          this.hideRelatedMapPins(chainInfo.name);
         } else if (settings.dimChains) {
           element.classList.add("lfa-chain-business");
           this.injectedElements.set(element, { type: "chain-dimmed", chainInfo });
@@ -1132,6 +1216,46 @@
       }
     }
     /**
+     * Hide map pins/markers related to a chain business
+     */
+    hideRelatedMapPins(businessName) {
+      try {
+        const cleanName = businessName.toLowerCase().trim();
+        const mapSelectors = [
+          'button[data-value="Directions"]',
+          '[role="button"][aria-label*="directions"]',
+          '[data-value="Directions"][role="button"]',
+          'button[aria-label*="' + cleanName + '"]',
+          '[data-title*="' + cleanName + '"]'
+        ];
+        mapSelectors.forEach((selector) => {
+          try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach((element) => {
+              const text = (element.textContent || element.getAttribute("aria-label") || "").toLowerCase();
+              if (text.includes(cleanName)) {
+                element.style.display = "none";
+                element.setAttribute("data-lfa-hidden", "true");
+                console.log(`UIInjector: Hid map pin for ${businessName}`);
+              }
+            });
+          } catch (error) {
+            console.warn(`UIInjector: Error with selector ${selector}:`, error);
+          }
+        });
+        const allButtons = document.querySelectorAll('button, [role="button"]');
+        allButtons.forEach((button) => {
+          const text = (button.textContent || button.getAttribute("aria-label") || "").toLowerCase();
+          if (text.includes(cleanName) && (text.includes("directions") || text.includes("marker"))) {
+            button.style.display = "none";
+            button.setAttribute("data-lfa-hidden", "true");
+          }
+        });
+      } catch (error) {
+        console.error("UIInjector: Failed to hide related map pins:", error);
+      }
+    }
+    /**
      * Remove all injected UI elements from an element
      */
     removeInjectedElements(element) {
@@ -1161,6 +1285,10 @@
       });
       document.querySelectorAll(".lfa-badge, .lfa-alternatives").forEach((element) => {
         element.remove();
+      });
+      document.querySelectorAll('[data-lfa-hidden="true"]').forEach((element) => {
+        element.style.display = "";
+        element.removeAttribute("data-lfa-hidden");
       });
       this.injectedElements = /* @__PURE__ */ new WeakMap();
       console.log("UIInjector: Cleared all injected elements");
@@ -1209,6 +1337,8 @@
         this.setupMutationObserver();
         this.setupMessageListener();
         this.setupNavigationListener();
+        this.setupToggleListener();
+        this.updateStatusBar();
         await this.processCurrentPage();
         this.isInitialized = true;
         console.log("MapsModifier: Initialized successfully");
@@ -1366,6 +1496,46 @@
       window.addEventListener("popstate", () => {
         this.handleNavigation();
       });
+    }
+    /**
+     * Set up toggle listener for filter controls
+     */
+    setupToggleListener() {
+      window.addEventListener("lfa-toggle-filter", () => {
+        this.toggleFilterMode();
+      });
+    }
+    /**
+     * Toggle between strict and moderate filtering
+     */
+    toggleFilterMode() {
+      const currentLevel = this.settings.filterLevel;
+      const newLevel = currentLevel === "strict" ? "moderate" : "strict";
+      console.log(`MapsModifier: Switching from ${currentLevel} to ${newLevel} filtering`);
+      this.settings.filterLevel = newLevel;
+      this.updateStatusBar();
+      uiInjector.clearAllInjectedElements();
+      businessDetector.clearProcessedCache();
+      setTimeout(() => {
+        this.processCurrentPage();
+      }, 100);
+      this.trackEvent("filter_toggle", {
+        fromLevel: currentLevel,
+        toLevel: newLevel
+      });
+    }
+    /**
+     * Update the status bar text and button based on current settings
+     */
+    updateStatusBar() {
+      const statusMessage2 = document.getElementById("lfa-status-message");
+      const toggleButton2 = document.getElementById("lfa-toggle-button");
+      if (statusMessage2 && toggleButton2) {
+        const isStrict = this.settings.filterLevel === "strict";
+        statusMessage2.textContent = isStrict ? "🏪 Local First Arizona is hiding chain stores" : "🏪 Local First Arizona is dimming chain stores";
+        toggleButton2.textContent = isStrict ? "Switch to Dimming" : "Switch to Hiding";
+        console.log(`MapsModifier: Updated status bar for ${this.settings.filterLevel} mode`);
+      }
     }
     /**
      * Handle page navigation
@@ -1600,30 +1770,74 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 30px;
+  height: 35px;
   background: linear-gradient(90deg, #2E7D32, #4CAF50);
   color: white;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0 15px;
   font-family: Arial, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
   z-index: 999999;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  cursor: pointer;
 `;
-  statusBar.innerHTML = "🏪 Local First Arizona Extension Active - Click to hide";
-  statusBar.onclick = function() {
-    this.style.display = "none";
+  const statusMessage = document.createElement("span");
+  statusMessage.id = "lfa-status-message";
+  statusMessage.textContent = "🏪 Local First Arizona is filtering chain stores";
+  const toggleContainer = document.createElement("div");
+  toggleContainer.style.cssText = `
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+  const toggleButton = document.createElement("button");
+  toggleButton.id = "lfa-toggle-button";
+  toggleButton.textContent = "Switch to Dimming";
+  toggleButton.style.cssText = `
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: bold;
+`;
+  const hideButton = document.createElement("button");
+  hideButton.textContent = "×";
+  hideButton.style.cssText = `
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+  toggleButton.onclick = function(e) {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent("lfa-toggle-filter"));
   };
+  hideButton.onclick = function(e) {
+    e.stopPropagation();
+    statusBar.style.display = "none";
+  };
+  toggleContainer.appendChild(toggleButton);
+  toggleContainer.appendChild(hideButton);
+  statusBar.appendChild(statusMessage);
+  statusBar.appendChild(toggleContainer);
   if (document.body) {
     document.body.appendChild(statusBar);
-    document.body.style.marginTop = "30px";
+    document.body.style.marginTop = "35px";
   } else {
     document.addEventListener("DOMContentLoaded", () => {
       document.body.appendChild(statusBar);
-      document.body.style.marginTop = "30px";
+      document.body.style.marginTop = "35px";
     });
   }
   setTimeout(() => {

@@ -27,6 +27,16 @@ export class BusinessDetector {
         '.section-result-content', // Content within results
         '[data-result-index]', // Indexed results
         '.section-layout-root', // Layout root sections
+        '.hfpxzc', // Modern Google Maps business card class
+        '.Nv2PK', // Another modern Maps class
+        '.bJzME', // Search result container
+        '.lI9IFe', // Business listing container
+        'div[jsaction*="mouseover"]', // Interactive elements
+        'div[data-value][data-dtype]', // Data elements with values
+        '[data-value="Directions"][role="button"]', // Map pins with directions
+        'button[data-value="Directions"]', // Map direction buttons
+        '.section-result-action-container button', // Action buttons in results
+        'div[role="button"][aria-label*="directions"]', // Accessible direction buttons
       ],
 
       // Business name elements
@@ -41,6 +51,11 @@ export class BusinessDetector {
         '[data-value="Directions"] h3',
         '.x3AX1-LfntMc-header-title', // Specific Maps title class
         '[jsaction*="pane.kp.place"] h1',
+        '.hfpxzc .qBF1Pd', // Modern Maps business name
+        '.hfpxzc .NrDZNb', // Alternative modern Maps business name
+        '.bJzME .qBF1Pd', // Search result business name
+        '.lI9IFe span[role="heading"]', // Business listing heading
+        'span[data-value][data-dtype="d3bn"] span', // Business name with specific data attributes
       ],
 
       // Business address elements
@@ -100,6 +115,18 @@ export class BusinessDetector {
     try {
       // Find all potential business containers
       const containers = this.findBusinessContainers();
+      console.log(`BusinessDetector: Found ${containers.length} potential containers`);
+      
+      // DEBUG: Log some container details
+      containers.slice(0, 3).forEach((container, i) => {
+        console.log(`Container ${i}:`, {
+          tagName: container.tagName,
+          className: container.className,
+          textContent: container.textContent?.slice(0, 100),
+          hasDirections: !!container.querySelector('[data-value="Directions"]'),
+          hasHeadings: container.querySelectorAll('h1, h2, h3, h4, [role="heading"]').length
+        });
+      });
       
       for (const container of containers) {
         // Skip if already processed
@@ -110,6 +137,7 @@ export class BusinessDetector {
         const businessInfo = this.extractBusinessInfo(container);
         
         if (businessInfo && businessInfo.name && !processedNames.has(businessInfo.name)) {
+          console.log(`BusinessDetector: Found business: ${businessInfo.name}`);
           businesses.push({
             ...businessInfo,
             element: container,
@@ -118,6 +146,8 @@ export class BusinessDetector {
           
           processedNames.add(businessInfo.name);
           this.processedElements.add(container);
+        } else if (businessInfo) {
+          console.log(`BusinessDetector: Skipped business (no name or duplicate): ${businessInfo.name || 'unnamed'}`);
         }
       }
 
@@ -149,10 +179,60 @@ export class BusinessDetector {
       }
     }
 
+    console.log(`BusinessDetector: Found ${containers.size} containers from selectors`);
+
+    // If no containers found, try fallback approach
+    if (containers.size === 0) {
+      console.log('BusinessDetector: No containers found, trying fallback approach');
+      this.addFallbackContainers(containers);
+    }
+
     // Filter to only actual business containers
-    return Array.from(containers).filter(container => {
+    const filteredContainers = Array.from(containers).filter(container => {
       return this.isLikelyBusinessContainer(container);
     });
+    
+    console.log(`BusinessDetector: After filtering, ${filteredContainers.length} containers remain`);
+    return filteredContainers;
+  }
+
+  /**
+   * Fallback method to find business containers when normal selectors fail
+   */
+  addFallbackContainers(containers) {
+    // Look for elements that contain business names like "safeway", "walmart", etc.
+    const businessKeywords = ['safeway', 'walmart', 'frys', 'target', 'mcdonald', 'starbucks', 'cvs'];
+    
+    for (const keyword of businessKeywords) {
+      try {
+        // Use a safer approach - search all text nodes
+        const walker = document.createTreeWalker(
+          document.body,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        
+        let node;
+        while (node = walker.nextNode()) {
+          if (node.textContent.toLowerCase().includes(keyword)) {
+            const element = node.parentElement;
+            if (element) {
+              containers.add(element);
+              // Find the nearest business container
+              const container = element.closest('[role="article"], div[jsaction], div[data-result-index], .hfpxzc, [data-value="Directions"]');
+              if (container) {
+                containers.add(container);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`BusinessDetector: Error searching for keyword "${keyword}":`, error);
+      }
+    }
+    
+    console.log(`BusinessDetector: Fallback found ${containers.size} total containers`);
   }
 
   /**

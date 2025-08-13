@@ -51,6 +51,12 @@ class MapsModifier {
       // Set up navigation listener
       this.setupNavigationListener();
       
+      // Set up toggle listener for filter controls
+      this.setupToggleListener();
+      
+      // Update status bar with current settings
+      this.updateStatusBar();
+      
       // Initial processing
       await this.processCurrentPage();
       
@@ -251,6 +257,65 @@ class MapsModifier {
     window.addEventListener('popstate', () => {
       this.handleNavigation();
     });
+  }
+
+  /**
+   * Set up toggle listener for filter controls
+   */
+  setupToggleListener() {
+    window.addEventListener('lfa-toggle-filter', () => {
+      this.toggleFilterMode();
+    });
+  }
+
+  /**
+   * Toggle between strict and moderate filtering
+   */
+  toggleFilterMode() {
+    const currentLevel = this.settings.filterLevel;
+    const newLevel = currentLevel === 'strict' ? 'moderate' : 'strict';
+    
+    console.log(`MapsModifier: Switching from ${currentLevel} to ${newLevel} filtering`);
+    
+    this.settings.filterLevel = newLevel;
+    this.updateStatusBar();
+    
+    // Clear existing modifications and reprocess
+    uiInjector.clearAllInjectedElements();
+    businessDetector.clearProcessedCache();
+    
+    // Reprocess current page with new settings
+    setTimeout(() => {
+      this.processCurrentPage();
+    }, 100);
+    
+    // Track the toggle
+    this.trackEvent('filter_toggle', {
+      fromLevel: currentLevel,
+      toLevel: newLevel
+    });
+  }
+
+  /**
+   * Update the status bar text and button based on current settings
+   */
+  updateStatusBar() {
+    const statusMessage = document.getElementById('lfa-status-message');
+    const toggleButton = document.getElementById('lfa-toggle-button');
+    
+    if (statusMessage && toggleButton) {
+      const isStrict = this.settings.filterLevel === 'strict';
+      
+      statusMessage.textContent = isStrict 
+        ? '🏪 Local First Arizona is hiding chain stores'
+        : '🏪 Local First Arizona is dimming chain stores';
+        
+      toggleButton.textContent = isStrict 
+        ? 'Switch to Dimming' 
+        : 'Switch to Hiding';
+        
+      console.log(`MapsModifier: Updated status bar for ${this.settings.filterLevel} mode`);
+    }
   }
 
   /**

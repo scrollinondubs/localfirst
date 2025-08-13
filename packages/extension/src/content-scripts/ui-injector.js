@@ -301,6 +301,9 @@ export class UIInjector {
       if (settings.hideChains) {
         element.classList.add('lfa-chain-hidden');
         this.injectedElements.set(element, { type: 'chain-hidden', chainInfo });
+        
+        // Also hide related map pins
+        this.hideRelatedMapPins(chainInfo.name);
       } else if (settings.dimChains) {
         element.classList.add('lfa-chain-business');
         this.injectedElements.set(element, { type: 'chain-dimmed', chainInfo });
@@ -518,6 +521,54 @@ export class UIInjector {
   }
 
   /**
+   * Hide map pins/markers related to a chain business
+   */
+  hideRelatedMapPins(businessName) {
+    try {
+      // Clean the business name for comparison
+      const cleanName = businessName.toLowerCase().trim();
+      
+      // Find and hide map pins that contain the business name
+      const mapSelectors = [
+        'button[data-value="Directions"]',
+        '[role="button"][aria-label*="directions"]',
+        '[data-value="Directions"][role="button"]',
+        'button[aria-label*="' + cleanName + '"]',
+        '[data-title*="' + cleanName + '"]'
+      ];
+      
+      mapSelectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            const text = (element.textContent || element.getAttribute('aria-label') || '').toLowerCase();
+            if (text.includes(cleanName)) {
+              element.style.display = 'none';
+              element.setAttribute('data-lfa-hidden', 'true');
+              console.log(`UIInjector: Hid map pin for ${businessName}`);
+            }
+          });
+        } catch (error) {
+          console.warn(`UIInjector: Error with selector ${selector}:`, error);
+        }
+      });
+      
+      // Also hide map marker elements that might contain the business name
+      const allButtons = document.querySelectorAll('button, [role="button"]');
+      allButtons.forEach(button => {
+        const text = (button.textContent || button.getAttribute('aria-label') || '').toLowerCase();
+        if (text.includes(cleanName) && (text.includes('directions') || text.includes('marker'))) {
+          button.style.display = 'none';
+          button.setAttribute('data-lfa-hidden', 'true');
+        }
+      });
+      
+    } catch (error) {
+      console.error('UIInjector: Failed to hide related map pins:', error);
+    }
+  }
+
+  /**
    * Remove all injected UI elements from an element
    */
   removeInjectedElements(element) {
@@ -556,6 +607,12 @@ export class UIInjector {
     // Remove all injected elements
     document.querySelectorAll('.lfa-badge, .lfa-alternatives').forEach(element => {
       element.remove();
+    });
+    
+    // Restore hidden map pins
+    document.querySelectorAll('[data-lfa-hidden="true"]').forEach(element => {
+      element.style.display = '';
+      element.removeAttribute('data-lfa-hidden');
     });
     
     // Clear tracking
