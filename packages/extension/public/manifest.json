@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Local First Arizona",
+  "version": "1.0.0",
+  "description": "Discover locally-owned businesses on Google Maps while filtering out chain stores",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "alarms"
+  ],
+  
+  "host_permissions": [
+    "https://maps.google.com/*",
+    "http://localhost:8787/*",
+    "https://api-localfirst-az.your-domain.workers.dev/*"
+  ],
+  
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://maps.google.com/*"],
+      "js": ["content.js"],
+      "css": ["assets/styles/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Local First Arizona",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png", 
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/badges/*",
+        "assets/styles/*"
+      ],
+      "matches": ["https://maps.google.com/*"]
+    }
+  ]
+}

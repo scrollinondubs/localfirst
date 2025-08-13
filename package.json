@@ -6,7 +6,6 @@
     "packages/*"
   ],
   "scripts": {
-    "install": "npm install --workspaces",
     "dev": "npm run dev:api & npm run dev:dashboard & npm run dev:extension",
     "dev:api": "npm run dev --workspace=packages/api",
     "dev:dashboard": "npm run dev --workspace=packages/dashboard",

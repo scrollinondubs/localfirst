@@ -1,0 +1,20 @@
+{
+  "name": "@local-first/extension",
+  "version": "1.0.0",
+  "description": "Local First Arizona Chrome Extension",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest",
+    "load": "echo 'Load dist/ folder in Chrome Extensions page'",
+    "package": "zip -r local-first-arizona-extension.zip dist/",
+    "clean": "rm -rf dist/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@types/chrome": "^0.0.268"
+  }
+}

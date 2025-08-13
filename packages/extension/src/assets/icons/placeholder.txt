@@ -1,0 +1,9 @@
+# Icon Placeholders
+
+This directory will contain the extension icons:
+- icon-16.png
+- icon-32.png
+- icon-48.png
+- icon-128.png
+
+For testing, you can use any square PNG images or generate them from the LFA logo.

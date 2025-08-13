@@ -37,7 +37,10 @@
       "mcp__sqlite__list_tables",
       "Bash(sqlite3:*)",
       "Bash(curl:*)",
-      "mcp__linear-server__get_issue"
+      "mcp__linear-server__get_issue",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api npm run dev)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" wrangler dev src/index.js --port 8787)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node temp-server.js)"
     ],
     "deny": []
   }
