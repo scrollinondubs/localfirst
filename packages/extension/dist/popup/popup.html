@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local First Arizona</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>Local First Arizona</h1>
+      <p class="tagline">Support Local Businesses</p>
+    </header>
+    
+    <main class="popup-content">
+      <div class="toggle-section">
+        <label class="toggle-switch">
+          <input type="checkbox" id="enableToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Filter Chains</span>
+      </div>
+      
+      <div class="filter-level">
+        <label for="filterLevel">Filter Level:</label>
+        <select id="filterLevel">
+          <option value="light">Light</option>
+          <option value="moderate" selected>Moderate</option>
+          <option value="strict">Strict</option>
+        </select>
+      </div>
+      
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-label">Chains Filtered:</span>
+          <span class="stat-value" id="chainsFiltered">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Local Highlighted:</span>
+          <span class="stat-value" id="localHighlighted">0</span>
+        </div>
+      </div>
+      
+      <div class="options">
+        <label>
+          <input type="checkbox" id="showBadges" checked>
+          Show Local Badges
+        </label>
+        <label>
+          <input type="checkbox" id="showAlternatives" checked>
+          Suggest Alternatives
+        </label>
+      </div>
+    </main>
+    
+    <footer class="popup-footer">
+      <a href="https://localfirstaz.com" target="_blank">Visit LFA Directory</a>
+    </footer>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
