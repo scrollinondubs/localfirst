@@ -49,7 +49,9 @@
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_close",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(npx @playwright/mcp:*)",
+      "mcp__playwright__browser_snapshot"
     ],
     "deny": []
   }

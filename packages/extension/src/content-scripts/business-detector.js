@@ -188,11 +188,33 @@ export class BusinessDetector {
     }
 
     // Filter to only actual business containers
-    const filteredContainers = Array.from(containers).filter(container => {
-      return this.isLikelyBusinessContainer(container);
+    const allContainers = Array.from(containers);
+    const filteredContainers = allContainers.filter(container => {
+      const isLikely = this.isLikelyBusinessContainer(container);
+      
+      // Enhanced debugging
+      if (!isLikely) {
+        console.log('BusinessDetector: Filtered out container:', {
+          element: container,
+          textContent: container.textContent?.slice(0, 100),
+          hasDirections: !!container.querySelector('[data-value="Directions"]'),
+          hasHeading: !!container.querySelector('[role="heading"]'),
+          classList: Array.from(container.classList),
+          attributes: container.attributes ? Array.from(container.attributes).map(attr => ({name: attr.name, value: attr.value})) : []
+        });
+      }
+      
+      return isLikely;
     });
     
     console.log(`BusinessDetector: After filtering, ${filteredContainers.length} containers remain`);
+    
+    // Temporary: if no containers pass filter, let's see what we have
+    if (filteredContainers.length === 0 && allContainers.length > 0) {
+      console.log('BusinessDetector: No containers passed filter, using first 3 unfiltered for debugging');
+      return allContainers.slice(0, 3);
+    }
+    
     return filteredContainers;
   }
 
@@ -285,6 +307,15 @@ export class BusinessDetector {
       if (location) {
         businessInfo.location = location;
       }
+
+      // Capture Google Maps specific data attributes for pin correlation
+      businessInfo.googleMapsData = this.extractGoogleMapsData(container);
+      
+      // Enhanced logging for debugging sidebar-to-pin relationships
+      console.log('BusinessDetector: Enhanced business data extracted:', {
+        name: businessInfo.name,
+        googleMapsData: businessInfo.googleMapsData
+      });
 
       return businessInfo;
 
@@ -470,6 +501,112 @@ export class BusinessDetector {
     }
 
     return textNodes;
+  }
+
+  /**
+   * Extract Google Maps specific data for pin correlation
+   */
+  extractGoogleMapsData(container) {
+    const googleData = {
+      attributes: {},
+      classes: [],
+      jsActions: [],
+      dataValues: [],
+      coordinates: null,
+      placeId: null,
+      businessId: null
+    };
+
+    try {
+      // Collect all data-* attributes
+      if (container.attributes) {
+        for (const attr of container.attributes) {
+          if (attr.name.startsWith('data-')) {
+            googleData.attributes[attr.name] = attr.value;
+          }
+        }
+      }
+
+      // Collect CSS classes
+      googleData.classes = Array.from(container.classList);
+
+      // Look for jsaction attributes (Google Maps uses these extensively)
+      const jsActionElements = container.querySelectorAll('[jsaction], [data-jsaction]');
+      jsActionElements.forEach(el => {
+        const jsAction = el.getAttribute('jsaction') || el.getAttribute('data-jsaction');
+        if (jsAction) {
+          googleData.jsActions.push(jsAction);
+        }
+      });
+
+      // Look for data-value attributes (common in Google Maps buttons)
+      const dataValueElements = container.querySelectorAll('[data-value]');
+      dataValueElements.forEach(el => {
+        const dataValue = el.getAttribute('data-value');
+        if (dataValue) {
+          googleData.dataValues.push(dataValue);
+        }
+      });
+
+      // Look for possible coordinates in various formats
+      const coordinatePatterns = [
+        /(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/, // "33.1234, -112.5678"
+        /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/, // "@33.1234,-112.5678"
+      ];
+
+      const containerText = container.textContent;
+      for (const pattern of coordinatePatterns) {
+        const match = containerText.match(pattern);
+        if (match) {
+          googleData.coordinates = {
+            lat: parseFloat(match[1]),
+            lng: parseFloat(match[2])
+          };
+          break;
+        }
+      }
+
+      // Look for possible Google Place IDs (format: ChI...)
+      const placeIdMatch = containerText.match(/ChI[a-zA-Z0-9_-]+/);
+      if (placeIdMatch) {
+        googleData.placeId = placeIdMatch[0];
+      }
+
+      // Look for possible business/location IDs in href attributes
+      const links = container.querySelectorAll('a[href]');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        
+        // Extract place ID from Google Maps URLs
+        const placeIdMatch = href.match(/place\/([^\/]+)/);
+        if (placeIdMatch) {
+          googleData.placeId = placeIdMatch[1];
+        }
+
+        // Extract other IDs from Maps URLs
+        const idMatches = href.match(/@([^,]+),([^,]+),.*!(\w+)/);
+        if (idMatches) {
+          googleData.businessId = idMatches[3];
+        }
+      });
+
+      // Look for map-specific element identifiers
+      const mapElements = container.querySelectorAll('[role="button"], [aria-label*="directions"], [aria-label*="call"]');
+      mapElements.forEach(el => {
+        if (el.getAttribute('aria-label')) {
+          // Store aria-labels that might help correlate with map pins
+          if (!googleData.ariaLabels) {
+            googleData.ariaLabels = [];
+          }
+          googleData.ariaLabels.push(el.getAttribute('aria-label'));
+        }
+      });
+
+    } catch (error) {
+      console.error('Error extracting Google Maps data:', error);
+    }
+
+    return googleData;
   }
 
   /**

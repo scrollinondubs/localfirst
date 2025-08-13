@@ -8,6 +8,7 @@ export class UIInjector {
   constructor() {
     this.injectedElements = new WeakMap();
     this.styleSheet = null;
+    this.hiddenBusinessData = new Map(); // Store data for hidden businesses
     this.initializeStyles();
   }
 
@@ -338,12 +339,26 @@ export class UIInjector {
     try {
       const settings = CONFIG.FILTER_LEVELS[filterLevel] || CONFIG.FILTER_LEVELS.moderate;
       
+      // Extract specific business data from the element being hidden
+      const businessData = this.extractBusinessData(element);
+      const businessKey = this.generateBusinessKey(businessData, chainInfo);
+      
       if (settings.hideChains) {
         element.classList.add('lfa-chain-hidden');
         this.injectedElements.set(element, { type: 'chain-hidden', chainInfo });
         
-        // Also hide related map pins
-        this.hideRelatedMapPins(chainInfo.name);
+        // Store this hidden business data for targeted pin hiding
+        this.hiddenBusinessData.set(businessKey, {
+          element: element,
+          chainInfo: chainInfo,
+          businessData: businessData,
+          timestamp: Date.now()
+        });
+        
+        console.log(`UIInjector: Stored hidden business data for ${chainInfo.name}:`, businessData);
+        
+        // Use targeted pin hiding based on business data
+        this.hideTargetedMapPins(businessData, chainInfo);
         
         // In strict mode, create a placeholder for alternatives
         this.createChainReplacementPlaceholder(element, chainInfo);
@@ -360,6 +375,507 @@ export class UIInjector {
   }
 
   /**
+   * Extract business data from a DOM element
+   */
+  extractBusinessData(element) {
+    const data = {
+      name: null,
+      address: null,
+      element: element
+    };
+    
+    try {
+      // Try multiple selectors to find business name
+      const nameSelectors = [
+        '[role="heading"]',
+        'h1', 'h2', 'h3',
+        '.section-result-title',
+        '.qBF1Pd',
+        '.NrDZNb',
+        'span[data-value][data-dtype="d3bn"]'
+      ];
+      
+      for (const selector of nameSelectors) {
+        const nameElement = element.querySelector(selector);
+        if (nameElement && nameElement.textContent.trim()) {
+          data.name = nameElement.textContent.trim();
+          break;
+        }
+      }
+      
+      // Try to find address
+      const addressSelectors = [
+        '[data-value="Address"]',
+        '.section-result-location',
+        '.rogA2c'
+      ];
+      
+      for (const selector of addressSelectors) {
+        const addressElement = element.querySelector(selector);
+        if (addressElement && addressElement.textContent.trim()) {
+          data.address = addressElement.textContent.trim();
+          break;
+        }
+      }
+      
+      // If no name found, try getting text from common business name containers
+      if (!data.name) {
+        const textContent = element.textContent.trim();
+        if (textContent && textContent.length > 0 && textContent.length < 200) {
+          const lines = textContent.split('\n').filter(line => line.trim().length > 0);
+          if (lines.length > 0) {
+            data.name = lines[0].trim();
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error extracting business data:', error);
+    }
+    
+    return data;
+  }
+  
+  /**
+   * Generate a unique key for business data
+   */
+  generateBusinessKey(businessData, chainInfo) {
+    const name = businessData.name || chainInfo.name;
+    const address = businessData.address || '';
+    return `${name.toLowerCase()}-${address.toLowerCase()}`.replace(/\s+/g, '-');
+  }
+  
+  /**
+   * Hide map pins using targeted business data
+   */
+  hideTargetedMapPins(businessData, chainInfo) {
+    try {
+      console.log(`UIInjector: Starting enhanced pin hiding for business:`, businessData);
+      
+      // Use multiple strategies to find and hide the corresponding map pins
+      let hiddenCount = 0;
+      
+      // Strategy 1: Use Google Maps specific data if available
+      if (businessData.googleMapsData) {
+        hiddenCount += this.hideMapPinsByGoogleData(businessData.googleMapsData, chainInfo.name);
+      }
+      
+      // Strategy 2: Use business name matching
+      hiddenCount += this.hideMapPinsByBusinessName(businessData.name || chainInfo.name);
+      
+      // Strategy 3: Use address if available
+      if (businessData.address) {
+        hiddenCount += this.hideMapPinsByAddress(businessData.address);
+      }
+      
+      // Strategy 4: Use coordinates if available
+      if (businessData.googleMapsData?.coordinates) {
+        hiddenCount += this.hideMapPinsByCoordinates(businessData.googleMapsData.coordinates);
+      }
+      
+      console.log(`UIInjector: Initial pin hiding found ${hiddenCount} elements for ${chainInfo.name}`);
+      
+      // Set up continuous monitoring for new pins
+      this.setupTargetedPinMonitoring(businessData, chainInfo);
+      
+      // Set up delayed pin hiding with multiple methods
+      this.setupDelayedPinHiding(businessData, chainInfo);
+      
+    } catch (error) {
+      console.error('Error in targeted map pin hiding:', error);
+      // Fallback to original method
+      this.hideRelatedMapPins(chainInfo.name);
+    }
+  }
+  
+  /**
+   * Hide map pins using Google Maps specific data
+   */
+  hideMapPinsByGoogleData(googleData, businessName) {
+    let hiddenCount = 0;
+    
+    try {
+      // Strategy 1: Use Place ID if available
+      if (googleData.placeId) {
+        const placeElements = document.querySelectorAll(`[data-cid*="${googleData.placeId}"], [href*="${googleData.placeId}"]`);
+        placeElements.forEach(element => {
+          this.concealElement(element, `Google Place ID match for ${businessName}`);
+          hiddenCount++;
+        });
+      }
+      
+      // Strategy 2: Use data-value attributes
+      googleData.dataValues.forEach(dataValue => {
+        const elements = document.querySelectorAll(`[data-value="${dataValue}"]`);
+        elements.forEach(element => {
+          // Only hide if it's likely a map pin (not the sidebar element we already hid)
+          if (this.isLikelyMapPin(element)) {
+            this.concealElement(element, `Data value match for ${businessName}`);
+            hiddenCount++;
+          }
+        });
+      });
+      
+      // Strategy 3: Use jsaction patterns
+      googleData.jsActions.forEach(jsAction => {
+        const elements = document.querySelectorAll(`[jsaction*="${jsAction}"]`);
+        elements.forEach(element => {
+          if (this.isLikelyMapPin(element)) {
+            this.concealElement(element, `JS action match for ${businessName}`);
+            hiddenCount++;
+          }
+        });
+      });
+      
+      // Strategy 4: Use aria labels
+      if (googleData.ariaLabels) {
+        googleData.ariaLabels.forEach(ariaLabel => {
+          const elements = document.querySelectorAll(`[aria-label*="${ariaLabel}"]`);
+          elements.forEach(element => {
+            if (this.isLikelyMapPin(element)) {
+              this.concealElement(element, `Aria label match for ${businessName}`);
+              hiddenCount++;
+            }
+          });
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error in Google data pin hiding:', error);
+    }
+    
+    return hiddenCount;
+  }
+
+  /**
+   * Hide map pins by coordinates
+   */
+  hideMapPinsByCoordinates(coordinates) {
+    let hiddenCount = 0;
+    
+    try {
+      // Look for elements containing these coordinates
+      const coordString1 = `${coordinates.lat},${coordinates.lng}`;
+      const coordString2 = `${coordinates.lat}, ${coordinates.lng}`;
+      
+      const elements = document.querySelectorAll('*');
+      elements.forEach(element => {
+        const text = element.textContent || element.getAttribute('href') || '';
+        if ((text.includes(coordString1) || text.includes(coordString2)) && this.isLikelyMapPin(element)) {
+          this.concealElement(element, `Coordinate match`);
+          hiddenCount++;
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error in coordinate pin hiding:', error);
+    }
+    
+    return hiddenCount;
+  }
+
+  /**
+   * Check if element is likely a map pin (not a sidebar element)
+   */
+  isLikelyMapPin(element) {
+    try {
+      // Safety check for element
+      if (!element || !element.getBoundingClientRect) {
+        return false;
+      }
+      
+      // Check if element is in the map area (right side) vs sidebar (left side)
+      const rect = element.getBoundingClientRect();
+      const isOnMap = rect.left > 400; // Map is typically to the right of 400px
+      
+      // Check for map-specific classes or attributes - safely handle className
+      let hasMapClasses = false;
+      if (element.className && typeof element.className === 'string') {
+        hasMapClasses = 
+          element.className.includes('pin') ||
+          element.className.includes('marker') ||
+          element.className.includes('place');
+      } else if (element.classList && element.classList.length > 0) {
+        // Handle DOMTokenList case
+        const classString = Array.from(element.classList).join(' ');
+        hasMapClasses = 
+          classString.includes('pin') ||
+          classString.includes('marker') ||
+          classString.includes('place');
+      }
+      
+      // Check for map-specific roles or tags
+      const hasMapRole = element.hasAttribute && element.hasAttribute('role') && 
+        ['button', 'link'].includes(element.getAttribute('role'));
+      
+      // Exclude sidebar elements - but be more careful about detection
+      let isInSidebar = false;
+      try {
+        isInSidebar = element.closest && element.closest('[role="main"]') && rect.left < 400;
+      } catch (error) {
+        // If closest fails, assume not in sidebar
+        isInSidebar = false;
+      }
+      
+      return (isOnMap || hasMapClasses || hasMapRole) && !isInSidebar;
+      
+    } catch (error) {
+      console.warn('UIInjector: Error in isLikelyMapPin:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Conceal element using multiple CSS methods
+   */
+  concealElement(element, reason) {
+    try {
+      // Safety check - don't hide essential UI elements
+      if (this.isEssentialElement(element)) {
+        console.log(`UIInjector: Skipped concealing essential element - ${reason}:`, element);
+        return;
+      }
+      
+      // Apply concealment methods - use fewer simultaneous methods to avoid conflicts
+      element.style.display = 'none';
+      element.style.visibility = 'hidden';
+      element.style.opacity = '0';
+      // Remove transform and z-index that might interfere with Maps UI
+      // element.style.transform = 'scale(0)';
+      element.style.pointerEvents = 'none';
+      // element.style.zIndex = '-1000';
+      
+      // Mark element as hidden by our extension
+      element.setAttribute('data-lfa-hidden', 'true');
+      element.setAttribute('data-lfa-reason', reason);
+      
+      console.log(`UIInjector: Concealed element - ${reason}:`, element);
+    } catch (error) {
+      console.warn('UIInjector: Error concealing element:', error);
+    }
+  }
+
+  /**
+   * Check if element is essential to Google Maps UI
+   */
+  isEssentialElement(element) {
+    try {
+      // Don't hide main containers, panes, or essential UI
+      const essentialSelectors = [
+        '#pane',
+        '[role="main"]',
+        '.section-layout-root',
+        '.section-result-content',
+        '.lfa-chain-placeholder',
+        '[data-lfa-alternatives]'
+      ];
+      
+      for (const selector of essentialSelectors) {
+        if (element.matches && element.matches(selector)) {
+          return true;
+        }
+        if (element.closest && element.closest(selector)) {
+          return true;
+        }
+      }
+      
+      // Don't hide elements that contain our alternatives
+      if (element.querySelector && element.querySelector('.lfa-alternatives, [data-lfa-alternatives]')) {
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Hide map pins by business name
+   */
+  hideMapPinsByBusinessName(businessName) {
+    if (!businessName) return 0;
+    
+    let hiddenCount = 0;
+    const normalizedName = businessName.toLowerCase().trim();
+    
+    // Find map pins/buttons that contain the business name
+    const pinSelectors = [
+      `[aria-label*="${businessName}"]`,
+      `[title*="${businessName}"]`,
+      '[role="button"][data-value="Directions"]',
+      'button[data-value="Directions"]',
+      '.section-result-action-container button'
+    ];
+    
+    pinSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(element => {
+        const text = (element.textContent || element.getAttribute('aria-label') || element.getAttribute('title') || '').toLowerCase();
+        if (text.includes(normalizedName) || normalizedName.includes(text.split(' ')[0])) {
+          if (this.isLikelyMapPin(element)) {
+            this.concealElement(element, `Business name match for ${businessName}`);
+            hiddenCount++;
+          }
+        }
+      });
+    });
+    
+    return hiddenCount;
+  }
+  
+  /**
+   * Hide map pins by address
+   */
+  hideMapPinsByAddress(address) {
+    if (!address) return 0;
+    
+    let hiddenCount = 0;
+    const normalizedAddress = address.toLowerCase().trim();
+    
+    // Find elements containing the address
+    const elements = document.querySelectorAll('[role="button"], button, [data-value]');
+    elements.forEach(element => {
+      const text = (element.textContent || element.getAttribute('aria-label') || '').toLowerCase();
+      if ((text.includes(normalizedAddress) || normalizedAddress.includes(text)) && this.isLikelyMapPin(element)) {
+        this.concealElement(element, `Address match for ${address}`);
+        hiddenCount++;
+      }
+    });
+    
+    return hiddenCount;
+  }
+
+  /**
+   * Set up delayed pin hiding with multiple methods
+   */
+  setupDelayedPinHiding(businessData, chainInfo) {
+    const businessName = businessData.name || chainInfo.name;
+    
+    // Reduced delays to minimize interference with Google Maps
+    const delays = [2000, 5000]; // Only 2 delayed attempts
+    
+    delays.forEach((delay, index) => {
+      setTimeout(() => {
+        console.log(`UIInjector: Delayed pin hiding attempt ${index + 1} for ${businessName}`);
+        
+        let hiddenCount = 0;
+        
+        // Try focused strategies - avoid the scanning method that causes issues
+        if (businessData.googleMapsData) {
+          hiddenCount += this.hideMapPinsByGoogleData(businessData.googleMapsData, businessName);
+        }
+        
+        hiddenCount += this.hideMapPinsByBusinessName(businessName);
+        
+        if (businessData.address) {
+          hiddenCount += this.hideMapPinsByAddress(businessData.address);
+        }
+        
+        // Skip the aggressive scanning method that was causing issues
+        // hiddenCount += this.scanAndHideNewPins(businessData, chainInfo);
+        
+        if (hiddenCount > 0) {
+          console.log(`UIInjector: Delayed attempt ${index + 1} found ${hiddenCount} additional pins for ${businessName}`);
+        }
+      }, delay);
+    });
+  }
+
+  /**
+   * Scan for and hide new pins that match our business data (SAFER VERSION)
+   */
+  scanAndHideNewPins(businessData, chainInfo) {
+    let hiddenCount = 0;
+    const businessName = businessData.name || chainInfo.name;
+    
+    try {
+      // More targeted approach - only look at likely pin elements instead of all elements
+      const pinCandidates = document.querySelectorAll(`
+        [role="button"]:not([data-lfa-hidden]),
+        button:not([data-lfa-hidden]),
+        [data-value]:not([data-lfa-hidden]),
+        [aria-label*="directions"]:not([data-lfa-hidden])
+      `);
+      
+      // Limit to first 20 elements to avoid performance issues
+      const limitedCandidates = Array.from(pinCandidates).slice(0, 20);
+      
+      limitedCandidates.forEach(element => {
+        if (!this.isLikelyMapPin(element)) return;
+        
+        const elementText = (
+          (element.textContent || '') + ' ' + 
+          (element.getAttribute('aria-label') || '') + ' ' +
+          (element.getAttribute('title') || '')
+        ).toLowerCase();
+        
+        // Only check for name matches to be safer
+        const nameMatch = businessName && elementText.includes(businessName.toLowerCase());
+        
+        if (nameMatch) {
+          this.concealElement(element, `Late scan match for ${businessName}`);
+          hiddenCount++;
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error in new pin scanning:', error);
+    }
+    
+    return hiddenCount;
+  }
+  
+  /**
+   * Set up continuous monitoring for new map pins
+   */
+  setupTargetedPinMonitoring(businessData, chainInfo) {
+    const businessName = businessData.name || chainInfo.name;
+    const normalizedName = businessName.toLowerCase().trim();
+    
+    // Create a mutation observer to hide pins as they appear
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check if this new element is a map pin for our business
+            const text = (node.textContent || node.getAttribute('aria-label') || '').toLowerCase();
+            if (text.includes(normalizedName)) {
+              node.style.display = 'none';
+              console.log(`UIInjector: Hidden dynamically added pin for ${businessName}:`, node);
+            }
+            
+            // Also check child elements
+            const childPins = node.querySelectorAll('[role="button"], button, [data-value]');
+            childPins.forEach(pin => {
+              const pinText = (pin.textContent || pin.getAttribute('aria-label') || '').toLowerCase();
+              if (pinText.includes(normalizedName)) {
+                pin.style.display = 'none';
+                console.log(`UIInjector: Hidden child pin for ${businessName}:`, pin);
+              }
+            });
+          }
+        });
+      });
+    });
+    
+    // Observe the map area
+    const mapContainer = document.querySelector('#map') || document.body;
+    observer.observe(mapContainer, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Store observer for cleanup
+    if (!this.targetedPinObservers) {
+      this.targetedPinObservers = [];
+    }
+    this.targetedPinObservers.push(observer);
+    
+    console.log(`UIInjector: Set up targeted pin monitoring for ${businessName}`);
+  }
+
+  /**
    * Create a placeholder element for hidden chain businesses
    */
   createChainReplacementPlaceholder(element, chainInfo) {
@@ -371,12 +887,25 @@ export class UIInjector {
         background: #f8f9fa !important;
         border: 1px solid #e8eaed !important;
         border-radius: 8px !important;
-        padding: 12px !important;
-        margin: 4px 0 !important;
+        padding: 16px !important;
+        margin: 8px 0 !important;
         display: block !important;
         position: relative !important;
         z-index: 1000 !important;
         color: #333 !important;
+        font-family: Google Sans, Roboto, Arial, sans-serif !important;
+        font-size: 14px !important;
+        line-height: 20px !important;
+        min-height: 60px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+      `;
+      
+      // Add default content to prevent black appearance
+      placeholder.innerHTML = `
+        <div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">
+          <div style="font-weight: 500; margin-bottom: 8px;">🏪 Chain store hidden</div>
+          <div style="font-size: 12px;">Looking for local alternatives...</div>
+        </div>
       `;
       
       // Insert the placeholder after the hidden element
@@ -409,7 +938,8 @@ export class UIInjector {
       // Check if this chain is hidden and has a placeholder
       const injectedData = this.injectedElements.get(element);
       if (injectedData && injectedData.placeholder) {
-        // Use the placeholder for hidden chains
+        // Replace the placeholder content with alternatives
+        injectedData.placeholder.innerHTML = ''; // Clear placeholder content
         injectedData.placeholder.appendChild(alternativesElement);
         injectedData.placeholder.style.display = 'block'; // Show the placeholder
         injectedData.alternatives = alternativesElement;
@@ -641,15 +1171,35 @@ export class UIInjector {
     try {
       let url;
       
-      if (business.latitude && business.longitude) {
-        // Use coordinates if available
+      // Priority 1: Use Google Place ID if available (most reliable)
+      if (business.placeId) {
+        // Try the correct Google Places URL format
+        url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
+        console.log('Opening business using Place ID:', business.name, 'Place ID:', business.placeId);
+      }
+      // Priority 2: Use name + address search for precise results
+      else if (business.name && business.address) {
+        const query = encodeURIComponent(`${business.name} ${business.address}`);
+        url = `https://maps.google.com/maps/search/${query}`;
+        console.log('Opening business using name + address search:', business.name);
+      } 
+      // Priority 3: Search by name only
+      else if (business.name) {
+        const query = encodeURIComponent(business.name);
+        url = `https://maps.google.com/maps/search/${query}`;
+        console.log('Opening business using name search:', business.name);
+      } 
+      // Priority 4: Use coordinates as last resort
+      else if (business.latitude && business.longitude) {
         url = `https://maps.google.com/maps?q=${business.latitude},${business.longitude}`;
-      } else {
-        // Use name and address
-        const query = encodeURIComponent(`${business.name} ${business.address || ''}`);
-        url = `https://maps.google.com/maps?q=${query}`;
+        console.log('Opening business using coordinates:', business.name);
+      } 
+      else {
+        console.warn('Business has insufficient data for Maps search:', business);
+        return;
       }
       
+      console.log('Final Maps URL:', url);
       window.open(url, '_blank');
     } catch (error) {
       console.error('Failed to open business in maps:', error);
@@ -692,6 +1242,36 @@ export class UIInjector {
       
       // Hide existing pins immediately
       hiddenCount = this.hideChainPinsInElement(document, cleanName);
+      
+      // Add delayed pin hiding to catch rendered map pins
+      setTimeout(() => {
+        console.log(`UIInjector: Starting delayed pin hiding scan for "${businessName}"`);
+        const delayedHiddenCount = this.hideMapPinsWithDelay(cleanName);
+        console.log(`UIInjector: Delayed pin hiding found ${delayedHiddenCount} additional elements for ${businessName}`);
+      }, 2000);
+      
+      // Add periodic pin hiding to catch dynamically loaded pins
+      const intervalId = setInterval(() => {
+        const periodicHiddenCount = this.hideMapPinsWithDelay(cleanName);
+        if (periodicHiddenCount > 0) {
+          console.log(`UIInjector: Periodic pin hiding found ${periodicHiddenCount} additional elements for ${businessName}`);
+        }
+      }, 3000);
+      
+      // Store interval for cleanup
+      if (!this.mapPinIntervals) {
+        this.mapPinIntervals = [];
+      }
+      this.mapPinIntervals.push(intervalId);
+      
+      // Stop periodic checking after 30 seconds
+      setTimeout(() => {
+        clearInterval(intervalId);
+        const index = this.mapPinIntervals.indexOf(intervalId);
+        if (index > -1) {
+          this.mapPinIntervals.splice(index, 1);
+        }
+      }, 30000);
       
       console.log(`UIInjector: Set up pin hiding for ${businessName}, hid ${hiddenCount} existing elements`);
       
@@ -848,6 +1428,106 @@ export class UIInjector {
   }
 
   /**
+   * Hide map pins with delay - targets actual Google Maps pin elements
+   */
+  hideMapPinsWithDelay(cleanName) {
+    let hiddenCount = 0;
+    
+    try {
+      // Look for Google Maps pin and overlay elements
+      const mapContainer = document.querySelector('#map');
+      if (!mapContainer) {
+        console.log(`UIInjector: No #map container found for ${cleanName}`);
+        return 0;
+      }
+      
+      console.log(`UIInjector: Map container found, scanning for pins containing "${cleanName}"`);
+      
+      // Target actual Google Maps pin elements and overlays
+      const pinSelectors = [
+        // Map markers/pins (typical Google Maps classes)
+        '[role="button"]', // Most map pins are buttons
+        '[role="img"]',    // Some pins are images
+        '.gm-style-iw',    // Info windows
+        '.gm-style-cc',    // Map controls
+        '[data-value]',    // Elements with data values
+        '[jsaction]'       // Interactive elements
+      ];
+      
+      pinSelectors.forEach(selector => {
+        const elements = mapContainer.querySelectorAll(selector);
+        console.log(`UIInjector: Found ${elements.length} elements for selector "${selector}"`);
+        
+        elements.forEach((element, index) => {
+          const text = this.getElementText(element);
+          
+          // Log a sample of elements for debugging
+          if (index < 5 && text.length > 0) {
+            console.log(`UIInjector: Sample element ${index} (${selector}): "${text.substring(0, 100)}"`);
+          }
+          
+          // More flexible matching - check for partial names too
+          const isMatch = text.includes(cleanName) || 
+                         text.includes(cleanName.split(' ')[0]) || // First word match
+                         (cleanName.includes('whole foods') && text.includes('whole')) ||
+                         (cleanName.includes('safeway') && text.includes('safeway')) ||
+                         (cleanName.includes('fry') && text.includes('fry'));
+          
+          if (isMatch && !element.hasAttribute('data-lfa-hidden')) {
+            console.log(`UIInjector: MATCH FOUND for ${cleanName}:`, text.substring(0, 100));
+            const rect = element.getBoundingClientRect();
+            
+            // Skip elements that are too large (probably containers)
+            if (rect.width > 300 || rect.height > 300) {
+              return;
+            }
+            
+            // Skip if element has no visible content
+            if (rect.width === 0 && rect.height === 0) {
+              return;
+            }
+            
+            console.log(`UIInjector: Hiding map pin for ${cleanName}:`, {
+              element: element.tagName,
+              class: element.className,
+              role: element.getAttribute('role'),
+              size: `${rect.width}x${rect.height}`,
+              text: text.substring(0, 100),
+              hasJsAction: !!element.getAttribute('jsaction')
+            });
+            
+            // Hide the element with multiple approaches
+            element.style.setProperty('display', 'none', 'important');
+            element.style.setProperty('visibility', 'hidden', 'important');
+            element.style.setProperty('opacity', '0', 'important');
+            element.style.setProperty('pointer-events', 'none', 'important');
+            element.style.setProperty('transform', 'scale(0)', 'important');
+            element.setAttribute('data-lfa-hidden', 'true');
+            element.setAttribute('data-lfa-chain', cleanName);
+            hiddenCount++;
+            
+            // Also try to hide parent if it looks like a pin container
+            const parent = element.parentElement;
+            if (parent && parent.children.length === 1 && !parent.hasAttribute('data-lfa-hidden')) {
+              const parentRect = parent.getBoundingClientRect();
+              if (parentRect.width < 100 && parentRect.height < 100) {
+                parent.style.setProperty('display', 'none', 'important');
+                parent.setAttribute('data-lfa-hidden-parent', 'true');
+                console.log(`UIInjector: Also hiding parent pin container for ${cleanName}`);
+              }
+            }
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.warn('UIInjector: Error in delayed pin hiding:', error);
+    }
+    
+    return hiddenCount;
+  }
+
+  /**
    * Show map pins for local alternative businesses
    */
   showAlternativeMapPins(alternatives) {
@@ -971,6 +1651,27 @@ export class UIInjector {
     // Remove filter status
     this.hideFilterStatus();
     
+    // Clear observers and intervals
+    if (this.mapPinObservers) {
+      this.mapPinObservers.forEach(observer => observer.disconnect());
+      this.mapPinObservers = [];
+    }
+    
+    if (this.targetedPinObservers) {
+      this.targetedPinObservers.forEach(observer => observer.disconnect());
+      this.targetedPinObservers = [];
+    }
+    
+    if (this.mapPinIntervals) {
+      this.mapPinIntervals.forEach(intervalId => clearInterval(intervalId));
+      this.mapPinIntervals = [];
+    }
+    
+    // Clear hidden business data
+    if (this.hiddenBusinessData) {
+      this.hiddenBusinessData.clear();
+    }
+    
     // Remove all class-based modifications
     document.querySelectorAll('.lfa-chain-business, .lfa-chain-hidden').forEach(element => {
       element.classList.remove('lfa-chain-business', 'lfa-chain-hidden');
@@ -981,10 +1682,20 @@ export class UIInjector {
       element.remove();
     });
     
-    // Restore hidden map pins
+    // Restore hidden map pins and parent containers
     document.querySelectorAll('[data-lfa-hidden="true"]').forEach(element => {
       element.style.display = '';
+      element.style.visibility = '';
+      element.style.opacity = '';
+      element.style.pointerEvents = '';
+      element.style.transform = '';
       element.removeAttribute('data-lfa-hidden');
+      element.removeAttribute('data-lfa-chain');
+    });
+    
+    document.querySelectorAll('[data-lfa-hidden-parent="true"]').forEach(element => {
+      element.style.display = '';
+      element.removeAttribute('data-lfa-hidden-parent');
     });
     
     // Clear tracking

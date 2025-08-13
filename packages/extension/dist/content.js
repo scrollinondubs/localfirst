@@ -193,7 +193,7 @@
     /**
      * Find local alternatives in the same category
      */
-    findLocalAlternatives(chainBusiness, location, maxResults = 3) {
+    findLocalAlternatives(chainBusiness, location, maxResults = 8) {
       console.log("BusinessMatcher: findLocalAlternatives called with:", chainBusiness, location, "localBusinesses:", this.localBusinesses.length);
       if (!chainBusiness || !location || this.localBusinesses.length === 0) {
         console.log("BusinessMatcher: Early return - missing data");
@@ -349,7 +349,14 @@
      * Get latitude delta from zoom level (approximate)
      */
     getLatDeltaFromZoom(zoom) {
-      return 180 / Math.pow(2, zoom + 1);
+      const baseDelta = 180 / Math.pow(2, zoom + 1);
+      if (zoom >= 12) {
+        return baseDelta * 3;
+      } else if (zoom >= 10) {
+        return baseDelta * 2;
+      } else {
+        return baseDelta * 1.5;
+      }
     }
     /**
      * Get longitude delta from zoom level and latitude
@@ -357,7 +364,14 @@
     getLngDeltaFromZoom(zoom, lat) {
       const latRadians = lat * Math.PI / 180;
       const cosLat = Math.cos(latRadians);
-      return 360 / Math.pow(2, zoom + 1) * cosLat;
+      const baseDelta = 360 / Math.pow(2, zoom + 1) * cosLat;
+      if (zoom >= 12) {
+        return baseDelta * 3;
+      } else if (zoom >= 10) {
+        return baseDelta * 2;
+      } else {
+        return baseDelta * 1.5;
+      }
     }
     /**
      * Check if a point is within map bounds
@@ -559,10 +573,27 @@
         console.log("BusinessDetector: No containers found, trying fallback approach");
         this.addFallbackContainers(containers);
       }
-      const filteredContainers = Array.from(containers).filter((container) => {
-        return this.isLikelyBusinessContainer(container);
+      const allContainers = Array.from(containers);
+      const filteredContainers = allContainers.filter((container) => {
+        var _a;
+        const isLikely = this.isLikelyBusinessContainer(container);
+        if (!isLikely) {
+          console.log("BusinessDetector: Filtered out container:", {
+            element: container,
+            textContent: (_a = container.textContent) == null ? void 0 : _a.slice(0, 100),
+            hasDirections: !!container.querySelector('[data-value="Directions"]'),
+            hasHeading: !!container.querySelector('[role="heading"]'),
+            classList: Array.from(container.classList),
+            attributes: container.attributes ? Array.from(container.attributes).map((attr) => ({ name: attr.name, value: attr.value })) : []
+          });
+        }
+        return isLikely;
       });
       console.log(`BusinessDetector: After filtering, ${filteredContainers.length} containers remain`);
+      if (filteredContainers.length === 0 && allContainers.length > 0) {
+        console.log("BusinessDetector: No containers passed filter, using first 3 unfiltered for debugging");
+        return allContainers.slice(0, 3);
+      }
       return filteredContainers;
     }
     /**
@@ -630,6 +661,11 @@
         if (location) {
           businessInfo.location = location;
         }
+        businessInfo.googleMapsData = this.extractGoogleMapsData(container);
+        console.log("BusinessDetector: Enhanced business data extracted:", {
+          name: businessInfo.name,
+          googleMapsData: businessInfo.googleMapsData
+        });
         return businessInfo;
       } catch (error) {
         console.error("BusinessDetector: Error extracting business info:", error);
@@ -778,6 +814,89 @@
       return textNodes;
     }
     /**
+     * Extract Google Maps specific data for pin correlation
+     */
+    extractGoogleMapsData(container) {
+      const googleData = {
+        attributes: {},
+        classes: [],
+        jsActions: [],
+        dataValues: [],
+        coordinates: null,
+        placeId: null,
+        businessId: null
+      };
+      try {
+        if (container.attributes) {
+          for (const attr of container.attributes) {
+            if (attr.name.startsWith("data-")) {
+              googleData.attributes[attr.name] = attr.value;
+            }
+          }
+        }
+        googleData.classes = Array.from(container.classList);
+        const jsActionElements = container.querySelectorAll("[jsaction], [data-jsaction]");
+        jsActionElements.forEach((el) => {
+          const jsAction = el.getAttribute("jsaction") || el.getAttribute("data-jsaction");
+          if (jsAction) {
+            googleData.jsActions.push(jsAction);
+          }
+        });
+        const dataValueElements = container.querySelectorAll("[data-value]");
+        dataValueElements.forEach((el) => {
+          const dataValue = el.getAttribute("data-value");
+          if (dataValue) {
+            googleData.dataValues.push(dataValue);
+          }
+        });
+        const coordinatePatterns = [
+          /(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/,
+          // "33.1234, -112.5678"
+          /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/
+          // "@33.1234,-112.5678"
+        ];
+        const containerText = container.textContent;
+        for (const pattern of coordinatePatterns) {
+          const match = containerText.match(pattern);
+          if (match) {
+            googleData.coordinates = {
+              lat: parseFloat(match[1]),
+              lng: parseFloat(match[2])
+            };
+            break;
+          }
+        }
+        const placeIdMatch = containerText.match(/ChI[a-zA-Z0-9_-]+/);
+        if (placeIdMatch) {
+          googleData.placeId = placeIdMatch[0];
+        }
+        const links = container.querySelectorAll("a[href]");
+        links.forEach((link) => {
+          const href = link.getAttribute("href");
+          const placeIdMatch2 = href.match(/place\/([^\/]+)/);
+          if (placeIdMatch2) {
+            googleData.placeId = placeIdMatch2[1];
+          }
+          const idMatches = href.match(/@([^,]+),([^,]+),.*!(\w+)/);
+          if (idMatches) {
+            googleData.businessId = idMatches[3];
+          }
+        });
+        const mapElements = container.querySelectorAll('[role="button"], [aria-label*="directions"], [aria-label*="call"]');
+        mapElements.forEach((el) => {
+          if (el.getAttribute("aria-label")) {
+            if (!googleData.ariaLabels) {
+              googleData.ariaLabels = [];
+            }
+            googleData.ariaLabels.push(el.getAttribute("aria-label"));
+          }
+        });
+      } catch (error) {
+        console.error("Error extracting Google Maps data:", error);
+      }
+      return googleData;
+    }
+    /**
      * Generate a unique ID for an element
      */
     generateElementId(element) {
@@ -816,6 +935,7 @@
     constructor() {
       this.injectedElements = /* @__PURE__ */ new WeakMap();
       this.styleSheet = null;
+      this.hiddenBusinessData = /* @__PURE__ */ new Map();
       this.initializeStyles();
     }
     /**
@@ -1129,10 +1249,19 @@
       }
       try {
         const settings = CONFIG.FILTER_LEVELS[filterLevel] || CONFIG.FILTER_LEVELS.moderate;
+        const businessData = this.extractBusinessData(element);
+        const businessKey = this.generateBusinessKey(businessData, chainInfo);
         if (settings.hideChains) {
           element.classList.add("lfa-chain-hidden");
           this.injectedElements.set(element, { type: "chain-hidden", chainInfo });
-          this.hideRelatedMapPins(chainInfo.name);
+          this.hiddenBusinessData.set(businessKey, {
+            element,
+            chainInfo,
+            businessData,
+            timestamp: Date.now()
+          });
+          console.log(`UIInjector: Stored hidden business data for ${chainInfo.name}:`, businessData);
+          this.hideTargetedMapPins(businessData, chainInfo);
           this.createChainReplacementPlaceholder(element, chainInfo);
         } else if (settings.dimChains) {
           element.classList.add("lfa-chain-business");
@@ -1142,6 +1271,374 @@
       } catch (error) {
         console.error("UIInjector: Failed to apply chain filtering:", error);
       }
+    }
+    /**
+     * Extract business data from a DOM element
+     */
+    extractBusinessData(element) {
+      const data = {
+        name: null,
+        address: null,
+        element
+      };
+      try {
+        const nameSelectors = [
+          '[role="heading"]',
+          "h1",
+          "h2",
+          "h3",
+          ".section-result-title",
+          ".qBF1Pd",
+          ".NrDZNb",
+          'span[data-value][data-dtype="d3bn"]'
+        ];
+        for (const selector of nameSelectors) {
+          const nameElement = element.querySelector(selector);
+          if (nameElement && nameElement.textContent.trim()) {
+            data.name = nameElement.textContent.trim();
+            break;
+          }
+        }
+        const addressSelectors = [
+          '[data-value="Address"]',
+          ".section-result-location",
+          ".rogA2c"
+        ];
+        for (const selector of addressSelectors) {
+          const addressElement = element.querySelector(selector);
+          if (addressElement && addressElement.textContent.trim()) {
+            data.address = addressElement.textContent.trim();
+            break;
+          }
+        }
+        if (!data.name) {
+          const textContent = element.textContent.trim();
+          if (textContent && textContent.length > 0 && textContent.length < 200) {
+            const lines = textContent.split("\n").filter((line) => line.trim().length > 0);
+            if (lines.length > 0) {
+              data.name = lines[0].trim();
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error extracting business data:", error);
+      }
+      return data;
+    }
+    /**
+     * Generate a unique key for business data
+     */
+    generateBusinessKey(businessData, chainInfo) {
+      const name = businessData.name || chainInfo.name;
+      const address = businessData.address || "";
+      return `${name.toLowerCase()}-${address.toLowerCase()}`.replace(/\s+/g, "-");
+    }
+    /**
+     * Hide map pins using targeted business data
+     */
+    hideTargetedMapPins(businessData, chainInfo) {
+      var _a;
+      try {
+        console.log(`UIInjector: Starting enhanced pin hiding for business:`, businessData);
+        let hiddenCount = 0;
+        if (businessData.googleMapsData) {
+          hiddenCount += this.hideMapPinsByGoogleData(businessData.googleMapsData, chainInfo.name);
+        }
+        hiddenCount += this.hideMapPinsByBusinessName(businessData.name || chainInfo.name);
+        if (businessData.address) {
+          hiddenCount += this.hideMapPinsByAddress(businessData.address);
+        }
+        if ((_a = businessData.googleMapsData) == null ? void 0 : _a.coordinates) {
+          hiddenCount += this.hideMapPinsByCoordinates(businessData.googleMapsData.coordinates);
+        }
+        console.log(`UIInjector: Initial pin hiding found ${hiddenCount} elements for ${chainInfo.name}`);
+        this.setupTargetedPinMonitoring(businessData, chainInfo);
+        this.setupDelayedPinHiding(businessData, chainInfo);
+      } catch (error) {
+        console.error("Error in targeted map pin hiding:", error);
+        this.hideRelatedMapPins(chainInfo.name);
+      }
+    }
+    /**
+     * Hide map pins using Google Maps specific data
+     */
+    hideMapPinsByGoogleData(googleData, businessName) {
+      let hiddenCount = 0;
+      try {
+        if (googleData.placeId) {
+          const placeElements = document.querySelectorAll(`[data-cid*="${googleData.placeId}"], [href*="${googleData.placeId}"]`);
+          placeElements.forEach((element) => {
+            this.concealElement(element, `Google Place ID match for ${businessName}`);
+            hiddenCount++;
+          });
+        }
+        googleData.dataValues.forEach((dataValue) => {
+          const elements = document.querySelectorAll(`[data-value="${dataValue}"]`);
+          elements.forEach((element) => {
+            if (this.isLikelyMapPin(element)) {
+              this.concealElement(element, `Data value match for ${businessName}`);
+              hiddenCount++;
+            }
+          });
+        });
+        googleData.jsActions.forEach((jsAction) => {
+          const elements = document.querySelectorAll(`[jsaction*="${jsAction}"]`);
+          elements.forEach((element) => {
+            if (this.isLikelyMapPin(element)) {
+              this.concealElement(element, `JS action match for ${businessName}`);
+              hiddenCount++;
+            }
+          });
+        });
+        if (googleData.ariaLabels) {
+          googleData.ariaLabels.forEach((ariaLabel) => {
+            const elements = document.querySelectorAll(`[aria-label*="${ariaLabel}"]`);
+            elements.forEach((element) => {
+              if (this.isLikelyMapPin(element)) {
+                this.concealElement(element, `Aria label match for ${businessName}`);
+                hiddenCount++;
+              }
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Error in Google data pin hiding:", error);
+      }
+      return hiddenCount;
+    }
+    /**
+     * Hide map pins by coordinates
+     */
+    hideMapPinsByCoordinates(coordinates) {
+      let hiddenCount = 0;
+      try {
+        const coordString1 = `${coordinates.lat},${coordinates.lng}`;
+        const coordString2 = `${coordinates.lat}, ${coordinates.lng}`;
+        const elements = document.querySelectorAll("*");
+        elements.forEach((element) => {
+          const text = element.textContent || element.getAttribute("href") || "";
+          if ((text.includes(coordString1) || text.includes(coordString2)) && this.isLikelyMapPin(element)) {
+            this.concealElement(element, `Coordinate match`);
+            hiddenCount++;
+          }
+        });
+      } catch (error) {
+        console.error("Error in coordinate pin hiding:", error);
+      }
+      return hiddenCount;
+    }
+    /**
+     * Check if element is likely a map pin (not a sidebar element)
+     */
+    isLikelyMapPin(element) {
+      try {
+        if (!element || !element.getBoundingClientRect) {
+          return false;
+        }
+        const rect = element.getBoundingClientRect();
+        const isOnMap = rect.left > 400;
+        let hasMapClasses = false;
+        if (element.className && typeof element.className === "string") {
+          hasMapClasses = element.className.includes("pin") || element.className.includes("marker") || element.className.includes("place");
+        } else if (element.classList && element.classList.length > 0) {
+          const classString = Array.from(element.classList).join(" ");
+          hasMapClasses = classString.includes("pin") || classString.includes("marker") || classString.includes("place");
+        }
+        const hasMapRole = element.hasAttribute && element.hasAttribute("role") && ["button", "link"].includes(element.getAttribute("role"));
+        let isInSidebar = false;
+        try {
+          isInSidebar = element.closest && element.closest('[role="main"]') && rect.left < 400;
+        } catch (error) {
+          isInSidebar = false;
+        }
+        return (isOnMap || hasMapClasses || hasMapRole) && !isInSidebar;
+      } catch (error) {
+        console.warn("UIInjector: Error in isLikelyMapPin:", error);
+        return false;
+      }
+    }
+    /**
+     * Conceal element using multiple CSS methods
+     */
+    concealElement(element, reason) {
+      try {
+        if (this.isEssentialElement(element)) {
+          console.log(`UIInjector: Skipped concealing essential element - ${reason}:`, element);
+          return;
+        }
+        element.style.display = "none";
+        element.style.visibility = "hidden";
+        element.style.opacity = "0";
+        element.style.pointerEvents = "none";
+        element.setAttribute("data-lfa-hidden", "true");
+        element.setAttribute("data-lfa-reason", reason);
+        console.log(`UIInjector: Concealed element - ${reason}:`, element);
+      } catch (error) {
+        console.warn("UIInjector: Error concealing element:", error);
+      }
+    }
+    /**
+     * Check if element is essential to Google Maps UI
+     */
+    isEssentialElement(element) {
+      try {
+        const essentialSelectors = [
+          "#pane",
+          '[role="main"]',
+          ".section-layout-root",
+          ".section-result-content",
+          ".lfa-chain-placeholder",
+          "[data-lfa-alternatives]"
+        ];
+        for (const selector of essentialSelectors) {
+          if (element.matches && element.matches(selector)) {
+            return true;
+          }
+          if (element.closest && element.closest(selector)) {
+            return true;
+          }
+        }
+        if (element.querySelector && element.querySelector(".lfa-alternatives, [data-lfa-alternatives]")) {
+          return true;
+        }
+        return false;
+      } catch (error) {
+        return false;
+      }
+    }
+    /**
+     * Hide map pins by business name
+     */
+    hideMapPinsByBusinessName(businessName) {
+      if (!businessName) return 0;
+      let hiddenCount = 0;
+      const normalizedName = businessName.toLowerCase().trim();
+      const pinSelectors = [
+        `[aria-label*="${businessName}"]`,
+        `[title*="${businessName}"]`,
+        '[role="button"][data-value="Directions"]',
+        'button[data-value="Directions"]',
+        ".section-result-action-container button"
+      ];
+      pinSelectors.forEach((selector) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((element) => {
+          const text = (element.textContent || element.getAttribute("aria-label") || element.getAttribute("title") || "").toLowerCase();
+          if (text.includes(normalizedName) || normalizedName.includes(text.split(" ")[0])) {
+            if (this.isLikelyMapPin(element)) {
+              this.concealElement(element, `Business name match for ${businessName}`);
+              hiddenCount++;
+            }
+          }
+        });
+      });
+      return hiddenCount;
+    }
+    /**
+     * Hide map pins by address
+     */
+    hideMapPinsByAddress(address) {
+      if (!address) return 0;
+      let hiddenCount = 0;
+      const normalizedAddress = address.toLowerCase().trim();
+      const elements = document.querySelectorAll('[role="button"], button, [data-value]');
+      elements.forEach((element) => {
+        const text = (element.textContent || element.getAttribute("aria-label") || "").toLowerCase();
+        if ((text.includes(normalizedAddress) || normalizedAddress.includes(text)) && this.isLikelyMapPin(element)) {
+          this.concealElement(element, `Address match for ${address}`);
+          hiddenCount++;
+        }
+      });
+      return hiddenCount;
+    }
+    /**
+     * Set up delayed pin hiding with multiple methods
+     */
+    setupDelayedPinHiding(businessData, chainInfo) {
+      const businessName = businessData.name || chainInfo.name;
+      const delays = [2e3, 5e3];
+      delays.forEach((delay, index) => {
+        setTimeout(() => {
+          console.log(`UIInjector: Delayed pin hiding attempt ${index + 1} for ${businessName}`);
+          let hiddenCount = 0;
+          if (businessData.googleMapsData) {
+            hiddenCount += this.hideMapPinsByGoogleData(businessData.googleMapsData, businessName);
+          }
+          hiddenCount += this.hideMapPinsByBusinessName(businessName);
+          if (businessData.address) {
+            hiddenCount += this.hideMapPinsByAddress(businessData.address);
+          }
+          if (hiddenCount > 0) {
+            console.log(`UIInjector: Delayed attempt ${index + 1} found ${hiddenCount} additional pins for ${businessName}`);
+          }
+        }, delay);
+      });
+    }
+    /**
+     * Scan for and hide new pins that match our business data (SAFER VERSION)
+     */
+    scanAndHideNewPins(businessData, chainInfo) {
+      let hiddenCount = 0;
+      const businessName = businessData.name || chainInfo.name;
+      try {
+        const pinCandidates = document.querySelectorAll(`
+        [role="button"]:not([data-lfa-hidden]),
+        button:not([data-lfa-hidden]),
+        [data-value]:not([data-lfa-hidden]),
+        [aria-label*="directions"]:not([data-lfa-hidden])
+      `);
+        const limitedCandidates = Array.from(pinCandidates).slice(0, 20);
+        limitedCandidates.forEach((element) => {
+          if (!this.isLikelyMapPin(element)) return;
+          const elementText = ((element.textContent || "") + " " + (element.getAttribute("aria-label") || "") + " " + (element.getAttribute("title") || "")).toLowerCase();
+          const nameMatch = businessName && elementText.includes(businessName.toLowerCase());
+          if (nameMatch) {
+            this.concealElement(element, `Late scan match for ${businessName}`);
+            hiddenCount++;
+          }
+        });
+      } catch (error) {
+        console.error("Error in new pin scanning:", error);
+      }
+      return hiddenCount;
+    }
+    /**
+     * Set up continuous monitoring for new map pins
+     */
+    setupTargetedPinMonitoring(businessData, chainInfo) {
+      const businessName = businessData.name || chainInfo.name;
+      const normalizedName = businessName.toLowerCase().trim();
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const text = (node.textContent || node.getAttribute("aria-label") || "").toLowerCase();
+              if (text.includes(normalizedName)) {
+                node.style.display = "none";
+                console.log(`UIInjector: Hidden dynamically added pin for ${businessName}:`, node);
+              }
+              const childPins = node.querySelectorAll('[role="button"], button, [data-value]');
+              childPins.forEach((pin) => {
+                const pinText = (pin.textContent || pin.getAttribute("aria-label") || "").toLowerCase();
+                if (pinText.includes(normalizedName)) {
+                  pin.style.display = "none";
+                  console.log(`UIInjector: Hidden child pin for ${businessName}:`, pin);
+                }
+              });
+            }
+          });
+        });
+      });
+      const mapContainer = document.querySelector("#map") || document.body;
+      observer.observe(mapContainer, {
+        childList: true,
+        subtree: true
+      });
+      if (!this.targetedPinObservers) {
+        this.targetedPinObservers = [];
+      }
+      this.targetedPinObservers.push(observer);
+      console.log(`UIInjector: Set up targeted pin monitoring for ${businessName}`);
     }
     /**
      * Create a placeholder element for hidden chain businesses
@@ -1154,12 +1651,23 @@
         background: #f8f9fa !important;
         border: 1px solid #e8eaed !important;
         border-radius: 8px !important;
-        padding: 12px !important;
-        margin: 4px 0 !important;
+        padding: 16px !important;
+        margin: 8px 0 !important;
         display: block !important;
         position: relative !important;
         z-index: 1000 !important;
         color: #333 !important;
+        font-family: Google Sans, Roboto, Arial, sans-serif !important;
+        font-size: 14px !important;
+        line-height: 20px !important;
+        min-height: 60px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+      `;
+        placeholder.innerHTML = `
+        <div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">
+          <div style="font-weight: 500; margin-bottom: 8px;">🏪 Chain store hidden</div>
+          <div style="font-size: 12px;">Looking for local alternatives...</div>
+        </div>
       `;
         element.parentNode.insertBefore(placeholder, element.nextSibling);
         if (this.injectedElements.has(element)) {
@@ -1183,6 +1691,7 @@
         const alternativesElement = this.createAlternativesElement(alternatives, chainInfo);
         const injectedData = this.injectedElements.get(element);
         if (injectedData && injectedData.placeholder) {
+          injectedData.placeholder.innerHTML = "";
           injectedData.placeholder.appendChild(alternativesElement);
           injectedData.placeholder.style.display = "block";
           injectedData.alternatives = alternativesElement;
@@ -1365,12 +1874,25 @@
     openBusinessInMaps(business) {
       try {
         let url;
-        if (business.latitude && business.longitude) {
+        if (business.placeId) {
+          url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
+          console.log("Opening business using Place ID:", business.name, "Place ID:", business.placeId);
+        } else if (business.name && business.address) {
+          const query = encodeURIComponent(`${business.name} ${business.address}`);
+          url = `https://maps.google.com/maps/search/${query}`;
+          console.log("Opening business using name + address search:", business.name);
+        } else if (business.name) {
+          const query = encodeURIComponent(business.name);
+          url = `https://maps.google.com/maps/search/${query}`;
+          console.log("Opening business using name search:", business.name);
+        } else if (business.latitude && business.longitude) {
           url = `https://maps.google.com/maps?q=${business.latitude},${business.longitude}`;
+          console.log("Opening business using coordinates:", business.name);
         } else {
-          const query = encodeURIComponent(`${business.name} ${business.address || ""}`);
-          url = `https://maps.google.com/maps?q=${query}`;
+          console.warn("Business has insufficient data for Maps search:", business);
+          return;
         }
+        console.log("Final Maps URL:", url);
         window.open(url, "_blank");
       } catch (error) {
         console.error("Failed to open business in maps:", error);
@@ -1403,6 +1925,28 @@
         }
         this.mapPinObservers.push(observer);
         hiddenCount = this.hideChainPinsInElement(document, cleanName);
+        setTimeout(() => {
+          console.log(`UIInjector: Starting delayed pin hiding scan for "${businessName}"`);
+          const delayedHiddenCount = this.hideMapPinsWithDelay(cleanName);
+          console.log(`UIInjector: Delayed pin hiding found ${delayedHiddenCount} additional elements for ${businessName}`);
+        }, 2e3);
+        const intervalId = setInterval(() => {
+          const periodicHiddenCount = this.hideMapPinsWithDelay(cleanName);
+          if (periodicHiddenCount > 0) {
+            console.log(`UIInjector: Periodic pin hiding found ${periodicHiddenCount} additional elements for ${businessName}`);
+          }
+        }, 3e3);
+        if (!this.mapPinIntervals) {
+          this.mapPinIntervals = [];
+        }
+        this.mapPinIntervals.push(intervalId);
+        setTimeout(() => {
+          clearInterval(intervalId);
+          const index = this.mapPinIntervals.indexOf(intervalId);
+          if (index > -1) {
+            this.mapPinIntervals.splice(index, 1);
+          }
+        }, 3e4);
         console.log(`UIInjector: Set up pin hiding for ${businessName}, hid ${hiddenCount} existing elements`);
       } catch (error) {
         console.error("UIInjector: Failed to hide related map pins:", error);
@@ -1540,6 +2084,85 @@
       element.matches(".gm-style-iw");
     }
     /**
+     * Hide map pins with delay - targets actual Google Maps pin elements
+     */
+    hideMapPinsWithDelay(cleanName) {
+      let hiddenCount = 0;
+      try {
+        const mapContainer = document.querySelector("#map");
+        if (!mapContainer) {
+          console.log(`UIInjector: No #map container found for ${cleanName}`);
+          return 0;
+        }
+        console.log(`UIInjector: Map container found, scanning for pins containing "${cleanName}"`);
+        const pinSelectors = [
+          // Map markers/pins (typical Google Maps classes)
+          '[role="button"]',
+          // Most map pins are buttons
+          '[role="img"]',
+          // Some pins are images
+          ".gm-style-iw",
+          // Info windows
+          ".gm-style-cc",
+          // Map controls
+          "[data-value]",
+          // Elements with data values
+          "[jsaction]"
+          // Interactive elements
+        ];
+        pinSelectors.forEach((selector) => {
+          const elements = mapContainer.querySelectorAll(selector);
+          console.log(`UIInjector: Found ${elements.length} elements for selector "${selector}"`);
+          elements.forEach((element, index) => {
+            const text = this.getElementText(element);
+            if (index < 5 && text.length > 0) {
+              console.log(`UIInjector: Sample element ${index} (${selector}): "${text.substring(0, 100)}"`);
+            }
+            const isMatch = text.includes(cleanName) || text.includes(cleanName.split(" ")[0]) || // First word match
+            cleanName.includes("whole foods") && text.includes("whole") || cleanName.includes("safeway") && text.includes("safeway") || cleanName.includes("fry") && text.includes("fry");
+            if (isMatch && !element.hasAttribute("data-lfa-hidden")) {
+              console.log(`UIInjector: MATCH FOUND for ${cleanName}:`, text.substring(0, 100));
+              const rect = element.getBoundingClientRect();
+              if (rect.width > 300 || rect.height > 300) {
+                return;
+              }
+              if (rect.width === 0 && rect.height === 0) {
+                return;
+              }
+              console.log(`UIInjector: Hiding map pin for ${cleanName}:`, {
+                element: element.tagName,
+                class: element.className,
+                role: element.getAttribute("role"),
+                size: `${rect.width}x${rect.height}`,
+                text: text.substring(0, 100),
+                hasJsAction: !!element.getAttribute("jsaction")
+              });
+              element.style.setProperty("display", "none", "important");
+              element.style.setProperty("visibility", "hidden", "important");
+              element.style.setProperty("opacity", "0", "important");
+              element.style.setProperty("pointer-events", "none", "important");
+              element.style.setProperty("transform", "scale(0)", "important");
+              element.setAttribute("data-lfa-hidden", "true");
+              element.setAttribute("data-lfa-chain", cleanName);
+              hiddenCount++;
+              const parent = element.parentElement;
+              if (parent && parent.children.length === 1 && !parent.hasAttribute("data-lfa-hidden")) {
+                const parentRect = parent.getBoundingClientRect();
+                if (parentRect.width < 100 && parentRect.height < 100) {
+                  parent.style.setProperty("display", "none", "important");
+                  parent.setAttribute("data-lfa-hidden-parent", "true");
+                  console.log(`UIInjector: Also hiding parent pin container for ${cleanName}`);
+                }
+              }
+            }
+          });
+        });
+      } catch (error) {
+        console.warn("UIInjector: Error in delayed pin hiding:", error);
+      }
+      return hiddenCount;
+    }
+    /**
      * Show map pins for local alternative businesses
      */
     showAlternativeMapPins(alternatives) {
@@ -1633,6 +2256,21 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
      */
     clearAllInjectedElements() {
       this.hideFilterStatus();
+      if (this.mapPinObservers) {
+        this.mapPinObservers.forEach((observer) => observer.disconnect());
+        this.mapPinObservers = [];
+      }
+      if (this.targetedPinObservers) {
+        this.targetedPinObservers.forEach((observer) => observer.disconnect());
+        this.targetedPinObservers = [];
+      }
+      if (this.mapPinIntervals) {
+        this.mapPinIntervals.forEach((intervalId) => clearInterval(intervalId));
+        this.mapPinIntervals = [];
+      }
+      if (this.hiddenBusinessData) {
+        this.hiddenBusinessData.clear();
+      }
       document.querySelectorAll(".lfa-chain-business, .lfa-chain-hidden").forEach((element) => {
         element.classList.remove("lfa-chain-business", "lfa-chain-hidden");
       });
@@ -1641,7 +2279,16 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       });
       document.querySelectorAll('[data-lfa-hidden="true"]').forEach((element) => {
         element.style.display = "";
+        element.style.visibility = "";
+        element.style.opacity = "";
+        element.style.pointerEvents = "";
+        element.style.transform = "";
         element.removeAttribute("data-lfa-hidden");
+        element.removeAttribute("data-lfa-chain");
+      });
+      document.querySelectorAll('[data-lfa-hidden-parent="true"]').forEach((element) => {
+        element.style.display = "";
+        element.removeAttribute("data-lfa-hidden-parent");
       });
       this.injectedElements = /* @__PURE__ */ new WeakMap();
       console.log("UIInjector: Cleared all injected elements");
@@ -1966,7 +2613,11 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "721 N Central Ave, Phoenix, AZ",
             latitude: 33.4734,
             longitude: -112.074,
-            verified: true
+            verified: true,
+            placeId: "ChIJN1t_tDeuAIERAGYS_wLBZiw",
+            // Example Phoenix Public Market Place ID
+            phone: "(602) 252-2204",
+            website: "https://phoenixpublicmarket.com"
           },
           {
             id: "local_2",
@@ -1975,7 +2626,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "3045 N 16th St, Phoenix, AZ",
             latitude: 33.4851,
             longitude: -112.0379,
-            verified: false
+            verified: false,
+            placeId: "ChIJc_eKY7arAIERAMZe7WqHFaE",
+            // Example place ID
+            phone: "(602) 279-3344"
           },
           {
             id: "local_3",
@@ -1984,7 +2638,11 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "1750 E Bell Rd, Phoenix, AZ",
             latitude: 33.639,
             longitude: -112.0277,
-            verified: true
+            verified: true,
+            placeId: "ChIJwZHKP2CqAIERaGBt_2oYQfI",
+            // Example place ID
+            phone: "(602) 867-3663",
+            website: "https://desertrootsmarket.com"
           },
           // West Valley
           {
@@ -1994,7 +2652,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "7500 W Thomas Rd, Phoenix, AZ",
             latitude: 33.4806,
             longitude: -112.23,
-            verified: true
+            verified: true,
+            placeId: "ChIJwVHKQ3CqAIERfGEt_2pYQfI",
+            phone: "(623) 846-2245"
           },
           {
             id: "local_5",
@@ -2003,7 +2663,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "11025 W McDowell Rd, Avondale, AZ",
             latitude: 33.465,
             longitude: -112.349,
-            verified: false
+            verified: false,
+            placeId: "ChIJ-XHKa3CqAIERbGEt_2qYQfI",
+            phone: "(623) 935-4483"
           },
           {
             id: "local_6",
@@ -2012,7 +2674,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "14500 W Indian School Rd, Goodyear, AZ",
             latitude: 33.4942,
             longitude: -112.3951,
-            verified: true
+            verified: true,
+            placeId: "ChIJzXHKb3CqAIERcGEt_2rYQfI",
+            phone: "(623) 932-1234",
+            website: "https://goodyearfarmfresh.com"
           },
           // East Valley
           {
@@ -2022,7 +2687,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "4045 E Chandler Blvd, Phoenix, AZ",
             latitude: 33.3061,
             longitude: -111.9973,
-            verified: false
+            verified: false,
+            placeId: "ChIJyXHKc3CqAIERdGEt_2sYQfI",
+            phone: "(480) 753-2214"
           },
           {
             id: "local_8",
@@ -2031,7 +2698,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "7014 E Camelback Rd, Scottsdale, AZ",
             latitude: 33.5026,
             longitude: -111.9306,
-            verified: true
+            verified: true,
+            placeId: "ChIJxXHKd3CqAIEReGEt_2tYQfI",
+            phone: "(480) 941-5566",
+            website: "https://scottsdalefresh.com"
           },
           {
             id: "local_9",
@@ -2040,7 +2710,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "1919 E Baseline Rd, Tempe, AZ",
             latitude: 33.3781,
             longitude: -111.9048,
-            verified: true
+            verified: true,
+            placeId: "ChIJwXHKe3CqAIERfGEt_2uYQfI",
+            phone: "(480) 967-4455",
+            website: "https://tempemarket.org"
           },
           {
             id: "local_10",
@@ -2049,7 +2722,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "1065 N Country Club Dr, Mesa, AZ",
             latitude: 33.4295,
             longitude: -111.8568,
-            verified: false
+            verified: false,
+            placeId: "ChIJvXHKf3CqAIERgGEt_2vYQfI",
+            phone: "(480) 832-7799"
           },
           // North Phoenix/Deer Valley
           {
@@ -2059,7 +2734,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "2102 W Union Hills Dr, Phoenix, AZ",
             latitude: 33.65,
             longitude: -112.105,
-            verified: true
+            verified: true,
+            placeId: "ChIJuXHKg3CqAIERhGEt_2wYQfI",
+            phone: "(602) 867-3344",
+            website: "https://deervalleymarket.com"
           },
           {
             id: "local_12",
@@ -2068,7 +2746,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "17235 N Cave Creek Rd, Phoenix, AZ",
             latitude: 33.648,
             longitude: -112.0295,
-            verified: false
+            verified: false,
+            placeId: "ChIJtXHKh3CqAIERiGEt_2xYQfI",
+            phone: "(602) 482-5566"
           },
           // South Phoenix
           {
@@ -2078,7 +2758,10 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "5532 S Central Ave, Phoenix, AZ",
             latitude: 33.395,
             longitude: -112.074,
-            verified: true
+            verified: true,
+            placeId: "ChIJsXHKi3CqAIERjGEt_2yYQfI",
+            phone: "(602) 276-1234",
+            website: "https://southmountainmarket.com"
           },
           {
             id: "local_14",
@@ -2087,7 +2770,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             address: "5130 W Baseline Rd, Laveen, AZ",
             latitude: 33.3781,
             longitude: -112.175,
-            verified: false
+            verified: false,
+            placeId: "ChIJrXHKj3CqAIERkGEt_2zYQfI",
+            phone: "(602) 237-8899"
           }
         ];
         console.log("MapsModifier: Location for nearby businesses:", location);
@@ -2266,76 +2951,22 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
   const statusBar = document.createElement("div");
   statusBar.id = "lfa-status-bar";
   const updateStatusBarPosition = () => {
-    var _a;
     try {
       const windowWidth = window.innerWidth;
-      console.log("StatusBar DEBUG: Window width:", windowWidth);
-      const potentialSelectors = [
-        "#searchboxinput",
-        '[role="main"]',
-        ".section-layout-sidebar",
-        '[data-value="Search nearby"]',
-        ".section-result",
-        "#pane",
-        ".widget-pane",
-        ".widget-pane-content",
-        "#left-pane",
-        ".left-panel",
-        ".sidebar"
-      ];
-      console.log("StatusBar DEBUG: Testing sidebar selectors...");
-      potentialSelectors.forEach((selector) => {
-        const elements = document.querySelectorAll(selector);
-        console.log(`StatusBar DEBUG: ${selector} found ${elements.length} elements:`, elements);
-        if (elements.length > 0) {
-          elements.forEach((el, i) => {
-            const rect = el.getBoundingClientRect();
-            console.log(`  Element ${i}: width=${rect.width}, right=${rect.right}, left=${rect.left}`);
-          });
-        }
-      });
-      let sidebar = null;
-      let sidebarMethod = "fallback";
-      const searchBox = document.querySelector("#searchboxinput");
-      if (searchBox) {
-        sidebar = searchBox.closest('[role="main"]') || searchBox.closest("#pane") || searchBox.closest(".widget-pane");
-        if (sidebar) sidebarMethod = "searchbox-parent";
-      }
-      if (!sidebar) {
-        sidebar = document.querySelector("#pane") || document.querySelector(".widget-pane") || document.querySelector(".widget-pane-content");
-        if (sidebar) sidebarMethod = "direct-pane";
-      }
-      if (!sidebar) {
-        sidebar = document.querySelector(".section-layout-sidebar") || ((_a = document.querySelector('[data-value="Search nearby"]')) == null ? void 0 : _a.closest("div"));
-        if (sidebar) sidebarMethod = "layout-container";
-      }
+      console.log("StatusBar: Setting fixed position for window width:", windowWidth);
       let leftPos = 408;
       let statusBarWidth = windowWidth - leftPos;
-      if (sidebar) {
-        const sidebarRect = sidebar.getBoundingClientRect();
-        leftPos = Math.max(sidebarRect.right, 350);
+      if (windowWidth < 500) {
+        leftPos = 0;
+        statusBarWidth = windowWidth;
+      } else if (windowWidth < 800) {
+        leftPos = Math.floor(windowWidth * 0.45);
         statusBarWidth = windowWidth - leftPos;
-        console.log(`StatusBar DEBUG: Found sidebar using method '${sidebarMethod}':`);
-        console.log(`  Sidebar rect:`, sidebarRect);
-        console.log(`  Calculated leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
-      } else {
-        console.log("StatusBar DEBUG: No sidebar found, using responsive fallback");
-        if (windowWidth < 768) {
-          leftPos = 0;
-          statusBarWidth = windowWidth;
-        } else if (windowWidth < 1200) {
-          leftPos = Math.floor(windowWidth * 0.35);
-          statusBarWidth = windowWidth - leftPos;
-        } else {
-          leftPos = 450;
-          statusBarWidth = windowWidth - leftPos;
-        }
-        console.log(`StatusBar DEBUG: Responsive fallback (${windowWidth}px) leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
       }
       statusBar.style.left = leftPos + "px";
       statusBar.style.width = statusBarWidth + "px";
       statusBar.style.right = "auto";
-      console.log(`StatusBar DEBUG: Applied styles - left: ${leftPos}px, width: ${statusBarWidth}px`);
+      console.log(`StatusBar: Applied fixed position - left: ${leftPos}px, width: ${statusBarWidth}px`);
     } catch (error) {
       console.error("Error updating status bar position:", error);
       statusBar.style.left = "408px";
