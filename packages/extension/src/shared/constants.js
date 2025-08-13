@@ -30,8 +30,8 @@ export const CONFIG = {
   
   // Business Filtering Configuration
   FILTERING: {
-    DEFAULT_RADIUS: 5, // miles
-    MAX_RADIUS: 25, // maximum search radius
+    DEFAULT_RADIUS: 50, // miles
+    MAX_RADIUS: 50, // maximum search radius
     MAX_RESULTS: 100, // maximum businesses to return
     CONFIDENCE_THRESHOLD: 80, // minimum confidence for chain matching
   },

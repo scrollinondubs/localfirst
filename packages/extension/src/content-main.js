@@ -18,10 +18,119 @@ window.LFA_EXTENSION_LOADED = true;
 // Add a persistent green bar at the top with filter controls
 const statusBar = document.createElement('div');
 statusBar.id = 'lfa-status-bar';
+// Dynamic positioning based on sidebar width
+const updateStatusBarPosition = () => {
+  try {
+    const windowWidth = window.innerWidth;
+    console.log('StatusBar DEBUG: Window width:', windowWidth);
+    
+    // Debug: List all possible sidebar selectors
+    const potentialSelectors = [
+      '#searchboxinput',
+      '[role="main"]',
+      '.section-layout-sidebar',
+      '[data-value="Search nearby"]',
+      '.section-result',
+      '#pane',
+      '.widget-pane',
+      '.widget-pane-content',
+      '#left-pane',
+      '.left-panel',
+      '.sidebar'
+    ];
+    
+    console.log('StatusBar DEBUG: Testing sidebar selectors...');
+    potentialSelectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      console.log(`StatusBar DEBUG: ${selector} found ${elements.length} elements:`, elements);
+      if (elements.length > 0) {
+        elements.forEach((el, i) => {
+          const rect = el.getBoundingClientRect();
+          console.log(`  Element ${i}: width=${rect.width}, right=${rect.right}, left=${rect.left}`);
+        });
+      }
+    });
+    
+    // Try multiple approaches to find the sidebar
+    let sidebar = null;
+    let sidebarMethod = 'fallback';
+    
+    // Method 1: Search box parent navigation
+    const searchBox = document.querySelector('#searchboxinput');
+    if (searchBox) {
+      sidebar = searchBox.closest('[role="main"]') || 
+                searchBox.closest('#pane') ||
+                searchBox.closest('.widget-pane');
+      if (sidebar) sidebarMethod = 'searchbox-parent';
+    }
+    
+    // Method 2: Direct pane selectors
+    if (!sidebar) {
+      sidebar = document.querySelector('#pane') || 
+                document.querySelector('.widget-pane') ||
+                document.querySelector('.widget-pane-content');
+      if (sidebar) sidebarMethod = 'direct-pane';
+    }
+    
+    // Method 3: Layout containers
+    if (!sidebar) {
+      sidebar = document.querySelector('.section-layout-sidebar') ||
+                document.querySelector('[data-value="Search nearby"]')?.closest('div');
+      if (sidebar) sidebarMethod = 'layout-container';
+    }
+    
+    let leftPos = 408; // fallback
+    let statusBarWidth = windowWidth - leftPos;
+    
+    if (sidebar) {
+      const sidebarRect = sidebar.getBoundingClientRect();
+      leftPos = Math.max(sidebarRect.right, 350); // Ensure minimum offset
+      statusBarWidth = windowWidth - leftPos;
+      
+      console.log(`StatusBar DEBUG: Found sidebar using method '${sidebarMethod}':`);
+      console.log(`  Sidebar rect:`, sidebarRect);
+      console.log(`  Calculated leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
+    } else {
+      console.log('StatusBar DEBUG: No sidebar found, using responsive fallback');
+      
+      // Improved responsive fallback based on common Google Maps layouts
+      if (windowWidth < 768) {
+        // Mobile: sidebar takes full width, so position bar at top
+        leftPos = 0;
+        statusBarWidth = windowWidth;
+      } else if (windowWidth < 1200) {
+        // Tablet: sidebar is about 35% of width
+        leftPos = Math.floor(windowWidth * 0.35);
+        statusBarWidth = windowWidth - leftPos;
+      } else {
+        // Desktop: sidebar is typically 400-450px
+        leftPos = 450;
+        statusBarWidth = windowWidth - leftPos;
+      }
+      
+      console.log(`StatusBar DEBUG: Responsive fallback (${windowWidth}px) leftPos: ${leftPos}, statusBarWidth: ${statusBarWidth}`);
+    }
+    
+    // Apply the positioning
+    statusBar.style.left = leftPos + 'px';
+    statusBar.style.width = statusBarWidth + 'px';
+    statusBar.style.right = 'auto'; // Remove right positioning
+    
+    console.log(`StatusBar DEBUG: Applied styles - left: ${leftPos}px, width: ${statusBarWidth}px`);
+    
+  } catch (error) {
+    console.error('Error updating status bar position:', error);
+    // Safe fallback
+    statusBar.style.left = '408px';
+    statusBar.style.right = '0px';
+    statusBar.style.width = 'auto';
+  }
+};
+
 statusBar.style.cssText = `
   position: fixed;
   top: 0;
-  left: 0;
+  left: 408px;
   right: 0;
   height: 35px;
   background: linear-gradient(90deg, #2E7D32, #4CAF50);
@@ -36,6 +145,34 @@ statusBar.style.cssText = `
   z-index: 999999;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 `;
+
+// Update position after DOM loads and on window resize
+setTimeout(() => {
+  console.log('StatusBar: Initial positioning attempt');
+  updateStatusBarPosition();
+}, 2000);
+window.addEventListener('resize', updateStatusBarPosition);
+
+// Add observer to watch for layout changes
+const layoutObserver = new MutationObserver(() => {
+  // Throttle position updates
+  clearTimeout(window.statusBarUpdateTimeout);
+  window.statusBarUpdateTimeout = setTimeout(() => {
+    updateStatusBarPosition();
+  }, 500);
+});
+
+layoutObserver.observe(document.body, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['style', 'class']
+});
+
+setTimeout(() => {
+  console.log('StatusBar: Final positioning attempt');  
+  updateStatusBarPosition();
+}, 10000); // Give more time for Maps to fully load
 
 // Create status message
 const statusMessage = document.createElement('span');
@@ -98,12 +235,10 @@ statusBar.appendChild(toggleContainer);
 // Add status bar immediately
 if (document.body) {
   document.body.appendChild(statusBar);
-  document.body.style.marginTop = '35px';
 } else {
   // If body doesn't exist yet, wait for it
   document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(statusBar);
-    document.body.style.marginTop = '35px';
   });
 }
 

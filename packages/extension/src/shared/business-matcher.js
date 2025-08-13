@@ -118,22 +118,32 @@ export class BusinessMatcher {
    * Find local alternatives in the same category
    */
   findLocalAlternatives(chainBusiness, location, maxResults = 3) {
+    console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location, 'localBusinesses:', this.localBusinesses.length);
     if (!chainBusiness || !location || this.localBusinesses.length === 0) {
+      console.log('BusinessMatcher: Early return - missing data');
       return [];
     }
 
     const category = chainBusiness.category || 'other';
+    console.log('BusinessMatcher: Looking for category:', category);
     const categoryBusinesses = this.localBusinesses.filter(
       business => business.category === category || category === 'other'
     );
+    console.log('BusinessMatcher: Found', categoryBusinesses.length, 'businesses in category:', categoryBusinesses);
 
-    // Calculate distances and sort by proximity
-    const businessesWithDistance = categoryBusinesses
-      .map(business => {
+    // Filter by map bounds first, then calculate distances
+    const businessesInView = categoryBusinesses
+      .filter(business => {
         if (!business.latitude || !business.longitude) {
-          return null;
+          return false;
         }
-
+        
+        // Check if business is within map bounds
+        const withinBounds = this.isWithinBounds(business.latitude, business.longitude, location.bounds);
+        console.log(`BusinessMatcher: ${business.name} within bounds:`, withinBounds, location.bounds);
+        return withinBounds;
+      })
+      .map(business => {
         const distance = this.calculateDistance(
           location.lat, location.lng,
           business.latitude, business.longitude
@@ -144,11 +154,11 @@ export class BusinessMatcher {
           distance: distance,
         };
       })
-      .filter(business => business && business.distance <= 5) // Within 5 miles
       .sort((a, b) => a.distance - b.distance)
       .slice(0, maxResults);
 
-    return businessesWithDistance;
+    console.log('BusinessMatcher: After bounds filtering, found', businessesInView.length, 'businesses');
+    return businessesInView;
   }
 
   /**
@@ -255,12 +265,37 @@ export class BusinessMatcher {
   extractLocationFromUrl() {
     try {
       const url = window.location.href;
-      const matches = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      const matches = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(\d+(?:\.\d+)?)z/);
       
       if (matches) {
+        const lat = parseFloat(matches[1]);
+        const lng = parseFloat(matches[2]);
+        const zoom = parseFloat(matches[3]);
+        
+        // Calculate approximate bounds based on zoom level
+        const latDelta = this.getLatDeltaFromZoom(zoom);
+        const lngDelta = this.getLngDeltaFromZoom(zoom, lat);
+        
         return {
-          lat: parseFloat(matches[1]),
-          lng: parseFloat(matches[2])
+          lat,
+          lng,
+          zoom,
+          bounds: {
+            north: lat + latDelta,
+            south: lat - latDelta, 
+            east: lng + lngDelta,
+            west: lng - lngDelta
+          }
+        };
+      }
+      
+      // Fallback: try without zoom
+      const basicMatches = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (basicMatches) {
+        return {
+          lat: parseFloat(basicMatches[1]),
+          lng: parseFloat(basicMatches[2]),
+          bounds: null
         };
       }
       
@@ -268,12 +303,11 @@ export class BusinessMatcher {
       const urlObj = new URL(url);
       const searchParams = urlObj.searchParams;
       
-      // Look for various location parameters
       const coords = searchParams.get('ll') || searchParams.get('center');
       if (coords) {
         const [lat, lng] = coords.split(',').map(parseFloat);
         if (!isNaN(lat) && !isNaN(lng)) {
-          return { lat, lng };
+          return { lat, lng, bounds: null };
         }
       }
       
@@ -282,6 +316,36 @@ export class BusinessMatcher {
       console.error('Failed to extract location from URL:', error);
       return null;
     }
+  }
+
+  /**
+   * Get latitude delta from zoom level (approximate)
+   */
+  getLatDeltaFromZoom(zoom) {
+    // Rough approximation: higher zoom = smaller area
+    return 180 / Math.pow(2, zoom + 1);
+  }
+
+  /**
+   * Get longitude delta from zoom level and latitude
+   */
+  getLngDeltaFromZoom(zoom, lat) {
+    // Longitude lines converge at poles, so adjust by latitude
+    const latRadians = (lat * Math.PI) / 180;
+    const cosLat = Math.cos(latRadians);
+    return (360 / Math.pow(2, zoom + 1)) * cosLat;
+  }
+
+  /**
+   * Check if a point is within map bounds
+   */
+  isWithinBounds(lat, lng, bounds) {
+    if (!bounds) return true; // No bounds check if not available
+    
+    return lat >= bounds.south && 
+           lat <= bounds.north && 
+           lng >= bounds.west && 
+           lng <= bounds.east;
   }
 
   /**

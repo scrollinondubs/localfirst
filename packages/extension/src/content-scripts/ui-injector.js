@@ -96,59 +96,99 @@ export class UIInjector {
         display: none !important;
       }
 
+      /* Chain Replacement Placeholder */
+      .lfa-chain-placeholder {
+        background: #f8f9fa !important;
+        border: 1px solid #e8eaed !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        margin: 4px 0 !important;
+        display: block !important;
+        position: relative !important;
+        z-index: 1000 !important;
+        color: #333 !important;
+        font-family: Google Sans, Roboto, Arial, sans-serif !important;
+        font-size: 14px !important;
+        line-height: 20px !important;
+      }
+
       /* Local Alternative Suggestions */
       .lfa-alternatives {
-        background: #f8f9fa;
-        border: 1px solid #e8eaed;
-        border-radius: 8px;
-        padding: 8px;
-        margin: 4px 0;
-        font-size: 12px;
-        position: relative;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        background: #f8f9fa !important;
+        border: 1px solid #e8eaed !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        margin: 4px 0 !important;
+        font-family: Google Sans, Roboto, Arial, sans-serif !important;
+        font-size: 14px !important;
+        line-height: 20px !important;
+        position: relative !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        color: #3c4043 !important;
       }
 
       .lfa-alternatives-header {
-        font-weight: 600;
-        color: #2E7D32;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
+        font-weight: 600 !important;
+        color: #2E7D32 !important;
+        margin-bottom: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 16px !important;
+        line-height: 24px !important;
       }
 
       .lfa-alternatives-header::before {
         content: '🏪';
-        margin-right: 4px;
-        font-size: 11px;
+        margin-right: 6px !important;
+        font-size: 14px !important;
       }
 
       .lfa-alternative-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        border-bottom: 1px solid #f0f0f0;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 12px 0 !important;
+        border-bottom: 1px solid #e8eaed !important;
+        gap: 4px !important;
       }
 
       .lfa-alternative-item:last-child {
-        border-bottom: none;
+        border-bottom: none !important;
       }
 
       .lfa-alternative-name {
-        font-weight: 500;
-        color: #1a73e8;
-        cursor: pointer;
-        flex: 1;
+        font-weight: 500 !important;
+        color: #1a73e8 !important;
+        cursor: pointer !important;
+        font-size: 16px !important;
+        line-height: 24px !important;
+        text-decoration: none !important;
       }
 
       .lfa-alternative-name:hover {
-        text-decoration: underline;
+        text-decoration: underline !important;
+      }
+
+      .lfa-alternative-info {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        width: 100% !important;
+      }
+
+      .lfa-alternative-address {
+        font-size: 14px !important;
+        color: #5f6368 !important;
+        line-height: 20px !important;
       }
 
       .lfa-alternative-distance {
-        font-size: 10px;
-        color: #70757a;
-        margin-left: 8px;
+        font-size: 14px !important;
+        color: #5f6368 !important;
+        line-height: 20px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
       }
 
       /* Filter Status Indicator */
@@ -304,6 +344,10 @@ export class UIInjector {
         
         // Also hide related map pins
         this.hideRelatedMapPins(chainInfo.name);
+        
+        // In strict mode, create a placeholder for alternatives
+        this.createChainReplacementPlaceholder(element, chainInfo);
+        
       } else if (settings.dimChains) {
         element.classList.add('lfa-chain-business');
         this.injectedElements.set(element, { type: 'chain-dimmed', chainInfo });
@@ -312,6 +356,42 @@ export class UIInjector {
       console.log(`UIInjector: Applied ${filterLevel} filtering to ${chainInfo.name}`);
     } catch (error) {
       console.error('UIInjector: Failed to apply chain filtering:', error);
+    }
+  }
+
+  /**
+   * Create a placeholder element for hidden chain businesses
+   */
+  createChainReplacementPlaceholder(element, chainInfo) {
+    try {
+      // Create a placeholder that will replace the hidden chain
+      const placeholder = document.createElement('div');
+      placeholder.className = 'lfa-chain-placeholder';
+      placeholder.style.cssText = `
+        background: #f8f9fa !important;
+        border: 1px solid #e8eaed !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        margin: 4px 0 !important;
+        display: block !important;
+        position: relative !important;
+        z-index: 1000 !important;
+        color: #333 !important;
+      `;
+      
+      // Insert the placeholder after the hidden element
+      element.parentNode.insertBefore(placeholder, element.nextSibling);
+      
+      // Store reference to placeholder
+      if (this.injectedElements.has(element)) {
+        this.injectedElements.get(element).placeholder = placeholder;
+      } else {
+        this.injectedElements.set(element, { placeholder: placeholder, type: 'chain-placeholder' });
+      }
+      
+      console.log(`UIInjector: Created placeholder for hidden ${chainInfo.name}`);
+    } catch (error) {
+      console.error('UIInjector: Failed to create chain placeholder:', error);
     }
   }
 
@@ -325,19 +405,37 @@ export class UIInjector {
 
     try {
       const alternativesElement = this.createAlternativesElement(alternatives, chainInfo);
-      const insertionPoint = this.findAlternativesInsertionPoint(element);
       
-      if (insertionPoint) {
-        insertionPoint.appendChild(alternativesElement);
+      // Check if this chain is hidden and has a placeholder
+      const injectedData = this.injectedElements.get(element);
+      if (injectedData && injectedData.placeholder) {
+        // Use the placeholder for hidden chains
+        injectedData.placeholder.appendChild(alternativesElement);
+        injectedData.placeholder.style.display = 'block'; // Show the placeholder
+        injectedData.alternatives = alternativesElement;
+        console.log(`UIInjector: Added ${alternatives.length} alternatives to placeholder for ${chainInfo.name}`);
         
-        // Store reference for cleanup
-        if (this.injectedElements.has(element)) {
-          this.injectedElements.get(element).alternatives = alternativesElement;
-        } else {
-          this.injectedElements.set(element, { alternatives: alternativesElement, type: 'alternatives' });
+        // Also show alternative map pins
+        this.showAlternativeMapPins(alternatives);
+      } else {
+        // Use normal insertion point for dimmed chains
+        const insertionPoint = this.findAlternativesInsertionPoint(element);
+        
+        if (insertionPoint) {
+          insertionPoint.appendChild(alternativesElement);
+          
+          // Store reference for cleanup
+          if (this.injectedElements.has(element)) {
+            this.injectedElements.get(element).alternatives = alternativesElement;
+          } else {
+            this.injectedElements.set(element, { alternatives: alternativesElement, type: 'alternatives' });
+          }
+          
+          console.log(`UIInjector: Added ${alternatives.length} alternatives for ${chainInfo.name}`);
+          
+          // Also show alternative map pins
+          this.showAlternativeMapPins(alternatives);
         }
-        
-        console.log(`UIInjector: Added ${alternatives.length} alternatives for ${chainInfo.name}`);
       }
     } catch (error) {
       console.error('UIInjector: Failed to show alternatives:', error);
@@ -353,7 +451,12 @@ export class UIInjector {
 
     const header = document.createElement('div');
     header.className = 'lfa-alternatives-header';
-    header.textContent = `Local alternatives nearby:`;
+    header.innerHTML = `
+      <strong>🏪 Local alternatives to ${chainInfo.name}:</strong>
+      <div style="font-size: 11px; font-weight: normal; margin-top: 2px; color: #666;">
+        Supporting local businesses in your community
+      </div>
+    `;
     container.appendChild(header);
 
     alternatives.forEach(business => {
@@ -367,12 +470,45 @@ export class UIInjector {
         this.handleAlternativeClick(business, chainInfo);
       });
 
-      const distance = document.createElement('span');
-      distance.className = 'lfa-alternative-distance';
-      distance.textContent = `${business.distance.toFixed(1)} mi`;
+      // Create info section with address and distance
+      const info = document.createElement('div');
+      info.className = 'lfa-alternative-info';
+      
+      if (business.address) {
+        const address = document.createElement('span');
+        address.className = 'lfa-alternative-address';
+        address.textContent = business.address;
+        info.appendChild(address);
+      }
 
+      const distanceContainer = document.createElement('span');
+      distanceContainer.className = 'lfa-alternative-distance';
+      
+      const distanceText = business.distance ? `${business.distance.toFixed(1)} mi away` : 'Near you';
+      distanceContainer.textContent = distanceText;
+
+      // Add verified badge if applicable
+      if (business.verified) {
+        const badge = document.createElement('span');
+        badge.style.cssText = `
+          background: #4CAF50 !important;
+          color: white !important;
+          font-size: 12px !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+          margin-left: 8px !important;
+          font-weight: 500 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        `;
+        badge.textContent = 'VERIFIED';
+        distanceContainer.appendChild(badge);
+      }
+
+      info.appendChild(distanceContainer);
+      
       item.appendChild(name);
-      item.appendChild(distance);
+      item.appendChild(info);
       container.appendChild(item);
     });
 
@@ -525,47 +661,280 @@ export class UIInjector {
    */
   hideRelatedMapPins(businessName) {
     try {
-      // Clean the business name for comparison
       const cleanName = businessName.toLowerCase().trim();
+      console.log(`UIInjector: Attempting to hide map pins for "${businessName}"`);
       
-      // Find and hide map pins that contain the business name
-      const mapSelectors = [
-        'button[data-value="Directions"]',
-        '[role="button"][aria-label*="directions"]',
-        '[data-value="Directions"][role="button"]',
-        'button[aria-label*="' + cleanName + '"]',
-        '[data-title*="' + cleanName + '"]'
-      ];
+      let hiddenCount = 0;
       
-      mapSelectors.forEach(selector => {
-        try {
-          const elements = document.querySelectorAll(selector);
-          elements.forEach(element => {
-            const text = (element.textContent || element.getAttribute('aria-label') || '').toLowerCase();
-            if (text.includes(cleanName)) {
-              element.style.display = 'none';
-              element.setAttribute('data-lfa-hidden', 'true');
-              console.log(`UIInjector: Hid map pin for ${businessName}`);
+      // Use MutationObserver to continuously hide chain pins as they appear
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              this.hideChainPinsInElement(node, cleanName);
             }
           });
-        } catch (error) {
-          console.warn(`UIInjector: Error with selector ${selector}:`, error);
-        }
+        });
       });
       
-      // Also hide map marker elements that might contain the business name
-      const allButtons = document.querySelectorAll('button, [role="button"]');
-      allButtons.forEach(button => {
-        const text = (button.textContent || button.getAttribute('aria-label') || '').toLowerCase();
-        if (text.includes(cleanName) && (text.includes('directions') || text.includes('marker'))) {
-          button.style.display = 'none';
-          button.setAttribute('data-lfa-hidden', 'true');
-        }
+      // Start observing the map area
+      const mapContainer = document.querySelector('#map') || document.body;
+      observer.observe(mapContainer, {
+        childList: true,
+        subtree: true
       });
+      
+      // Store observer for cleanup
+      if (!this.mapPinObservers) {
+        this.mapPinObservers = [];
+      }
+      this.mapPinObservers.push(observer);
+      
+      // Hide existing pins immediately
+      hiddenCount = this.hideChainPinsInElement(document, cleanName);
+      
+      console.log(`UIInjector: Set up pin hiding for ${businessName}, hid ${hiddenCount} existing elements`);
       
     } catch (error) {
       console.error('UIInjector: Failed to hide related map pins:', error);
     }
+  }
+
+  /**
+   * Hide chain pins within a specific element
+   */
+  hideChainPinsInElement(element, cleanName) {
+    let hiddenCount = 0;
+    
+    try {
+      // Only target specific map elements, avoid major page containers
+      const selectors = [
+        // Only target specific business listing elements (not entire containers)
+        '.hfpxzc', // Individual business links
+        '.Nv2PK.THOPZb.CpccDe', // Individual business result containers
+        // Map-specific elements only
+        '.gm-ui-hover-effect', '.maps-sprite-pane-default', '.maps-pin-view',
+        '.widget-marker', 
+        // Individual buttons and links, not entire containers
+        'button[aria-label*="' + cleanName + '"]',
+        'a[aria-label*="' + cleanName + '"]',
+        // Info windows and popups (small containers only)
+        '.gm-style-iw', '.gm-style-iw-c', '.gm-style-iw-d'
+      ];
+      
+      // Critical containers that should NEVER be hidden
+      const protectedSelectors = [
+        '#app-container',
+        '.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde.ecceSd', // Results feed
+        '.k7jAl.miFGmb.lJ3Kh', // Side panels  
+        '.e07Vkf.kA9KIf', // Scrollable containers
+        '[role="feed"]', // Results feeds
+        '.vasquette' // Main app container
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = element.querySelectorAll ? element.querySelectorAll(selector) : [];
+        elements.forEach(el => {
+          // Skip if this is a protected element
+          if (this.isProtectedElement(el, protectedSelectors)) {
+            return;
+          }
+          
+          const text = this.getElementText(el);
+          const isMatch = text.includes(cleanName) || this.isChainRelated(el, cleanName);
+          
+          if (isMatch && !el.hasAttribute('data-lfa-hidden')) {
+            // Only hide small, specific elements
+            const rect = el.getBoundingClientRect();
+            const isLargeContainer = rect.width > 500 || rect.height > 500;
+            
+            if (!isLargeContainer || this.isSafeToHide(el)) {
+              console.log(`UIInjector: Hiding specific element for ${cleanName}:`, el.className, 'size:', rect.width + 'x' + rect.height);
+              
+              // Use more targeted hiding
+              el.style.setProperty('display', 'none', 'important');
+              el.setAttribute('data-lfa-hidden', 'true');
+              el.setAttribute('data-lfa-chain', cleanName);
+              hiddenCount++;
+            } else {
+              console.log(`UIInjector: Skipping large container for ${cleanName}:`, el.className, 'size:', rect.width + 'x' + rect.height);
+            }
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.warn('UIInjector: Error hiding pins in element:', error);
+    }
+    
+    return hiddenCount;
+  }
+
+  /**
+   * Get all text content from element and its attributes
+   */
+  getElementText(element) {
+    return (
+      (element.textContent || '') + ' ' +
+      (element.getAttribute('aria-label') || '') + ' ' +
+      (element.getAttribute('title') || '') + ' ' +
+      (element.getAttribute('data-value') || '') + ' ' +
+      (element.getAttribute('alt') || '')
+    ).toLowerCase();
+  }
+
+  /**
+   * Check if element is related to a chain business
+   */
+  isChainRelated(element, cleanName) {
+    // Check if this is a map marker or info window for the chain
+    const isMapElement = element.closest('#map') || 
+                        element.querySelector('img[src*="marker"]') ||
+                        element.classList.contains('gm-style-iw') ||
+                        element.hasAttribute('jsaction');
+    
+    return isMapElement && this.getElementText(element).includes(cleanName);
+  }
+
+  /**
+   * Check if element is a map container that should be hidden
+   */
+  isMapContainer(element) {
+    return element.classList.contains('gm-style') ||
+           element.classList.contains('gm-ui-hover-effect') ||
+           element.classList.contains('maps-pin-view') ||
+           element.classList.contains('widget-marker') ||
+           element.closest('#map') ||
+           element.hasAttribute('jsaction');
+  }
+
+  /**
+   * Check if element is protected from being hidden (major containers)
+   */
+  isProtectedElement(element, protectedSelectors) {
+    // Check if element matches any protected selector
+    for (const selector of protectedSelectors) {
+      if (element.matches && element.matches(selector)) {
+        return true;
+      }
+      if (element.id && selector.includes('#' + element.id)) {
+        return true;
+      }
+    }
+    
+    // Check if element is a major page container by ID or class patterns
+    const protectedPatterns = [
+      'app-container', 'vasquette', 'id-app-container',
+      'm6QErb', 'DxyBCb', 'kA9KIf', 'dS8AEf', 'XiKgde', 'ecceSd', // Results feed classes
+      'k7jAl', 'miFGmb', 'lJ3Kh', // Side panel classes
+      'e07Vkf' // Scrollable container
+    ];
+    
+    return protectedPatterns.some(pattern => 
+      element.id?.includes(pattern) || 
+      element.className?.includes(pattern)
+    );
+  }
+
+  /**
+   * Check if element is safe to hide (small, specific elements)
+   */
+  isSafeToHide(element) {
+    // Safe elements are specific business links or small components
+    return element.matches('.hfpxzc') || // Business links
+           element.matches('button') ||   // Individual buttons
+           element.matches('a') ||        // Individual links
+           element.matches('.gm-style-iw'); // Info windows
+  }
+
+  /**
+   * Show map pins for local alternative businesses
+   */
+  showAlternativeMapPins(alternatives) {
+    try {
+      console.log(`UIInjector: Attempting to show ${alternatives.length} alternative map pins`);
+      
+      // This is a simplified approach - in a real implementation, you'd need to
+      // interact with the Google Maps API to add custom markers
+      alternatives.forEach(business => {
+        // For now, we'll create overlay markers
+        this.createCustomMapMarker(business);
+      });
+      
+    } catch (error) {
+      console.error('UIInjector: Failed to show alternative map pins:', error);
+    }
+  }
+
+  /**
+   * Create a custom map marker overlay for local business
+   */
+  createCustomMapMarker(business) {
+    try {
+      // Find the map container
+      const mapContainer = document.querySelector('#map canvas') || 
+                          document.querySelector('[role="application"]') ||
+                          document.querySelector('.gm-style');
+      
+      if (!mapContainer) {
+        console.warn('UIInjector: Could not find map container for custom marker');
+        return;
+      }
+      
+      // Create a custom marker element
+      const marker = document.createElement('div');
+      marker.className = 'lfa-custom-marker';
+      marker.style.cssText = `
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: #4CAF50;
+        border: 2px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+      `;
+      marker.textContent = '🏪';
+      marker.title = `${business.name} - Local Alternative`;
+      
+      // Add click handler
+      marker.addEventListener('click', () => {
+        this.handleAlternativeMapPinClick(business);
+      });
+      
+      // Position the marker (this is a rough approximation)
+      // In a real implementation, you'd need proper coordinate conversion
+      marker.style.top = '50%';
+      marker.style.left = '50%';
+      marker.style.transform = 'translate(-50%, -50%)';
+      
+      // Add to map container
+      mapContainer.appendChild(marker);
+      
+      console.log(`UIInjector: Created custom map marker for ${business.name}`);
+      
+    } catch (error) {
+      console.error('UIInjector: Failed to create custom map marker:', error);
+    }
+  }
+
+  /**
+   * Handle click on alternative map pin
+   */
+  handleAlternativeMapPinClick(business) {
+    // Show business info popup or navigate to it
+    const info = `${business.name}\n${business.address}\n${business.distance ? business.distance.toFixed(1) + ' mi away' : 'Near you'}`;
+    alert(info);
+    
+    // Track the click
+    this.handleAlternativeClick(business, { name: 'map-pin-click' });
   }
 
   /**
@@ -580,6 +949,9 @@ export class UIInjector {
         }
         if (injected.alternatives && injected.alternatives.parentElement) {
           injected.alternatives.parentElement.removeChild(injected.alternatives);
+        }
+        if (injected.placeholder && injected.placeholder.parentElement) {
+          injected.placeholder.parentElement.removeChild(injected.placeholder);
         }
         
         // Remove CSS classes
