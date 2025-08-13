@@ -48,7 +48,7 @@ export const CONFIG = {
   // Default Settings
   DEFAULT_SETTINGS: {
     enabled: true,
-    filterLevel: 'moderate', // strict, moderate, light
+    filterLevel: 'strict', // strict, moderate, light - default to aggressive filtering
     showBadges: true,
     showAlternatives: true,
     anonymousAnalytics: true,
