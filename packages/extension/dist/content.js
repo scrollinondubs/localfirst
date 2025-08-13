@@ -1590,5 +1590,63 @@
   }
   initializeMapsModifier();
   console.log("Local First Arizona Maps Modifier loaded");
-  console.log("Local First Arizona extension content scripts loaded");
+  console.log("🏪 LOCAL FIRST ARIZONA EXTENSION - CONTENT SCRIPT STARTING");
+  console.warn("🏪 LFA DEBUG: Content script file loaded at", (/* @__PURE__ */ new Date()).toISOString());
+  window.LFA_EXTENSION_LOADED = true;
+  const statusBar = document.createElement("div");
+  statusBar.id = "lfa-status-bar";
+  statusBar.style.cssText = `
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(90deg, #2E7D32, #4CAF50);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 999999;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  cursor: pointer;
+`;
+  statusBar.innerHTML = "🏪 Local First Arizona Extension Active - Click to hide";
+  statusBar.onclick = function() {
+    this.style.display = "none";
+  };
+  if (document.body) {
+    document.body.appendChild(statusBar);
+    document.body.style.marginTop = "30px";
+  } else {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.body.appendChild(statusBar);
+      document.body.style.marginTop = "30px";
+    });
+  }
+  setTimeout(() => {
+    const indicator = document.createElement("div");
+    indicator.style.cssText = `
+    position: fixed;
+    top: 40px;
+    right: 10px;
+    background: #4CAF50;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    z-index: 10000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  `;
+    indicator.textContent = "LFA Extension Loaded Successfully!";
+    document.body.appendChild(indicator);
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.parentNode.removeChild(indicator);
+      }
+    }, 3e3);
+  }, 1e3);
 })();
