@@ -130,6 +130,106 @@ const chainData = [
     confidenceScore: 100
   },
 
+  // Clothing & Fashion chains
+  {
+    name: 'Gap',
+    patterns: ['gap', 'gap inc'],
+    category: 'retail',
+    parentCompany: 'Gap Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'Gap Factory',
+    patterns: ['gap factory', 'gap outlet'],
+    category: 'retail',
+    parentCompany: 'Gap Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'H&M',
+    patterns: ['h&m', 'h & m', 'hennes & mauritz'],
+    category: 'retail',
+    parentCompany: 'H & M Hennes & Mauritz AB',
+    confidenceScore: 100
+  },
+  {
+    name: 'Urban Outfitters',
+    patterns: ['urban outfitters'],
+    category: 'retail',
+    parentCompany: 'Urban Outfitters, Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'T.J. Maxx',
+    patterns: ['t.j. maxx', 'tj maxx', 'tjmaxx'],
+    category: 'retail',
+    parentCompany: 'TJX Companies',
+    confidenceScore: 100
+  },
+  {
+    name: 'Marshall\'s',
+    patterns: ['marshall\'s', 'marshalls'],
+    category: 'retail',
+    parentCompany: 'TJX Companies',
+    confidenceScore: 100
+  },
+  {
+    name: 'Old Navy',
+    patterns: ['old navy'],
+    category: 'retail',
+    parentCompany: 'Gap Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'American Eagle',
+    patterns: ['american eagle', 'american eagle outfitters', 'ae'],
+    category: 'retail',
+    parentCompany: 'American Eagle Outfitters',
+    confidenceScore: 100
+  },
+  {
+    name: 'Forever 21',
+    patterns: ['forever 21', 'forever21'],
+    category: 'retail',
+    parentCompany: 'Authentic Brands Group',
+    confidenceScore: 100
+  },
+  {
+    name: 'Zara',
+    patterns: ['zara'],
+    category: 'retail',
+    parentCompany: 'Inditex',
+    confidenceScore: 100
+  },
+  {
+    name: 'Banana Republic',
+    patterns: ['banana republic'],
+    category: 'retail',
+    parentCompany: 'Gap Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'Nordstrom',
+    patterns: ['nordstrom'],
+    category: 'retail',
+    parentCompany: 'Nordstrom, Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'Nordstrom Rack',
+    patterns: ['nordstrom rack'],
+    category: 'retail',
+    parentCompany: 'Nordstrom, Inc.',
+    confidenceScore: 100
+  },
+  {
+    name: 'Macy\'s',
+    patterns: ['macy\'s', 'macys'],
+    category: 'retail',
+    parentCompany: 'Macy\'s, Inc.',
+    confidenceScore: 100
+  },
+
   // Service chains
   {
     name: 'H&R Block',

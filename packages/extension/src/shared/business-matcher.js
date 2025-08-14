@@ -7,9 +7,8 @@ import { CONFIG } from './constants.js';
 export class BusinessMatcher {
   constructor() {
     this.chainPatterns = [];
-    this.localBusinesses = [];
     this.lastChainUpdate = null;
-    this.lastBusinessUpdate = null;
+    // Removed: localBusinesses array - now using dynamic API calls
   }
 
   /**
@@ -19,26 +18,50 @@ export class BusinessMatcher {
     this.chainPatterns = chains || [];
     this.lastChainUpdate = Date.now();
     console.log(`BusinessMatcher: Updated with ${this.chainPatterns.length} chain patterns`);
+    
+    // DEBUG: Show sample chain patterns to verify we have the expected ones
+    if (this.chainPatterns.length > 0) {
+      console.log('BusinessMatcher: Sample chain patterns:', 
+        this.chainPatterns.slice(0, 10).map(chain => ({
+          name: chain.name,
+          patterns: chain.patterns,
+          category: chain.category,
+          confidenceScore: chain.confidenceScore
+        }))
+      );
+      
+      // Check for specific chains we expect
+      const expectedChains = ['Gap', 'Urban Outfitters', 'T.J. Maxx', 'H&M', 'TJ Maxx', 'Gap Factory'];
+      const foundChains = expectedChains.filter(name => 
+        this.chainPatterns.some(chain => 
+          chain.name.toLowerCase().includes(name.toLowerCase()) ||
+          (Array.isArray(chain.patterns) && chain.patterns.some(pattern => 
+            pattern.toLowerCase().includes(name.toLowerCase())
+          ))
+        )
+      );
+      console.log(`BusinessMatcher: Found expected chains: ${foundChains.join(', ')}`);
+    }
   }
 
   /**
-   * Update local businesses for matching
+   * Removed: updateLocalBusinesses() - No longer managing local business arrays
+   * Local businesses are now fetched dynamically via API calls
    */
-  updateLocalBusinesses(businesses) {
-    this.localBusinesses = businesses || [];
-    this.lastBusinessUpdate = Date.now();
-    console.log(`BusinessMatcher: Updated with ${this.localBusinesses.length} local businesses`);
-  }
 
   /**
    * Check if a business name matches any chain patterns
    */
   isChainBusiness(businessName, confidenceThreshold = CONFIG.FILTERING.CONFIDENCE_THRESHOLD) {
     if (!businessName || this.chainPatterns.length === 0) {
+      console.log('BusinessMatcher: No business name or no chain patterns', { businessName, patternCount: this.chainPatterns.length });
       return { isChain: false, confidence: 0, matchedChain: null };
     }
 
     const normalizedName = this.normalizeName(businessName);
+    console.log(`BusinessMatcher: Checking "${businessName}" (normalized: "${normalizedName}") against ${this.chainPatterns.length} patterns with threshold ${confidenceThreshold}`);
+    
+    let bestMatch = { confidence: 0, chain: null, pattern: null };
     
     for (const chain of this.chainPatterns) {
       if (chain.confidenceScore < confidenceThreshold) {
@@ -50,7 +73,13 @@ export class BusinessMatcher {
       for (const pattern of patterns) {
         const confidence = this.calculateMatchConfidence(normalizedName, pattern);
         
+        // Track best match for debugging
+        if (confidence > bestMatch.confidence) {
+          bestMatch = { confidence, chain, pattern };
+        }
+        
         if (confidence >= confidenceThreshold) {
+          console.log(`BusinessMatcher: MATCH! "${businessName}" matched "${pattern}" (confidence: ${confidence})`);
           return {
             isChain: true,
             confidence: confidence,
@@ -66,93 +95,151 @@ export class BusinessMatcher {
       }
     }
 
+    console.log(`BusinessMatcher: No match for "${businessName}". Best match was "${bestMatch.pattern}" with confidence ${bestMatch.confidence}`);
     return { isChain: false, confidence: 0, matchedChain: null };
   }
 
   /**
-   * Find matching local business by name and location
+   * Removed: findLocalMatch() - No longer matching against local business arrays
+   * Local business identification now happens via API-based search
    */
-  findLocalMatch(businessName, location = null) {
-    if (!businessName || this.localBusinesses.length === 0) {
-      return null;
-    }
-
-    const normalizedName = this.normalizeName(businessName);
-    let bestMatch = null;
-    let bestScore = 0;
-
-    for (const business of this.localBusinesses) {
-      const businessNormalized = this.normalizeName(business.name);
-      
-      // Name similarity score
-      const nameScore = this.calculateNameSimilarity(normalizedName, businessNormalized);
-      
-      // Location proximity score (if location provided)
-      let locationScore = 0;
-      if (location && business.latitude && business.longitude) {
-        const distance = this.calculateDistance(
-          location.lat, location.lng,
-          business.latitude, business.longitude
-        );
-        locationScore = Math.max(0, 1 - (distance / 0.5)); // Within 0.5 miles gets full score
-      }
-
-      // Combined score (favor name similarity)
-      const totalScore = nameScore * 0.8 + locationScore * 0.2;
-
-      if (totalScore > bestScore && nameScore > 0.7) { // Minimum 70% name match
-        bestScore = totalScore;
-        bestMatch = {
-          ...business,
-          matchScore: totalScore,
-          nameScore: nameScore,
-          locationScore: locationScore,
-        };
-      }
-    }
-
-    return bestMatch;
-  }
 
   /**
-   * Find local alternatives in the same category
+   * Find local alternatives using semantic search API
    */
-  findLocalAlternatives(chainBusiness, location) {
-    console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location, 'localBusinesses:', this.localBusinesses.length);
-    if (!chainBusiness || !location || this.localBusinesses.length === 0) {
-      console.log('BusinessMatcher: Early return - missing data');
+  async findLocalAlternatives(chainBusiness, location) {
+    console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location);
+    if (!chainBusiness || !location) {
+      console.log('BusinessMatcher: Early return - missing chain business or location');
       return [];
     }
 
-    const category = chainBusiness.category || 'other';
-    console.log('BusinessMatcher: Looking for category:', category);
-    const categoryBusinesses = this.localBusinesses.filter(
-      business => business.category === category || category === 'other'
-    );
-    console.log('BusinessMatcher: Found', categoryBusinesses.length, 'businesses in category:', categoryBusinesses);
+    // Extract the user's current search query from Google Maps
+    const userQuery = this.extractUserSearchQuery();
+    console.log('BusinessMatcher: Extracted user search query:', userQuery);
 
-    // Calculate distances for all businesses (don't filter by bounds to show all alternatives)
-    const businessesInView = categoryBusinesses
-      .filter(business => {
-        // Only filter out businesses without coordinates
-        return business.latitude && business.longitude;
-      })
-      .map(business => {
-        const distance = this.calculateDistance(
-          location.lat, location.lng,
-          business.latitude, business.longitude
-        );
+    try {
+      // Use user's actual search query or fallback to category-based search
+      const searchQuery = userQuery || this.generateFallbackQuery(chainBusiness.category || 'other');
+      console.log(`BusinessMatcher: Using search query: "${searchQuery}"`);
 
-        return {
-          ...business,
-          distance: distance,
-        };
-      })
-      .sort((a, b) => a.distance - b.distance);
-
-    console.log('BusinessMatcher: Found', businessesInView.length, 'local alternatives sorted by distance');
-    return businessesInView;
+      // Call semantic search API
+      const apiResponse = await this.callSemanticSearchAPI(searchQuery, location);
+      
+      if (apiResponse && apiResponse.businesses && apiResponse.businesses.length > 0) {
+        console.log(`BusinessMatcher: Found ${apiResponse.businesses.length} semantic alternatives via API`);
+        console.log('BusinessMatcher: Top alternatives:', apiResponse.businesses.slice(0, 3).map(b => ({ name: b.name, score: b.relevanceScore })));
+        return apiResponse.businesses.slice(0, 5); // Limit to top 5 alternatives
+      } else {
+        console.log('BusinessMatcher: No local alternatives found via semantic search API');
+        return [];
+      }
+      
+    } catch (error) {
+      console.error('BusinessMatcher: Failed to search for local alternatives:', error);
+      return [];
+    }
   }
+
+  /**
+   * Extract the user's current search query from Google Maps URL or search box
+   */
+  extractUserSearchQuery() {
+    try {
+      // Method 1: Extract from URL
+      const url = window.location.href;
+      
+      // Check for search in URL path (e.g., /maps/search/grocery+stores/)
+      const searchMatch = url.match(/\/maps\/search\/([^\/\?]+)/);
+      if (searchMatch) {
+        const searchTerm = decodeURIComponent(searchMatch[1]).replace(/\+/g, ' ');
+        console.log('BusinessMatcher: Found search in URL path:', searchTerm);
+        return searchTerm;
+      }
+      
+      // Method 2: Extract from search box
+      const searchBox = document.querySelector('#searchboxinput, [data-value="Search"], input[placeholder*="Search"]');
+      if (searchBox && searchBox.value && searchBox.value.trim()) {
+        console.log('BusinessMatcher: Found search in search box:', searchBox.value);
+        return searchBox.value.trim();
+      }
+      
+      // Method 3: Extract from URL query parameters
+      const urlObj = new URL(url);
+      const query = urlObj.searchParams.get('q') || urlObj.searchParams.get('query');
+      if (query) {
+        console.log('BusinessMatcher: Found search in URL params:', query);
+        return query;
+      }
+      
+      console.log('BusinessMatcher: No user search query found');
+      return null;
+      
+    } catch (error) {
+      console.error('BusinessMatcher: Error extracting user search query:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate fallback search query based on chain business category
+   */
+  generateFallbackQuery(category) {
+    const fallbackQueries = {
+      'grocery': 'grocery stores',
+      'restaurant': 'restaurants',
+      'retail': 'stores shops',
+      'professional_services': 'professional services',
+      'health_wellness': 'health wellness services',
+      'home_garden': 'home garden stores',
+      'arts_entertainment': 'entertainment venues',
+      'automotive': 'auto repair services',
+      'financial': 'financial services',
+      'other': 'local businesses'
+    };
+    
+    return fallbackQueries[category] || 'local businesses';
+  }
+
+  /**
+   * Call semantic search API via Chrome runtime messaging
+   */
+  async callSemanticSearchAPI(query, location) {
+    try {
+      console.log('BusinessMatcher: Calling semantic search API via runtime messaging');
+      
+      const message = {
+        action: 'semanticSearch',
+        data: {
+          query: query,
+          lat: location.lat,
+          lng: location.lng,
+          radius: 10, // 10 mile search radius
+          limit: 8    // Get up to 8 alternatives
+        }
+      };
+      
+      console.log('BusinessMatcher: Sending message to service worker:', message);
+      
+      const response = await chrome.runtime.sendMessage(message);
+      
+      if (response && response.success) {
+        console.log('BusinessMatcher: Semantic search API response:', response.data);
+        return response.data;
+      } else {
+        throw new Error(response?.error || 'Unknown error from service worker');
+      }
+      
+    } catch (error) {
+      console.error('BusinessMatcher: Error calling semantic search API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Removed: extractBusinessesFromDocument() and extractCoordsFromContainer()
+   * Now using semantic search API instead of DOM extraction
+   */
 
   /**
    * Calculate match confidence between business name and pattern
@@ -367,14 +454,19 @@ export class BusinessMatcher {
   }
 
   /**
+   * Removed: PlaceID validation methods - No longer needed with dynamic API-based search
+   * The API now returns businesses with proper linking information
+   */
+
+  /**
    * Get matcher status for debugging
    */
   getStatus() {
     return {
       chainPatterns: this.chainPatterns.length,
-      localBusinesses: this.localBusinesses.length,
       lastChainUpdate: this.lastChainUpdate,
-      lastBusinessUpdate: this.lastBusinessUpdate,
+      dynamicBusinessSearch: true,
+      apiBasedAlternatives: true,
     };
   }
 }

@@ -266,21 +266,47 @@ export class BusinessDetector {
     }
 
     const text = element.textContent.toLowerCase();
-    const hasBusinessIndicators = 
+    
+    // Modern Google Maps indicators (based on current DOM structure)
+    const hasModernBusinessIndicators = 
+      // Modern business card classes
+      element.classList.contains('Nv2PK') ||  // New business card class
+      element.classList.contains('lI9IFe') ||  // Business listing class
+      element.classList.contains('qBF1Pd') ||  // Business name class
+      
+      // Traditional indicators (keep for backward compatibility)
       element.querySelector('[data-value="Directions"]') ||
       element.querySelector('[role="heading"]') ||
+      element.hasAttribute('data-result-index') ||
+      element.classList.contains('section-result') ||
+      
+      // Text-based indicators for business content
+      (text.includes('⋅') && (text.includes('opens') || text.includes('closed') || text.includes('hours'))) ||  // "Closed ⋅ Opens 10 am"
+      (text.includes('€') && text.includes('store')) ||  // "€€ Clothing store"
+      text.includes('clothing store') ||
+      text.includes('boutique') ||
+      text.includes('shop') ||
+      (text.match(/\d+\.\d+\(\d+\)/) && text.includes('·')) ||  // Rating pattern like "4.2(166) ·"
       text.includes('directions') ||
       text.includes('call') ||
       text.includes('website') ||
-      text.includes('reviews') ||
-      text.includes('hours') ||
-      element.hasAttribute('data-result-index') ||
-      element.classList.contains('section-result');
+      text.includes('reviews');
 
     const isNotFooter = !element.closest('footer') && !element.closest('[role="contentinfo"]');
     const isNotNavigation = !element.closest('nav') && !element.closest('[role="navigation"]');
+    const isNotControlElement = !text.includes('collapse side panel') && 
+                               !text.includes('savedrecentsget the app') &&
+                               !text.includes('all filters') &&
+                               text.length > 10;  // Avoid control elements with short text
     
-    return hasBusinessIndicators && isNotFooter && isNotNavigation;
+    const result = hasModernBusinessIndicators && isNotFooter && isNotNavigation && isNotControlElement;
+    
+    // Minimal debug logging for accepted containers
+    if (result) {
+      console.log(`BusinessDetector: Accepted container with text: "${text.slice(0, 100)}"`);
+    }
+    
+    return result;
   }
 
   /**
