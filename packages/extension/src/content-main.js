@@ -8,6 +8,8 @@ import './shared/constants.js';
 import './shared/api-client.js';
 import './shared/business-matcher.js';
 import './content-scripts/business-detector.js';
+import './content-scripts/coordinate-converter.js';
+import './content-scripts/map-pin-manager.js';
 import './content-scripts/ui-injector.js';
 import './content-scripts/maps-modifier.js';
 

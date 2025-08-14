@@ -334,7 +334,16 @@ export class BusinessDetector {
       try {
         const nameElement = container.querySelector(selector);
         if (nameElement && nameElement.textContent.trim()) {
-          return this.cleanBusinessName(nameElement.textContent.trim());
+          const name = this.cleanBusinessName(nameElement.textContent.trim());
+          console.log(`BusinessDetector: Found name "${name}" using selector "${selector}"`);
+          
+          // Skip generic/system terms
+          if (this.isGenericTerm(name)) {
+            console.log(`BusinessDetector: Skipping generic term: ${name}`);
+            continue;
+          }
+          
+          return name;
         }
       } catch (error) {
         // Skip invalid selectors
@@ -345,7 +354,9 @@ export class BusinessDetector {
     const headings = container.querySelectorAll('h1, h2, h3, h4, [role="heading"]');
     for (const heading of headings) {
       const text = heading.textContent.trim();
-      if (text && text.length > 2 && text.length < 100) {
+      console.log(`BusinessDetector: Checking heading text: "${text}"`);
+      
+      if (text && text.length > 2 && text.length < 100 && !this.isGenericTerm(text)) {
         return this.cleanBusinessName(text);
       }
     }
@@ -444,6 +455,25 @@ export class BusinessDetector {
       // Invalid URL
     }
     return null;
+  }
+
+  /**
+   * Check if a term is too generic to be a business name
+   */
+  isGenericTerm(text) {
+    if (!text) return true;
+    
+    const genericTerms = [
+      'results', 'search results', 'map results',
+      'loading', 'loading...', 'search',
+      'directions', 'call', 'website', 'save',
+      'more options', 'options', 'menu',
+      'filter', 'filters', 'sort', 'view all',
+      'show more', 'show less', 'expand', 'collapse'
+    ];
+    
+    const lowerText = text.toLowerCase().trim();
+    return genericTerms.includes(lowerText) || lowerText.length < 3;
   }
 
   /**
