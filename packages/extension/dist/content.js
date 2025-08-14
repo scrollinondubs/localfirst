@@ -675,7 +675,13 @@
         try {
           const nameElement = container.querySelector(selector);
           if (nameElement && nameElement.textContent.trim()) {
-            return this.cleanBusinessName(nameElement.textContent.trim());
+            const name = this.cleanBusinessName(nameElement.textContent.trim());
+            console.log(`BusinessDetector: Found name "${name}" using selector "${selector}"`);
+            if (this.isGenericTerm(name)) {
+              console.log(`BusinessDetector: Skipping generic term: ${name}`);
+              continue;
+            }
+            return name;
           }
         } catch (error) {
         }
@@ -683,7 +689,8 @@
       const headings = container.querySelectorAll('h1, h2, h3, h4, [role="heading"]');
       for (const heading of headings) {
         const text = heading.textContent.trim();
-        if (text && text.length > 2 && text.length < 100) {
+        console.log(`BusinessDetector: Checking heading text: "${text}"`);
+        if (text && text.length > 2 && text.length < 100 && !this.isGenericTerm(text)) {
           return this.cleanBusinessName(text);
         }
       }
@@ -765,6 +772,37 @@
       } catch (error) {
       }
       return null;
+    }
+    /**
+     * Check if a term is too generic to be a business name
+     */
+    isGenericTerm(text) {
+      if (!text) return true;
+      const genericTerms = [
+        "results",
+        "search results",
+        "map results",
+        "loading",
+        "loading...",
+        "search",
+        "directions",
+        "call",
+        "website",
+        "save",
+        "more options",
+        "options",
+        "menu",
+        "filter",
+        "filters",
+        "sort",
+        "view all",
+        "show more",
+        "show less",
+        "expand",
+        "collapse"
+      ];
+      const lowerText = text.toLowerCase().trim();
+      return genericTerms.includes(lowerText) || lowerText.length < 3;
     }
     /**
      * Clean and normalize business name
@@ -926,6 +964,954 @@
     }
   }
   const businessDetector = new BusinessDetector();
+  class CoordinateConverter {
+    constructor() {
+      this.EARTH_RADIUS = 6378137;
+      this.MAX_LATITUDE = 85.0511287798;
+    }
+    /**
+     * Convert latitude to Web Mercator Y coordinate
+     */
+    latitudeToMercatorY(lat) {
+      if (lat > this.MAX_LATITUDE) lat = this.MAX_LATITUDE;
+      if (lat < -this.MAX_LATITUDE) lat = -this.MAX_LATITUDE;
+      const radLat = lat * Math.PI / 180;
+      return Math.log(Math.tan(Math.PI / 4 + radLat / 2));
+    }
+    /**
+     * Convert Web Mercator Y coordinate to latitude
+     */
+    mercatorYToLatitude(mercY) {
+      return (2 * Math.atan(Math.exp(mercY)) - Math.PI / 2) * 180 / Math.PI;
+    }
+    /**
+     * Convert longitude to Web Mercator X coordinate
+     */
+    longitudeToMercatorX(lng) {
+      return lng * Math.PI / 180;
+    }
+    /**
+     * Convert Web Mercator X coordinate to longitude
+     */
+    mercatorXToLongitude(mercX) {
+      return mercX * 180 / Math.PI;
+    }
+    /**
+     * Extract detailed map bounds from Google Maps URL and DOM
+     */
+    extractMapBounds() {
+      console.log("CoordinateConverter: Starting map bounds extraction process");
+      try {
+        console.log("CoordinateConverter: Trying URL-based extraction...");
+        const urlBounds = this.extractBoundsFromUrl();
+        if (urlBounds) {
+          console.log("CoordinateConverter: Successfully extracted bounds from URL:", urlBounds);
+          return urlBounds;
+        }
+        console.log("CoordinateConverter: Trying DOM-based extraction...");
+        const domBounds = this.extractBoundsFromDOM();
+        if (domBounds) {
+          console.log("CoordinateConverter: Successfully extracted bounds from DOM:", domBounds);
+          return domBounds;
+        }
+        console.log("CoordinateConverter: Using fallback estimation...");
+        const fallbackBounds = this.estimateBoundsFromLocation();
+        console.log("CoordinateConverter: Using estimated bounds:", fallbackBounds);
+        return fallbackBounds;
+      } catch (error) {
+        console.error("CoordinateConverter: Failed to extract map bounds:", error);
+        return null;
+      }
+    }
+    /**
+     * Extract bounds from Google Maps URL
+     */
+    extractBoundsFromUrl() {
+      const url = window.location.href;
+      console.log("CoordinateConverter: Extracting bounds from URL:", url);
+      let coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+\.?\d*)z/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        const zoom = parseFloat(coordMatch[3]);
+        console.log("CoordinateConverter: Found URL coordinates (z-suffix):", { lat, lng, zoom });
+        return this.calculateBoundsFromCenter(lat, lng, zoom);
+      }
+      coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+\.?\d*)/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        const zoom = parseFloat(coordMatch[3]);
+        console.log("CoordinateConverter: Found URL coordinates (no-z):", { lat, lng, zoom });
+        return this.calculateBoundsFromCenter(lat, lng, zoom);
+      }
+      const placeMatch = url.match(/\/place\/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+\.?\d*)/);
+      if (placeMatch) {
+        const lat = parseFloat(placeMatch[1]);
+        const lng = parseFloat(placeMatch[2]);
+        const zoom = parseFloat(placeMatch[3]);
+        console.log("CoordinateConverter: Found place coordinates:", { lat, lng, zoom });
+        return this.calculateBoundsFromCenter(lat, lng, zoom);
+      }
+      const searchMatch = url.match(/\/search\/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+\.?\d*)/);
+      if (searchMatch) {
+        const lat = parseFloat(searchMatch[1]);
+        const lng = parseFloat(searchMatch[2]);
+        const zoom = parseFloat(searchMatch[3]);
+        console.log("CoordinateConverter: Found search coordinates:", { lat, lng, zoom });
+        return this.calculateBoundsFromCenter(lat, lng, zoom);
+      }
+      const dirMatch = url.match(/\/dir\/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+\.?\d*)/);
+      if (dirMatch) {
+        const lat = parseFloat(dirMatch[1]);
+        const lng = parseFloat(dirMatch[2]);
+        const zoom = parseFloat(dirMatch[3]);
+        console.log("CoordinateConverter: Found directions coordinates:", { lat, lng, zoom });
+        return this.calculateBoundsFromCenter(lat, lng, zoom);
+      }
+      console.log("CoordinateConverter: No coordinates found in URL patterns");
+      return null;
+    }
+    /**
+     * Calculate map bounds from center point and zoom level
+     */
+    calculateBoundsFromCenter(centerLat, centerLng, zoom) {
+      const degreesPerPixelAtEquator = 360 / (256 * Math.pow(2, zoom));
+      const containerWidth = 1366;
+      const containerHeight = 1024;
+      const lngSpan = containerWidth * degreesPerPixelAtEquator;
+      const latSpan = containerHeight * degreesPerPixelAtEquator;
+      const cosLat = Math.cos(centerLat * Math.PI / 180);
+      const adjustedLngSpan = lngSpan / cosLat;
+      console.log("CoordinateConverter: Calculated bounds for zoom", zoom, "spans:", {
+        latSpan,
+        lngSpan: adjustedLngSpan,
+        degreesPerPixel: degreesPerPixelAtEquator,
+        cosLat
+      });
+      return {
+        center: { lat: centerLat, lng: centerLng },
+        zoom,
+        north: centerLat + latSpan / 2,
+        south: centerLat - latSpan / 2,
+        east: centerLng + adjustedLngSpan / 2,
+        west: centerLng - adjustedLngSpan / 2
+      };
+    }
+    /**
+     * Extract bounds from DOM elements (if available)
+     */
+    extractBoundsFromDOM() {
+      console.log("CoordinateConverter: Attempting DOM-based bounds extraction");
+      try {
+        if (window.google && window.google.maps) {
+          console.log("CoordinateConverter: Found Google Maps API, but cannot directly access map instance");
+        }
+        const mapContainer = document.querySelector("#map") || document.querySelector(".gm-style");
+        if (mapContainer) {
+          console.log("CoordinateConverter: Found map container, checking for coordinate attributes");
+          const attrs = ["data-lat", "data-lng", "data-zoom", "data-bounds", "data-viewport"];
+          for (const attr of attrs) {
+            const value = mapContainer.getAttribute(attr);
+            if (value) {
+              console.log(`CoordinateConverter: Found attribute ${attr}:`, value);
+            }
+          }
+        }
+      } catch (error) {
+        console.log("CoordinateConverter: Error accessing Google Maps data:", error);
+      }
+      const mapElements = [
+        document.querySelector("[data-lat]"),
+        document.querySelector("[data-lng]"),
+        document.querySelector(".gm-style[data-bounds]"),
+        document.querySelector("#scene[data-viewport]"),
+        document.querySelector('[role="application"]'),
+        // Map application role
+        document.querySelector(".widget-scene-canvas")
+        // Scene canvas
+      ];
+      for (const element of mapElements) {
+        if (element) {
+          console.log("CoordinateConverter: Checking element for bounds:", element.tagName, element.className);
+          const bounds = this.parseBoundsFromElement(element);
+          if (bounds) {
+            console.log("CoordinateConverter: Successfully extracted bounds from DOM");
+            return bounds;
+          }
+        }
+      }
+      console.log("CoordinateConverter: No bounds found in DOM elements");
+      return null;
+    }
+    /**
+     * Parse bounds from a DOM element
+     */
+    parseBoundsFromElement(element) {
+      const attributes = ["data-bounds", "data-viewport", "data-center", "data-coords"];
+      for (const attr of attributes) {
+        const value = element.getAttribute(attr);
+        if (value) {
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed.north && parsed.south && parsed.east && parsed.west) {
+              return parsed;
+            }
+          } catch (e) {
+            const coords = value.match(/(-?\d+\.?\d*)/g);
+            if (coords && coords.length >= 4) {
+              return {
+                north: parseFloat(coords[0]),
+                south: parseFloat(coords[1]),
+                east: parseFloat(coords[2]),
+                west: parseFloat(coords[3])
+              };
+            }
+          }
+        }
+      }
+      return null;
+    }
+    /**
+     * Estimate bounds based on current location or search results
+     */
+    estimateBoundsFromLocation() {
+      console.log("CoordinateConverter: Attempting to estimate bounds from URL and context");
+      const url = window.location.href;
+      let coords = url.match(/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (coords && coords.length >= 3) {
+        const lat = parseFloat(coords[1]);
+        const lng = parseFloat(coords[2]);
+        if (lat >= 20 && lat <= 50 && lng >= -130 && lng <= -80) {
+          console.log("CoordinateConverter: Found coordinates in URL:", { lat, lng });
+          let estimatedZoom = 10;
+          const zoomMatch = url.match(/(\d+\.?\d*)z/);
+          if (zoomMatch) {
+            estimatedZoom = parseFloat(zoomMatch[1]);
+          } else {
+            if (url.includes("/place/") || url.includes("/search/")) {
+              estimatedZoom = 15;
+            } else if (url.includes("/dir/")) {
+              estimatedZoom = 12;
+            } else {
+              estimatedZoom = 10;
+            }
+          }
+          console.log("CoordinateConverter: Using estimated coordinates with zoom:", { lat, lng, zoom: estimatedZoom });
+          return this.calculateBoundsFromCenter(lat, lng, estimatedZoom);
+        }
+      }
+      if (url.includes("phoenix") || url.includes("Arizona") || url.includes("AZ")) {
+        const phoenixCenter2 = { lat: 33.4484, lng: -112.074 };
+        const defaultZoom = 9;
+        console.log("CoordinateConverter: Using Phoenix area bounds based on URL context");
+        return this.calculateBoundsFromCenter(phoenixCenter2.lat, phoenixCenter2.lng, defaultZoom);
+      }
+      const phoenixCenter = { lat: 33.4484, lng: -112.074 };
+      const wideZoom = 8;
+      console.log("CoordinateConverter: Using wide Phoenix default bounds as last resort");
+      return this.calculateBoundsFromCenter(phoenixCenter.lat, phoenixCenter.lng, wideZoom);
+    }
+    /**
+     * Convert lat/lng to pixel coordinates with simplified linear projection
+     */
+    latLngToPixel(lat, lng, mapBounds, containerSize) {
+      if (!mapBounds || !containerSize) {
+        return null;
+      }
+      try {
+        console.log("CoordinateConverter: Converting point:", { lat, lng });
+        console.log("CoordinateConverter: Map bounds:", mapBounds);
+        console.log("CoordinateConverter: Container size:", containerSize);
+        if (lat < mapBounds.south || lat > mapBounds.north || lng < mapBounds.west || lng > mapBounds.east) {
+          console.log("CoordinateConverter: Point outside map bounds");
+          return null;
+        }
+        const xRatio = (lng - mapBounds.west) / (mapBounds.east - mapBounds.west);
+        const yRatio = (mapBounds.north - lat) / (mapBounds.north - mapBounds.south);
+        console.log("CoordinateConverter: Calculated ratios:", { xRatio, yRatio });
+        const x = xRatio * containerSize.width;
+        const y = yRatio * containerSize.height;
+        console.log("CoordinateConverter: Final pixel coordinates:", { x, y });
+        if (x >= -20 && x <= containerSize.width + 20 && y >= -20 && y <= containerSize.height + 20) {
+          return { x, y };
+        } else {
+          console.log("CoordinateConverter: Point outside container bounds:", { x, y, containerSize });
+          return null;
+        }
+      } catch (error) {
+        console.error("CoordinateConverter: Conversion failed:", error);
+        return null;
+      }
+    }
+    /**
+     * Convert pixel coordinates back to lat/lng
+     */
+    pixelToLatLng(x, y, mapBounds, containerSize) {
+      if (!mapBounds || !containerSize) {
+        return null;
+      }
+      try {
+        const xRatio = x / containerSize.width;
+        const yRatio = y / containerSize.height;
+        const mercatorBounds = {
+          north: this.latitudeToMercatorY(mapBounds.north),
+          south: this.latitudeToMercatorY(mapBounds.south),
+          east: this.longitudeToMercatorX(mapBounds.east),
+          west: this.longitudeToMercatorX(mapBounds.west)
+        };
+        const mercatorX = mercatorBounds.west + xRatio * (mercatorBounds.east - mercatorBounds.west);
+        const mercatorY = mercatorBounds.north - yRatio * (mercatorBounds.north - mercatorBounds.south);
+        const lat = this.mercatorYToLatitude(mercatorY);
+        const lng = this.mercatorXToLongitude(mercatorX);
+        return { lat, lng };
+      } catch (error) {
+        console.error("CoordinateConverter: Reverse conversion failed:", error);
+        return null;
+      }
+    }
+    /**
+     * Calculate distance between two points in meters
+     */
+    calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = this.EARTH_RADIUS;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+    /**
+     * Check if a point is within the visible map bounds
+     */
+    isPointInBounds(lat, lng, mapBounds) {
+      return lat >= mapBounds.south && lat <= mapBounds.north && lng >= mapBounds.west && lng <= mapBounds.east;
+    }
+    /**
+     * Get optimal zoom level to fit all points
+     */
+    getOptimalZoom(points, containerSize) {
+      if (!points || points.length === 0) return 10;
+      let minLat = Infinity, maxLat = -Infinity;
+      let minLng = Infinity, maxLng = -Infinity;
+      points.forEach((point) => {
+        minLat = Math.min(minLat, point.lat);
+        maxLat = Math.max(maxLat, point.lat);
+        minLng = Math.min(minLng, point.lng);
+        maxLng = Math.max(maxLng, point.lng);
+      });
+      const latSpan = maxLat - minLat;
+      const lngSpan = maxLng - minLng;
+      const maxSpan = Math.max(latSpan, lngSpan);
+      const zoom = Math.floor(Math.log2(360 / maxSpan)) - 1;
+      return Math.max(1, Math.min(20, zoom));
+    }
+  }
+  const coordinateConverter = new CoordinateConverter();
+  console.log("CoordinateConverter: Module loaded and instance created");
+  if (typeof window !== "undefined") {
+    window.LFA_coordinateConverter = coordinateConverter;
+  }
+  class MapPinManager {
+    constructor() {
+      this.overlayContainer = null;
+      this.pins = /* @__PURE__ */ new Map();
+      this.businessData = /* @__PURE__ */ new Map();
+      this.infoWindow = null;
+      this.currentBounds = null;
+      this.currentZoom = null;
+      this.mapContainer = null;
+      this.isInitialized = false;
+      this.handleMapChange = this.handleMapChange.bind(this);
+      this.handlePinHover = this.handlePinHover.bind(this);
+      this.handlePinClick = this.handlePinClick.bind(this);
+      this.updateThrottle = 50;
+      this.lastUpdate = 0;
+      this.onPinHover = null;
+      this.onPinClick = null;
+    }
+    /**
+     * Initialize the pin manager system
+     */
+    async init() {
+      if (this.isInitialized) {
+        return;
+      }
+      try {
+        console.log("MapPinManager: Initializing...");
+        await this.setupMapContainer();
+        this.createOverlaySystem();
+        this.setupEventListeners();
+        this.isInitialized = true;
+        console.log("MapPinManager: Initialized successfully");
+      } catch (error) {
+        console.error("MapPinManager: Initialization failed:", error);
+        throw error;
+      }
+    }
+    /**
+     * Find and set up the Google Maps container
+     */
+    async setupMapContainer() {
+      const selectors = [
+        "#scene",
+        // Primary map canvas container
+        '[role="region"]',
+        // Map region
+        ".gm-style",
+        // Google Maps style container
+        "#map",
+        // Generic map ID
+        ".widget-scene-canvas",
+        // Canvas container
+        "[data-scene]",
+        // Scene container
+        ".maps-page",
+        // Maps page container
+        'div[jsaction*="map"]',
+        // Elements with map actions
+        'div[data-component-id*="scene"]'
+        // Components with scene ID
+      ];
+      console.log("MapPinManager: Searching for map container...");
+      for (const selector of selectors) {
+        try {
+          const containers = document.querySelectorAll(selector);
+          console.log(`MapPinManager: Found ${containers.length} elements for selector "${selector}"`);
+          for (const container of containers) {
+            const rect = container.getBoundingClientRect();
+            console.log(`MapPinManager: Checking container - size: ${rect.width}x${rect.height}, visible: ${rect.width > 0 && rect.height > 0}`);
+            if (rect.width > 200 && rect.height > 200) {
+              this.mapContainer = container;
+              console.log("MapPinManager: Found map container:", selector, "size:", `${rect.width}x${rect.height}`);
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn("MapPinManager: Error with selector", selector, error);
+        }
+      }
+      const allDivs = document.querySelectorAll("div");
+      for (const div of allDivs) {
+        const rect = div.getBoundingClientRect();
+        if (rect.width > 400 && rect.height > 300) {
+          const hasMapLikeContent = div.querySelector("canvas") || div.querySelector('img[src*="maps"]') || div.querySelector('[role="button"][aria-label*="map"]');
+          if (hasMapLikeContent) {
+            this.mapContainer = div;
+            console.log("MapPinManager: Found map container via fallback:", div.className, "size:", `${rect.width}x${rect.height}`);
+            return;
+          }
+        }
+      }
+      throw new Error("MapPinManager: Could not find valid map container");
+    }
+    /**
+     * Create the overlay system for pins
+     */
+    createOverlaySystem() {
+      if (this.overlayContainer) {
+        return;
+      }
+      this.overlayContainer = document.createElement("div");
+      this.overlayContainer.id = "lfa-pin-overlay";
+      this.overlayContainer.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+      overflow: hidden;
+    `;
+      this.mapContainer.appendChild(this.overlayContainer);
+      console.log("MapPinManager: Created overlay system");
+    }
+    /**
+     * Set up event listeners for map changes
+     */
+    setupEventListeners() {
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(() => {
+          this.handleMapChange("resize");
+        });
+        resizeObserver.observe(this.mapContainer);
+      }
+      let lastUrl = window.location.href;
+      setInterval(() => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl) {
+          console.log("MapPinManager: URL changed from", lastUrl, "to", currentUrl);
+          lastUrl = currentUrl;
+          this.handleMapChange("navigation");
+        }
+      }, 300);
+      this.mapContainer.addEventListener("wheel", () => {
+        setTimeout(() => this.handleMapChange("zoom"), 200);
+      }, { passive: true });
+      this.mapContainer.addEventListener("mouseup", () => {
+        setTimeout(() => this.handleMapChange("pan"), 200);
+      }, { passive: true });
+      this.mapContainer.addEventListener("touchend", () => {
+        setTimeout(() => this.handleMapChange("touch"), 200);
+      }, { passive: true });
+      this.mapContainer.addEventListener("keyup", () => {
+        setTimeout(() => this.handleMapChange("keyboard"), 200);
+      }, { passive: true });
+      if (window.MutationObserver) {
+        const mapObserver = new MutationObserver((mutations) => {
+          const hasMapChanges = mutations.some(
+            (mutation) => {
+              var _a, _b, _c;
+              return mutation.target && (((_a = mutation.target.classList) == null ? void 0 : _a.contains("gm-style")) || ((_c = (_b = mutation.target).querySelector) == null ? void 0 : _c.call(_b, ".gm-style")));
+            }
+          );
+          if (hasMapChanges) {
+            setTimeout(() => this.handleMapChange("dom-change"), 100);
+          }
+        });
+        mapObserver.observe(this.mapContainer, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["style", "transform"]
+        });
+      }
+      console.log("MapPinManager: Enhanced event listeners set up");
+    }
+    /**
+     * Handle map changes (zoom, pan, resize)
+     */
+    handleMapChange(type) {
+      const now = Date.now();
+      if (now - this.lastUpdate < this.updateThrottle) {
+        return;
+      }
+      this.lastUpdate = now;
+      console.log("MapPinManager: Map change detected:", type);
+      this.updatePinPositions();
+    }
+    /**
+     * Extract current map bounds and zoom from Google Maps
+     */
+    extractMapBounds() {
+      return coordinateConverter.extractMapBounds();
+    }
+    /**
+     * Convert latitude/longitude to pixel coordinates within the overlay
+     */
+    latLngToPixel(lat, lng, mapBounds, containerSize) {
+      if (!mapBounds || !containerSize) {
+        return null;
+      }
+      try {
+        return coordinateConverter.latLngToPixel(lat, lng, mapBounds, containerSize);
+      } catch (error) {
+        console.error("MapPinManager: Failed to convert lat/lng to pixel:", error);
+        return null;
+      }
+    }
+    /**
+     * Show pins for an array of businesses
+     */
+    showPinsForBusinesses(businesses) {
+      if (!this.isInitialized || !businesses || businesses.length === 0) {
+        return;
+      }
+      console.log("MapPinManager: Showing pins for", businesses.length, "businesses");
+      this.clearAllPins();
+      businesses.forEach((business, index) => {
+        this.createPin(business, index);
+      });
+      this.updatePinPositions();
+    }
+    /**
+     * Create a pin for a single business
+     */
+    createPin(business, index) {
+      if (!business.latitude || !business.longitude) {
+        console.warn("MapPinManager: Skipping business without coordinates:", business.name);
+        return;
+      }
+      const pin = document.createElement("div");
+      pin.className = "lfa-map-pin";
+      pin.setAttribute("data-business-id", business.id);
+      pin.style.cssText = `
+      position: absolute;
+      pointer-events: auto;
+      cursor: pointer;
+      transform: translate(-50%, -100%);
+      transition: all 0.2s ease;
+      z-index: ${101 + index};
+    `;
+      this.businessData.set(business.id, business);
+      pin.innerHTML = this.createPinSVG(business, index);
+      pin.addEventListener("mouseenter", (e) => this.handlePinHover(e, business, true));
+      pin.addEventListener("mouseleave", (e) => this.handlePinHover(e, business, false));
+      pin.addEventListener("click", (e) => this.handlePinClick(e, business));
+      this.overlayContainer.appendChild(pin);
+      this.pins.set(business.id, pin);
+      console.log("MapPinManager: Created pin for", business.name);
+    }
+    /**
+     * Create SVG for pin with Local First Arizona branding
+     */
+    createPinSVG(business, index) {
+      const gradientId = `lfa-gradient-${business.id}`;
+      return `
+      <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+          </linearGradient>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+          </filter>
+        </defs>
+        
+        <!-- Pin shape -->
+        <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z" 
+              fill="url(#${gradientId})" 
+              stroke="#1B5E20" 
+              stroke-width="1"
+              filter="url(#shadow)"/>
+        
+        <!-- Inner circle -->
+        <circle cx="16" cy="16" r="10" fill="white" stroke="#2E7D32" stroke-width="1"/>
+        
+        <!-- LFA text -->
+        <text x="16" y="20" text-anchor="middle" 
+              font-family="Arial, sans-serif" 
+              font-size="8" 
+              font-weight="bold" 
+              fill="#2E7D32">LFA</text>
+      </svg>
+    `;
+    }
+    /**
+     * Update positions of all pins based on current map state
+     */
+    updatePinPositions() {
+      const mapBounds = this.extractMapBounds();
+      if (!mapBounds) {
+        console.warn("MapPinManager: Could not extract map bounds for positioning");
+        return;
+      }
+      const containerSize = {
+        width: this.overlayContainer.offsetWidth,
+        height: this.overlayContainer.offsetHeight
+      };
+      console.log("MapPinManager: Updating pin positions with:", {
+        mapBounds,
+        containerSize,
+        totalPins: this.pins.size
+      });
+      let visiblePins = 0;
+      this.pins.forEach((pin, businessId) => {
+        const businessData = this.getBusinessDataFromPin(pin);
+        if (!businessData) {
+          console.warn("MapPinManager: No business data for pin:", businessId);
+          return;
+        }
+        console.log(`MapPinManager: Positioning pin for ${businessData.name} at (${businessData.latitude}, ${businessData.longitude})`);
+        const pixelPos = this.latLngToPixel(
+          businessData.latitude,
+          businessData.longitude,
+          mapBounds,
+          containerSize
+        );
+        if (pixelPos) {
+          pin.style.left = `${pixelPos.x}px`;
+          pin.style.top = `${pixelPos.y}px`;
+          pin.style.display = "block";
+          pin.style.position = "absolute";
+          visiblePins++;
+          console.log(`MapPinManager: Pin positioned at (${pixelPos.x}, ${pixelPos.y}) for ${businessData.name}`);
+        } else {
+          pin.style.display = "none";
+          console.log(`MapPinManager: Pin hidden (outside bounds) for ${businessData.name}`);
+        }
+      });
+      console.log(`MapPinManager: Updated positions for ${this.pins.size} pins, ${visiblePins} visible`);
+    }
+    /**
+     * Extract business data from pin element (helper method)
+     */
+    getBusinessDataFromPin(pin) {
+      const businessId = pin.getAttribute("data-business-id");
+      if (businessId && this.businessData.has(businessId)) {
+        return this.businessData.get(businessId);
+      }
+      console.warn("MapPinManager: No business data found for pin, using fallback");
+      return {
+        latitude: 33.4484,
+        // Phoenix area default
+        longitude: -112.074,
+        name: "Unknown Business"
+      };
+    }
+    /**
+     * Handle pin hover events
+     */
+    handlePinHover(event, business, isEntering) {
+      const pin = event.currentTarget;
+      if (isEntering) {
+        pin.style.transform = "translate(-50%, -100%) scale(1.1)";
+        pin.style.zIndex = "200";
+        this.highlightSidebarListing(business.id, true);
+        if (this.onPinHover) {
+          this.onPinHover(business, true);
+        }
+        console.log("MapPinManager: Hovering over", business.name);
+      } else {
+        pin.style.transform = "translate(-50%, -100%) scale(1)";
+        pin.style.zIndex = "";
+        this.highlightSidebarListing(business.id, false);
+        if (this.onPinHover) {
+          this.onPinHover(business, false);
+        }
+      }
+    }
+    /**
+     * Handle pin click events
+     */
+    handlePinClick(event, business) {
+      event.stopPropagation();
+      console.log("MapPinManager: Clicked pin for", business.name);
+      this.showInfoWindow(business, event.currentTarget);
+      if (this.onPinClick) {
+        this.onPinClick(business, event);
+      }
+    }
+    /**
+     * Show info window for business
+     */
+    showInfoWindow(business, pinElement) {
+      console.log("MapPinManager: Showing info window for", business.name);
+      this.hideInfoWindow();
+      this.infoWindow = this.createInfoWindow(business);
+      const pinRect = pinElement.getBoundingClientRect();
+      const overlayRect = this.overlayContainer.getBoundingClientRect();
+      this.infoWindow.style.left = `${pinRect.left - overlayRect.left}px`;
+      this.infoWindow.style.top = `${pinRect.top - overlayRect.top - 10}px`;
+      this.infoWindow.style.transform = "translate(-50%, -100%)";
+      this.overlayContainer.appendChild(this.infoWindow);
+      setTimeout(() => {
+        this.hideInfoWindow();
+      }, 5e3);
+    }
+    /**
+     * Create Google Maps-style info window
+     */
+    createInfoWindow(business) {
+      const infoWindow = document.createElement("div");
+      infoWindow.className = "lfa-info-window";
+      infoWindow.style.cssText = `
+      position: absolute;
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 300;
+      font-family: Google Sans, Roboto, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 20px;
+      max-width: 250px;
+      pointer-events: auto;
+      cursor: default;
+    `;
+      const arrow = document.createElement("div");
+      arrow.style.cssText = `
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid white;
+    `;
+      infoWindow.appendChild(arrow);
+      const name = document.createElement("div");
+      name.style.cssText = `
+      font-weight: 600;
+      color: #1a73e8;
+      margin-bottom: 4px;
+      cursor: pointer;
+    `;
+      name.textContent = business.name;
+      name.addEventListener("click", () => {
+        this.openBusinessInMaps(business);
+      });
+      infoWindow.appendChild(name);
+      if (business.address) {
+        const address = document.createElement("div");
+        address.style.cssText = `
+        color: #5f6368;
+        font-size: 13px;
+        margin-bottom: 4px;
+      `;
+        address.textContent = business.address;
+        infoWindow.appendChild(address);
+      }
+      if (business.distance) {
+        const distance = document.createElement("div");
+        distance.style.cssText = `
+        color: #5f6368;
+        font-size: 13px;
+        margin-bottom: 8px;
+      `;
+        distance.textContent = `${business.distance.toFixed(1)} mi away`;
+        infoWindow.appendChild(distance);
+      }
+      if (business.verified) {
+        const badge = document.createElement("div");
+        badge.style.cssText = `
+        background: #4CAF50;
+        color: white;
+        font-size: 11px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        font-weight: 600;
+      `;
+        badge.textContent = "Verified Local";
+        infoWindow.appendChild(badge);
+      }
+      return infoWindow;
+    }
+    /**
+     * Hide the current info window
+     */
+    hideInfoWindow() {
+      if (this.infoWindow) {
+        this.infoWindow.remove();
+        this.infoWindow = null;
+      }
+    }
+    /**
+     * Open business in Google Maps
+     */
+    openBusinessInMaps(business) {
+      try {
+        let url;
+        if (business.placeId) {
+          url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
+        } else if (business.name && business.address) {
+          const query = encodeURIComponent(`${business.name} ${business.address}`);
+          url = `https://maps.google.com/maps/search/${query}`;
+        } else if (business.latitude && business.longitude) {
+          url = `https://maps.google.com/maps?q=${business.latitude},${business.longitude}`;
+        } else {
+          return;
+        }
+        window.open(url, "_blank");
+      } catch (error) {
+        console.error("MapPinManager: Failed to open business in maps:", error);
+      }
+    }
+    /**
+     * Highlight sidebar listing for a business
+     */
+    highlightSidebarListing(businessId, highlight = true) {
+      try {
+        const business = this.businessData.get(businessId);
+        if (!business) return;
+        const alternativeItems = document.querySelectorAll(".lfa-alternative-item");
+        alternativeItems.forEach((item) => {
+          const nameElement = item.querySelector(".lfa-alternative-name");
+          if (nameElement && nameElement.textContent.trim() === business.name) {
+            if (highlight) {
+              item.style.backgroundColor = "#f0f8ff";
+              item.style.transform = "scale(1.02)";
+              item.style.transition = "all 0.2s ease";
+              item.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+            } else {
+              item.style.backgroundColor = "";
+              item.style.transform = "";
+              item.style.boxShadow = "";
+            }
+          }
+        });
+      } catch (error) {
+        console.warn("MapPinManager: Error highlighting sidebar listing:", error);
+      }
+    }
+    /**
+     * Clear all pins from the overlay
+     */
+    clearAllPins() {
+      this.hideInfoWindow();
+      this.pins.forEach((pin) => {
+        pin.remove();
+      });
+      this.pins.clear();
+      this.businessData.clear();
+      console.log("MapPinManager: Cleared all pins");
+    }
+    /**
+     * Set hover callbacks for bidirectional interaction
+     */
+    setHoverCallbacks(onPinHover, onPinClick) {
+      this.onPinHover = onPinHover;
+      this.onPinClick = onPinClick;
+    }
+    /**
+     * Highlight a pin from external trigger (e.g., sidebar hover)
+     */
+    highlightPinForBusiness(businessId, highlight = true) {
+      try {
+        const pin = this.pins.get(businessId);
+        if (pin) {
+          if (highlight) {
+            pin.style.transform = "translate(-50%, -100%) scale(1.15)";
+            pin.style.zIndex = "250";
+            pin.style.filter = "drop-shadow(0 4px 8px rgba(0,0,0,0.3))";
+          } else {
+            pin.style.transform = "translate(-50%, -100%) scale(1)";
+            pin.style.zIndex = "";
+            pin.style.filter = "";
+          }
+        }
+      } catch (error) {
+        console.warn("MapPinManager: Error highlighting pin:", error);
+      }
+    }
+    /**
+     * Get all pins for external access
+     */
+    getPins() {
+      return Array.from(this.pins.entries()).map(([businessId, pinElement]) => {
+        const business = this.businessData.get(businessId);
+        return {
+          businessId,
+          business,
+          pinElement
+        };
+      });
+    }
+    /**
+     * Destroy the pin manager and clean up
+     */
+    destroy() {
+      this.clearAllPins();
+      if (this.overlayContainer) {
+        this.overlayContainer.remove();
+        this.overlayContainer = null;
+      }
+      this.isInitialized = false;
+      console.log("MapPinManager: Destroyed");
+    }
+  }
+  const mapPinManager = new MapPinManager();
+  console.log("MapPinManager: Module loaded and instance created");
+  if (typeof window !== "undefined") {
+    window.LFA_mapPinManager = mapPinManager;
+  }
   class UIInjector {
     constructor() {
       this.injectedElements = /* @__PURE__ */ new WeakMap();
@@ -1177,6 +2163,67 @@
         }
       }
 
+      /* Map Pin Styles */
+      .lfa-map-pin {
+        position: absolute;
+        pointer-events: auto;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+      }
+
+      .lfa-map-pin:hover {
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+      }
+
+      /* Info Window Styles */
+      .lfa-info-window {
+        position: absolute;
+        background: white;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 300;
+        font-family: Google Sans, Roboto, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 20px;
+        max-width: 250px;
+        pointer-events: auto;
+        cursor: default;
+        animation: lfa-info-appear 0.2s ease-out;
+      }
+
+      @keyframes lfa-info-appear {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -100%) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -100%) scale(1);
+        }
+      }
+
+      /* Pin Overlay Container */
+      #lfa-pin-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+        overflow: hidden;
+      }
+
+      /* Enhanced Alternative Item Hover */
+      .lfa-alternative-item:hover {
+        background-color: #f8f9fa !important;
+        transform: translateX(4px) !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      }
+
       /* High contrast mode support */
       @media (prefers-contrast: high) {
         .lfa-badge {
@@ -1185,6 +2232,15 @@
         
         .lfa-chain-business {
           border: 2px solid orange;
+        }
+        
+        .lfa-map-pin {
+          border: 2px solid white;
+          border-radius: 50%;
+        }
+        
+        .lfa-info-window {
+          border: 2px solid #333;
         }
       }
     `;
@@ -1278,21 +2334,30 @@
       };
       try {
         const nameSelectors = [
+          ".qBF1Pd.fontHeadlineSmall",
+          // Most specific first
+          ".qBF1Pd",
           '[role="heading"]',
           "h1",
           "h2",
           "h3",
           ".section-result-title",
-          ".qBF1Pd",
           ".NrDZNb",
           'span[data-value][data-dtype="d3bn"]'
         ];
         for (const selector of nameSelectors) {
-          const nameElement = element.querySelector(selector);
-          if (nameElement && nameElement.textContent.trim()) {
-            data.name = nameElement.textContent.trim();
-            break;
+          const nameElements = element.querySelectorAll(selector);
+          for (const nameElement of nameElements) {
+            const text = nameElement.textContent.trim();
+            if (text && text.length > 3 && text.length < 100) {
+              if (text.toLowerCase().includes("whole foods") || text.toLowerCase().includes("safeway") || text.toLowerCase().includes("fry") || text.toLowerCase().includes("walmart") || text.toLowerCase().includes("target")) {
+                data.name = text;
+                console.log(`UIInjector: Found business name "${text}" using selector "${selector}"`);
+                break;
+              }
+            }
           }
+          if (data.name) break;
         }
         const addressSelectors = [
           '[data-value="Address"]',
@@ -1304,15 +2369,6 @@
           if (addressElement && addressElement.textContent.trim()) {
             data.address = addressElement.textContent.trim();
             break;
-          }
-        }
-        if (!data.name) {
-          const textContent = element.textContent.trim();
-          if (textContent && textContent.length > 0 && textContent.length < 200) {
-            const lines = textContent.split("\n").filter((line) => line.trim().length > 0);
-            if (lines.length > 0) {
-              data.name = lines[0].trim();
-            }
           }
         }
       } catch (error) {
@@ -1727,11 +2783,33 @@
       alternatives.forEach((business) => {
         const item = document.createElement("div");
         item.className = "lfa-alternative-item";
+        item.setAttribute("data-business-id", business.id);
         const name = document.createElement("span");
         name.className = "lfa-alternative-name";
         name.textContent = business.name;
         name.addEventListener("click", () => {
           this.handleAlternativeClick(business, chainInfo);
+        });
+        item.addEventListener("mouseenter", () => {
+          if (mapPinManager.isInitialized) {
+            mapPinManager.highlightPinForBusiness(business.id, true);
+          }
+        });
+        item.addEventListener("mouseleave", () => {
+          if (mapPinManager.isInitialized) {
+            mapPinManager.highlightPinForBusiness(business.id, false);
+          }
+        });
+        item.addEventListener("click", (event) => {
+          if (event.target === item || event.target.classList.contains("lfa-alternative-info") || event.target.classList.contains("lfa-alternative-address") || event.target.classList.contains("lfa-alternative-distance")) {
+            if (mapPinManager.isInitialized) {
+              mapPinManager.highlightPinForBusiness(business.id, true);
+              setTimeout(() => {
+                mapPinManager.highlightPinForBusiness(business.id, false);
+              }, 3e3);
+              console.log(`UIInjector: Highlighted pin for ${business.name} via sidebar click`);
+            }
+          }
         });
         const info = document.createElement("div");
         info.className = "lfa-alternative-info";
@@ -2160,14 +3238,34 @@
     /**
      * Show map pins for local alternative businesses
      */
-    showAlternativeMapPins(alternatives) {
+    async showAlternativeMapPins(alternatives) {
       try {
-        console.log(`UIInjector: Attempting to show ${alternatives.length} alternative map pins`);
-        alternatives.forEach((business) => {
-          this.createCustomMapMarker(business);
-        });
+        console.log(`UIInjector: Attempting to show ${alternatives.length} alternative map pins using MapPinManager`);
+        if (!mapPinManager.isInitialized) {
+          console.log("UIInjector: Initializing MapPinManager...");
+          try {
+            await mapPinManager.init();
+            console.log("UIInjector: MapPinManager initialized successfully");
+          } catch (initError) {
+            console.error("UIInjector: MapPinManager initialization failed:", initError);
+            throw initError;
+          }
+        }
+        mapPinManager.setHoverCallbacks(
+          (business, isHovering) => this.handlePinHover(business, isHovering),
+          (business, event) => this.handlePinClick(business, event)
+        );
+        console.log("UIInjector: Calling mapPinManager.showPinsForBusinesses with:", alternatives);
+        mapPinManager.showPinsForBusinesses(alternatives);
+        console.log("UIInjector: MapPinManager pin display completed");
       } catch (error) {
         console.error("UIInjector: Failed to show alternative map pins:", error);
+        console.log("UIInjector: Error details:", {
+          error: error.message,
+          stack: error.stack,
+          alternatives,
+          mapPinManagerInitialized: mapPinManager.isInitialized
+        });
       }
     }
     /**
@@ -2247,10 +3345,44 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       }
     }
     /**
+     * Handle pin hover from MapPinManager
+     */
+    handlePinHover(business, isHovering) {
+      try {
+        const alternativeItems = document.querySelectorAll(".lfa-alternative-item");
+        alternativeItems.forEach((item) => {
+          const nameElement = item.querySelector(".lfa-alternative-name");
+          if (nameElement && nameElement.textContent.trim() === business.name) {
+            if (isHovering) {
+              item.style.backgroundColor = "#e8f0fe";
+              item.style.transform = "scale(1.02)";
+              item.style.transition = "all 0.2s ease";
+              item.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+            } else {
+              item.style.backgroundColor = "";
+              item.style.transform = "";
+              item.style.boxShadow = "";
+            }
+          }
+        });
+      } catch (error) {
+        console.warn("UIInjector: Error handling pin hover:", error);
+      }
+    }
+    /**
+     * Handle pin click from MapPinManager
+     */
+    handlePinClick(business, event) {
+      console.log("UIInjector: Pin clicked for business:", business.name);
+    }
+    /**
      * Clear all injected elements (for page navigation)
      */
     clearAllInjectedElements() {
       this.hideFilterStatus();
+      if (mapPinManager.isInitialized) {
+        mapPinManager.clearAllPins();
+      }
       if (this.mapPinObservers) {
         this.mapPinObservers.forEach((observer) => observer.disconnect());
         this.mapPinObservers = [];

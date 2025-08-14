@@ -1,4 +1,5 @@
 import { CONFIG } from '../shared/constants.js';
+import { mapPinManager } from './map-pin-manager.js';
 
 /**
  * UI Injector for Local First Arizona Extension
@@ -257,6 +258,67 @@ export class UIInjector {
         }
       }
 
+      /* Map Pin Styles */
+      .lfa-map-pin {
+        position: absolute;
+        pointer-events: auto;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+      }
+
+      .lfa-map-pin:hover {
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+      }
+
+      /* Info Window Styles */
+      .lfa-info-window {
+        position: absolute;
+        background: white;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 300;
+        font-family: Google Sans, Roboto, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 20px;
+        max-width: 250px;
+        pointer-events: auto;
+        cursor: default;
+        animation: lfa-info-appear 0.2s ease-out;
+      }
+
+      @keyframes lfa-info-appear {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -100%) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -100%) scale(1);
+        }
+      }
+
+      /* Pin Overlay Container */
+      #lfa-pin-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+        overflow: hidden;
+      }
+
+      /* Enhanced Alternative Item Hover */
+      .lfa-alternative-item:hover {
+        background-color: #f8f9fa !important;
+        transform: translateX(4px) !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      }
+
       /* High contrast mode support */
       @media (prefers-contrast: high) {
         .lfa-badge {
@@ -265,6 +327,15 @@ export class UIInjector {
         
         .lfa-chain-business {
           border: 2px solid orange;
+        }
+        
+        .lfa-map-pin {
+          border: 2px solid white;
+          border-radius: 50%;
+        }
+        
+        .lfa-info-window {
+          border: 2px solid #333;
         }
       }
     `;
@@ -385,22 +456,35 @@ export class UIInjector {
     };
     
     try {
-      // Try multiple selectors to find business name
+      // Try multiple selectors to find business name - look for actual chain business names
       const nameSelectors = [
+        '.qBF1Pd.fontHeadlineSmall', // Most specific first
+        '.qBF1Pd',
         '[role="heading"]',
         'h1', 'h2', 'h3',
         '.section-result-title',
-        '.qBF1Pd',
         '.NrDZNb',
         'span[data-value][data-dtype="d3bn"]'
       ];
       
       for (const selector of nameSelectors) {
-        const nameElement = element.querySelector(selector);
-        if (nameElement && nameElement.textContent.trim()) {
-          data.name = nameElement.textContent.trim();
-          break;
+        const nameElements = element.querySelectorAll(selector);
+        for (const nameElement of nameElements) {
+          const text = nameElement.textContent.trim();
+          // Look for actual business names, not generic terms
+          if (text && text.length > 3 && text.length < 100) {
+            if (text.toLowerCase().includes('whole foods') || 
+                text.toLowerCase().includes('safeway') ||
+                text.toLowerCase().includes('fry') ||
+                text.toLowerCase().includes('walmart') ||
+                text.toLowerCase().includes('target')) {
+              data.name = text;
+              console.log(`UIInjector: Found business name "${text}" using selector "${selector}"`);
+              break;
+            }
+          }
         }
+        if (data.name) break;
       }
       
       // Try to find address
@@ -415,17 +499,6 @@ export class UIInjector {
         if (addressElement && addressElement.textContent.trim()) {
           data.address = addressElement.textContent.trim();
           break;
-        }
-      }
-      
-      // If no name found, try getting text from common business name containers
-      if (!data.name) {
-        const textContent = element.textContent.trim();
-        if (textContent && textContent.length > 0 && textContent.length < 200) {
-          const lines = textContent.split('\n').filter(line => line.trim().length > 0);
-          if (lines.length > 0) {
-            data.name = lines[0].trim();
-          }
         }
       }
       
@@ -945,7 +1018,7 @@ export class UIInjector {
         injectedData.alternatives = alternativesElement;
         console.log(`UIInjector: Added ${alternatives.length} alternatives to placeholder for ${chainInfo.name}`);
         
-        // Also show alternative map pins
+        // Show map pins using MapPinManager
         this.showAlternativeMapPins(alternatives);
       } else {
         // Use normal insertion point for dimmed chains
@@ -963,7 +1036,7 @@ export class UIInjector {
           
           console.log(`UIInjector: Added ${alternatives.length} alternatives for ${chainInfo.name}`);
           
-          // Also show alternative map pins
+          // Show map pins using MapPinManager
           this.showAlternativeMapPins(alternatives);
         }
       }
@@ -992,12 +1065,47 @@ export class UIInjector {
     alternatives.forEach(business => {
       const item = document.createElement('div');
       item.className = 'lfa-alternative-item';
+      item.setAttribute('data-business-id', business.id);
 
       const name = document.createElement('span');
       name.className = 'lfa-alternative-name';
       name.textContent = business.name;
       name.addEventListener('click', () => {
         this.handleAlternativeClick(business, chainInfo);
+      });
+      
+      // Add hover effects that interact with map pins
+      item.addEventListener('mouseenter', () => {
+        if (mapPinManager.isInitialized) {
+          mapPinManager.highlightPinForBusiness(business.id, true);
+        }
+      });
+      
+      item.addEventListener('mouseleave', () => {
+        if (mapPinManager.isInitialized) {
+          mapPinManager.highlightPinForBusiness(business.id, false);
+        }
+      });
+      
+      // Add click handler to entire item for better UX
+      item.addEventListener('click', (event) => {
+        // Only trigger if clicking on the item itself, not the name link
+        if (event.target === item || event.target.classList.contains('lfa-alternative-info') || 
+            event.target.classList.contains('lfa-alternative-address') || 
+            event.target.classList.contains('lfa-alternative-distance')) {
+          
+          if (mapPinManager.isInitialized) {
+            // Highlight the pin and center view on it
+            mapPinManager.highlightPinForBusiness(business.id, true);
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+              mapPinManager.highlightPinForBusiness(business.id, false);
+            }, 3000);
+            
+            console.log(`UIInjector: Highlighted pin for ${business.name} via sidebar click`);
+          }
+        }
       });
 
       // Create info section with address and distance
@@ -1530,19 +1638,41 @@ export class UIInjector {
   /**
    * Show map pins for local alternative businesses
    */
-  showAlternativeMapPins(alternatives) {
+  async showAlternativeMapPins(alternatives) {
     try {
-      console.log(`UIInjector: Attempting to show ${alternatives.length} alternative map pins`);
+      console.log(`UIInjector: Attempting to show ${alternatives.length} alternative map pins using MapPinManager`);
       
-      // This is a simplified approach - in a real implementation, you'd need to
-      // interact with the Google Maps API to add custom markers
-      alternatives.forEach(business => {
-        // For now, we'll create overlay markers
-        this.createCustomMapMarker(business);
-      });
+      // Initialize MapPinManager if not already done
+      if (!mapPinManager.isInitialized) {
+        console.log('UIInjector: Initializing MapPinManager...');
+        try {
+          await mapPinManager.init();
+          console.log('UIInjector: MapPinManager initialized successfully');
+        } catch (initError) {
+          console.error('UIInjector: MapPinManager initialization failed:', initError);
+          throw initError;
+        }
+      }
+      
+      // Set up bidirectional hover interactions
+      mapPinManager.setHoverCallbacks(
+        (business, isHovering) => this.handlePinHover(business, isHovering),
+        (business, event) => this.handlePinClick(business, event)
+      );
+      
+      // Show pins for alternatives
+      console.log('UIInjector: Calling mapPinManager.showPinsForBusinesses with:', alternatives);
+      mapPinManager.showPinsForBusinesses(alternatives);
+      console.log('UIInjector: MapPinManager pin display completed');
       
     } catch (error) {
       console.error('UIInjector: Failed to show alternative map pins:', error);
+      console.log('UIInjector: Error details:', {
+        error: error.message,
+        stack: error.stack,
+        alternatives: alternatives,
+        mapPinManagerInitialized: mapPinManager.isInitialized
+      });
     }
   }
 
@@ -1645,11 +1775,53 @@ export class UIInjector {
   }
 
   /**
+   * Handle pin hover from MapPinManager
+   */
+  handlePinHover(business, isHovering) {
+    // This is called when pins are hovered - highlight the corresponding sidebar listing
+    try {
+      const alternativeItems = document.querySelectorAll('.lfa-alternative-item');
+      
+      alternativeItems.forEach(item => {
+        const nameElement = item.querySelector('.lfa-alternative-name');
+        if (nameElement && nameElement.textContent.trim() === business.name) {
+          if (isHovering) {
+            item.style.backgroundColor = '#e8f0fe';
+            item.style.transform = 'scale(1.02)';
+            item.style.transition = 'all 0.2s ease';
+            item.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+          } else {
+            item.style.backgroundColor = '';
+            item.style.transform = '';
+            item.style.boxShadow = '';
+          }
+        }
+      });
+    } catch (error) {
+      console.warn('UIInjector: Error handling pin hover:', error);
+    }
+  }
+
+  /**
+   * Handle pin click from MapPinManager
+   */
+  handlePinClick(business, event) {
+    // This is called when pins are clicked - could trigger the alternative click handler
+    console.log('UIInjector: Pin clicked for business:', business.name);
+    // The info window is already handled by MapPinManager
+  }
+
+  /**
    * Clear all injected elements (for page navigation)
    */
   clearAllInjectedElements() {
     // Remove filter status
     this.hideFilterStatus();
+    
+    // Clear MapPinManager pins
+    if (mapPinManager.isInitialized) {
+      mapPinManager.clearAllPins();
+    }
     
     // Clear observers and intervals
     if (this.mapPinObservers) {
