@@ -106,14 +106,37 @@ class MapsModifier {
    * Load chain patterns from background script
    */
   async loadChainPatterns() {
+    console.log('🔍 CONTENT SCRIPT: loadChainPatterns() called');
+    
     try {
+      console.log('🔍 CONTENT SCRIPT: Sending getChainPatterns message to service worker');
       const response = await chrome.runtime.sendMessage({ action: 'getChainPatterns' });
+      
+      console.log('🔍 CONTENT SCRIPT: Received response from service worker:', {
+        hasResponse: !!response,
+        success: response?.success,
+        hasData: !!response?.data,
+        hasChains: !!response?.data?.chains,
+        chainsLength: response?.data?.chains?.length,
+        total: response?.data?.total
+      });
+      
       if (response && response.success && response.data.chains) {
+        console.log('🔍 CONTENT SCRIPT: Response data analysis:', {
+          chainsLength: response.data.chains.length,
+          hasTracer: response.data.chains.some(c => c.name.includes('TRACER')),
+          firstFewChains: response.data.chains.slice(0, 5).map(c => c.name),
+          totalFromResponse: response.data.total
+        });
+        
         businessMatcher.updateChainPatterns(response.data.chains);
-        console.log(`MapsModifier: Loaded ${response.data.chains.length} chain patterns`);
+        console.log(`🔍 CONTENT SCRIPT: Successfully loaded ${response.data.chains.length} chain patterns`);
+        console.log(`🔍 CONTENT SCRIPT: Updated with ${response.data.chains.length} chain patterns`);
+      } else {
+        console.error('🔍 CONTENT SCRIPT: Invalid response structure:', response);
       }
     } catch (error) {
-      console.error('MapsModifier: Failed to load chain patterns:', error);
+      console.error('🔍 CONTENT SCRIPT: Failed to load chain patterns:', error);
     }
   }
 
@@ -351,13 +374,8 @@ class MapsModifier {
     console.log('MapsModifier: Processing current page...');
     
     try {
-      // Get current location for nearby business queries
+      // Get current location for alternative business searches
       const currentLocation = businessMatcher.extractLocationFromUrl();
-      
-      // Load nearby businesses if we have location
-      if (currentLocation) {
-        await this.loadNearbyBusinesses(currentLocation);
-      }
 
       // Scan for businesses on the page
       const businesses = businessDetector.scanForBusinesses();
@@ -413,200 +431,9 @@ class MapsModifier {
   }
 
   /**
-   * Load nearby businesses for the current location
+   * Removed: loadNearbyBusinesses() - No longer using hardcoded business database
+   * Local businesses are now dynamically fetched via API when alternatives are needed
    */
-  async loadNearbyBusinesses(location) {
-    try {
-      // For now, create a simple local alternatives system
-      // In production, this would connect to a local business database
-      const mockLocalBusinesses = [
-        // Central Phoenix
-        {
-          id: 'local_1',
-          name: 'Phoenix Public Market',
-          category: 'grocery',
-          address: '721 N Central Ave, Phoenix, AZ',
-          latitude: 33.4734,
-          longitude: -112.0740,
-          verified: true,
-          placeId: 'ChIJN1t_tDeuAIERAGYS_wLBZiw', // Example Phoenix Public Market Place ID
-          phone: '(602) 252-2204',
-          website: 'https://phoenixpublicmarket.com'
-        },
-        {
-          id: 'local_2', 
-          name: 'Arizona Natural Market',
-          category: 'grocery',
-          address: '3045 N 16th St, Phoenix, AZ',
-          latitude: 33.4851,
-          longitude: -112.0379,
-          verified: false,
-          placeId: 'ChIJc_eKY7arAIERAMZe7WqHFaE', // Example place ID
-          phone: '(602) 279-3344'
-        },
-        {
-          id: 'local_3',
-          name: 'Desert Roots Market',
-          category: 'grocery', 
-          address: '1750 E Bell Rd, Phoenix, AZ',
-          latitude: 33.6390,
-          longitude: -112.0277,
-          verified: true,
-          placeId: 'ChIJwZHKP2CqAIERaGBt_2oYQfI', // Example place ID
-          phone: '(602) 867-3663',
-          website: 'https://desertrootsmarket.com'
-        },
-        
-        // West Valley
-        {
-          id: 'local_4',
-          name: 'West Valley Fresh Market',
-          category: 'grocery',
-          address: '7500 W Thomas Rd, Phoenix, AZ',
-          latitude: 33.4806,
-          longitude: -112.2300,
-          verified: true,
-          placeId: 'ChIJwVHKQ3CqAIERfGEt_2pYQfI',
-          phone: '(623) 846-2245'
-        },
-        {
-          id: 'local_5',
-          name: 'Avondale Organic Co-op',
-          category: 'grocery',
-          address: '11025 W McDowell Rd, Avondale, AZ',
-          latitude: 33.4650,
-          longitude: -112.3490,
-          verified: false,
-          placeId: 'ChIJ-XHKa3CqAIERbGEt_2qYQfI',
-          phone: '(623) 935-4483'
-        },
-        {
-          id: 'local_6',
-          name: 'Goodyear Farm Fresh',
-          category: 'grocery',
-          address: '14500 W Indian School Rd, Goodyear, AZ',
-          latitude: 33.4942,
-          longitude: -112.3951,
-          verified: true,
-          placeId: 'ChIJzXHKb3CqAIERcGEt_2rYQfI',
-          phone: '(623) 932-1234',
-          website: 'https://goodyearfarmfresh.com'
-        },
-        
-        // East Valley
-        {
-          id: 'local_7',
-          name: 'Ahwatukee Organic Foods',
-          category: 'grocery',
-          address: '4045 E Chandler Blvd, Phoenix, AZ',
-          latitude: 33.3061,
-          longitude: -111.9973,
-          verified: false,
-          placeId: 'ChIJyXHKc3CqAIERdGEt_2sYQfI',
-          phone: '(480) 753-2214'
-        },
-        {
-          id: 'local_8',
-          name: 'Scottsdale Fresh Market',
-          category: 'grocery',
-          address: '7014 E Camelback Rd, Scottsdale, AZ',
-          latitude: 33.5026,
-          longitude: -111.9306,
-          verified: true,
-          placeId: 'ChIJxXHKd3CqAIEReGEt_2tYQfI',
-          phone: '(480) 941-5566',
-          website: 'https://scottsdalefresh.com'
-        },
-        {
-          id: 'local_9',
-          name: 'Tempe Community Market',
-          category: 'grocery',
-          address: '1919 E Baseline Rd, Tempe, AZ',
-          latitude: 33.3781,
-          longitude: -111.9048,
-          verified: true,
-          placeId: 'ChIJwXHKe3CqAIERfGEt_2uYQfI',
-          phone: '(480) 967-4455',
-          website: 'https://tempemarket.org'
-        },
-        {
-          id: 'local_10',
-          name: 'Mesa Natural Foods',
-          category: 'grocery',
-          address: '1065 N Country Club Dr, Mesa, AZ',
-          latitude: 33.4295,
-          longitude: -111.8568,
-          verified: false,
-          placeId: 'ChIJvXHKf3CqAIERgGEt_2vYQfI',
-          phone: '(480) 832-7799'
-        },
-        
-        // North Phoenix/Deer Valley
-        {
-          id: 'local_11',
-          name: 'Deer Valley Market',
-          category: 'grocery',
-          address: '2102 W Union Hills Dr, Phoenix, AZ',
-          latitude: 33.6500,
-          longitude: -112.1050,
-          verified: true,
-          placeId: 'ChIJuXHKg3CqAIERhGEt_2wYQfI',
-          phone: '(602) 867-3344',
-          website: 'https://deervalleymarket.com'
-        },
-        {
-          id: 'local_12',
-          name: 'North Phoenix Co-op',
-          category: 'grocery',
-          address: '17235 N Cave Creek Rd, Phoenix, AZ',
-          latitude: 33.6480,
-          longitude: -112.0295,
-          verified: false,
-          placeId: 'ChIJtXHKh3CqAIERiGEt_2xYQfI',
-          phone: '(602) 482-5566'
-        },
-        
-        // South Phoenix
-        {
-          id: 'local_13',
-          name: 'South Mountain Market',
-          category: 'grocery',
-          address: '5532 S Central Ave, Phoenix, AZ',
-          latitude: 33.3950,
-          longitude: -112.0740,
-          verified: true,
-          placeId: 'ChIJsXHKi3CqAIERjGEt_2yYQfI',
-          phone: '(602) 276-1234',
-          website: 'https://southmountainmarket.com'
-        },
-        {
-          id: 'local_14',
-          name: 'Laveen Village Market',
-          category: 'grocery',
-          address: '5130 W Baseline Rd, Laveen, AZ',
-          latitude: 33.3781,
-          longitude: -112.1750,
-          verified: false,
-          placeId: 'ChIJrXHKj3CqAIERkGEt_2zYQfI',
-          phone: '(602) 237-8899'
-        }
-      ];
-
-      console.log('MapsModifier: Location for nearby businesses:', location);
-      console.log('MapsModifier: Mock local businesses available:', mockLocalBusinesses.length);
-      
-      // Use all businesses - filtering will be done by map bounds in findLocalAlternatives
-      const nearbyBusinesses = mockLocalBusinesses.filter(business => {
-        return business.latitude && business.longitude;
-      });
-
-      businessMatcher.updateLocalBusinesses(nearbyBusinesses);
-      console.log(`MapsModifier: Loaded ${nearbyBusinesses.length} nearby local businesses:`, nearbyBusinesses);
-      
-    } catch (error) {
-      console.error('MapsModifier: Failed to load nearby businesses:', error);
-    }
-  }
 
   /**
    * Calculate distance between two points (Haversine formula)
@@ -651,21 +478,25 @@ class MapsModifier {
           this.settings.filterLevel
         );
 
-        // Show alternatives if enabled
+        // Show alternatives if enabled (now using async API search)
         if (this.settings.showAlternatives && currentLocation) {
           console.log('MapsModifier: Looking for alternatives for', chainResult.matchedChain.name, 'at location', currentLocation);
-          const alternatives = businessMatcher.findLocalAlternatives(
-            chainResult.matchedChain, 
-            currentLocation
-          );
-          console.log('MapsModifier: Found', alternatives.length, 'alternatives:', alternatives);
+          
+          // findLocalAlternatives is now async and searches via API
+          businessMatcher.findLocalAlternatives(chainResult.matchedChain, currentLocation)
+            .then(alternatives => {
+              console.log('MapsModifier: Found', alternatives.length, 'alternatives via API:', alternatives);
 
-          if (alternatives.length > 0) {
-            console.log('MapsModifier: Showing alternatives for', chainResult.matchedChain.name);
-            uiInjector.showLocalAlternatives(business.element, chainResult.matchedChain, alternatives);
-          } else {
-            console.log('MapsModifier: No alternatives found for', chainResult.matchedChain.name);
-          }
+              if (alternatives.length > 0) {
+                console.log('MapsModifier: Showing alternatives for', chainResult.matchedChain.name);
+                uiInjector.showLocalAlternatives(business.element, chainResult.matchedChain, alternatives);
+              } else {
+                console.log('MapsModifier: No alternatives found via API for', chainResult.matchedChain.name);
+              }
+            })
+            .catch(error => {
+              console.error('MapsModifier: Error fetching alternatives:', error);
+            });
         } else {
           console.log('MapsModifier: Not showing alternatives - showAlternatives:', this.settings.showAlternatives, 'currentLocation:', currentLocation);
         }
@@ -678,25 +509,8 @@ class MapsModifier {
           filterLevel: this.settings.filterLevel,
         });
 
-      } else {
-        // Check if it's a local business
-        const localMatch = businessMatcher.findLocalMatch(business.name, currentLocation);
-
-        if (localMatch && this.settings.showBadges) {
-          business.processed.isLocal = true;
-          business.processed.localInfo = localMatch;
-
-          // Add LFA badge
-          uiInjector.addLFABadge(business.element, localMatch);
-
-          // Track local business view
-          this.trackEvent('local_highlighted', {
-            businessName: business.name,
-            businessId: localMatch.id,
-            matchScore: localMatch.matchScore,
-          });
-        }
       }
+      // Note: Local business identification/badging removed - could be re-implemented via API if needed
 
     } catch (error) {
       console.error(`MapsModifier: Error processing business ${business.name}:`, error);

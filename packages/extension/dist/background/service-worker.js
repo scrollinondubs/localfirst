@@ -30,9 +30,9 @@
     },
     // Business Filtering Configuration
     FILTERING: {
-      DEFAULT_RADIUS: 5,
+      DEFAULT_RADIUS: 50,
       // miles
-      MAX_RADIUS: 25,
+      MAX_RADIUS: 50,
       // maximum search radius
       MAX_RESULTS: 100,
       // maximum businesses to return
@@ -50,8 +50,8 @@
     // Default Settings
     DEFAULT_SETTINGS: {
       enabled: true,
-      filterLevel: "moderate",
-      // strict, moderate, light
+      filterLevel: "strict",
+      // strict, moderate, light - default to aggressive filtering
       showBadges: true,
       showAlternatives: true,
       anonymousAnalytics: true
@@ -148,8 +148,11 @@
     /**
      * Get nearby LFA businesses
      */
-    async getNearbyBusinesses(lat, lng, radius = CONFIG.FILTERING.DEFAULT_RADIUS) {
-      const url = `${this.baseUrl}/api/businesses/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+    async getNearbyBusinesses(lat, lng, radius = CONFIG.FILTERING.DEFAULT_RADIUS, category = null) {
+      let url = `${this.baseUrl}/api/businesses/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+      if (category && category !== "other") {
+        url += `&category=${encodeURIComponent(category)}`;
+      }
       try {
         const data = await this.request(url);
         return {
@@ -157,7 +160,8 @@
           businesses: data.businesses || [],
           total: data.total || 0,
           center: data.center,
-          radius: data.radius
+          radius: data.radius,
+          category
         };
       } catch (error) {
         console.error("Failed to fetch nearby businesses:", error);
@@ -173,17 +177,32 @@
      * Get chain business patterns for filtering
      */
     async getChainPatterns() {
+      var _a, _b, _c;
       const url = `${this.baseUrl}/api/chains`;
+      console.log("🔍 API CLIENT: Making request to:", url);
       try {
         const data = await this.request(url);
-        return {
+        console.log("🔍 API CLIENT: Raw response data:", {
+          total: data.total,
+          chainsLength: (_a = data.chains) == null ? void 0 : _a.length,
+          hasTracer: (_b = data.chains) == null ? void 0 : _b.some((c) => c.name.includes("TRACER")),
+          firstFewChains: (_c = data.chains) == null ? void 0 : _c.slice(0, 3).map((c) => c.name)
+        });
+        const result = {
           success: true,
           chains: data.chains || [],
           lastUpdated: data.lastUpdated,
           total: data.total || 0
         };
+        console.log("🔍 API CLIENT: Returning result:", {
+          success: result.success,
+          chainsLength: result.chains.length,
+          total: result.total,
+          hasTracer: result.chains.some((c) => c.name.includes("TRACER"))
+        });
+        return result;
       } catch (error) {
-        console.error("Failed to fetch chain patterns:", error);
+        console.error("🔍 API CLIENT: Request failed:", error);
         return {
           success: false,
           chains: [],
@@ -591,8 +610,12 @@
         const { action, data } = message;
         switch (action) {
           case "getNearbyBusinesses":
-            const businesses = await this.getNearbyBusinesses(data.lat, data.lng, data.radius);
+            const businesses = await this.getNearbyBusinesses(data.lat, data.lng, data.radius, data.category);
             sendResponse({ success: true, data: businesses });
+            break;
+          case "semanticSearch":
+            const semanticResults = await this.getSemanticSearch(data.query, data.lat, data.lng, data.radius, data.limit);
+            sendResponse({ success: true, data: semanticResults });
             break;
           case "getChainPatterns":
             const chains = await this.getChainPatterns();
@@ -674,17 +697,18 @@
     /**
      * Get nearby businesses with caching
      */
-    async getNearbyBusinesses(lat, lng, radius) {
+    async getNearbyBusinesses(lat, lng, radius, category = null) {
       try {
-        const cacheKey = `businesses_${lat}_${lng}_${radius}`;
+        const cacheKey = `businesses_${lat}_${lng}_${radius}_${category || "all"}`;
         const cached = await this.getFromCache(cacheKey, 10 * 60 * 1e3);
         if (cached) {
-          console.log("Returning cached businesses");
+          console.log(`Returning cached businesses for category: ${category || "all"}`);
           return cached;
         }
-        const result = await apiClient.getNearbyBusinesses(lat, lng, radius);
+        const result = await apiClient.getNearbyBusinesses(lat, lng, radius, category);
         if (result.success) {
           await this.setCache(cacheKey, result);
+          console.log(`Cached ${result.businesses.length} businesses for category: ${category || "all"}`);
           return result;
         } else {
           throw new Error(result.error);
@@ -695,35 +719,95 @@
       }
     }
     /**
+     * Get semantic search results for businesses
+     */
+    async getSemanticSearch(query, lat, lng, radius = 10, limit = 8) {
+      try {
+        console.log(`SERVICE WORKER: Semantic search for "${query}" near ${lat},${lng}`);
+        const apiUrl = `${CONFIG.API_BASE_URL}/api/businesses/semantic-search`;
+        const params = new URLSearchParams({
+          query,
+          lat: lat.toString(),
+          lng: lng.toString(),
+          radius: radius.toString(),
+          limit: limit.toString()
+        });
+        const url = `${apiUrl}?${params.toString()}`;
+        console.log("SERVICE WORKER: Calling semantic search API:", url);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        }
+        const result = await response.json();
+        console.log(`SERVICE WORKER: Found ${result.businesses.length} semantic matches`);
+        return result;
+      } catch (error) {
+        console.error("SERVICE WORKER: Failed to get semantic search results:", error);
+        return { success: false, businesses: [], error: error.message };
+      }
+    }
+    /**
      * Get chain patterns with caching
      */
     async getChainPatterns() {
+      var _a, _b, _c, _d, _e;
+      console.log("🔍 SERVICE WORKER: getChainPatterns() called");
+      console.log("🔍 SERVICE WORKER: Using storage key:", CONFIG.STORAGE_KEYS.CHAINS);
       try {
-        const result = await chrome.storage.local.get(["chains"]);
-        const cached = result.chains;
+        const result = await chrome.storage.local.get([CONFIG.STORAGE_KEYS.CHAINS]);
+        const cached = result[CONFIG.STORAGE_KEYS.CHAINS];
+        console.log("🔍 SERVICE WORKER: Cache check result:", {
+          hasCached: !!cached,
+          cachedTimestamp: cached == null ? void 0 : cached.timestamp,
+          currentTime: Date.now(),
+          cacheAge: (cached == null ? void 0 : cached.timestamp) ? Date.now() - cached.timestamp : "N/A",
+          syncInterval: CONFIG.SYNC_INTERVAL,
+          isCacheValid: cached && cached.timestamp && Date.now() - cached.timestamp < CONFIG.SYNC_INTERVAL
+        });
         if (cached && cached.timestamp && Date.now() - cached.timestamp < CONFIG.SYNC_INTERVAL) {
-          console.log("Returning cached chain patterns");
+          console.log("🔍 SERVICE WORKER: Using cached chain patterns");
+          console.log("🔍 SERVICE WORKER: Cached data:", {
+            chainsLength: (_a = cached.chains) == null ? void 0 : _a.length,
+            hasTracer: (_b = cached.chains) == null ? void 0 : _b.some((c) => c.name.includes("TRACER")),
+            firstFewChains: (_c = cached.chains) == null ? void 0 : _c.slice(0, 3).map((c) => c.name)
+          });
           return { success: true, chains: cached.chains };
         }
+        console.log("🔍 SERVICE WORKER: Cache invalid/missing, fetching fresh data from API");
         const apiResult = await apiClient.getChainPatterns();
+        console.log("🔍 SERVICE WORKER: API result:", {
+          success: apiResult.success,
+          chainsLength: (_d = apiResult.chains) == null ? void 0 : _d.length,
+          hasTracer: (_e = apiResult.chains) == null ? void 0 : _e.some((c) => c.name.includes("TRACER")),
+          total: apiResult.total
+        });
         if (apiResult.success) {
-          await chrome.storage.local.set({
-            chains: {
-              chains: apiResult.chains,
-              timestamp: Date.now(),
-              lastUpdated: apiResult.lastUpdated
-            }
+          const cacheData = {
+            chains: apiResult.chains,
+            timestamp: Date.now(),
+            lastUpdated: apiResult.lastUpdated
+          };
+          console.log("🔍 SERVICE WORKER: Caching result under key:", CONFIG.STORAGE_KEYS.CHAINS);
+          console.log("🔍 SERVICE WORKER: Caching data:", {
+            chainsLength: cacheData.chains.length,
+            timestamp: cacheData.timestamp,
+            hasTracer: cacheData.chains.some((c) => c.name.includes("TRACER"))
           });
+          await chrome.storage.local.set({
+            [CONFIG.STORAGE_KEYS.CHAINS]: cacheData
+          });
+          console.log("🔍 SERVICE WORKER: Successfully cached and returning API result");
           return apiResult;
         } else {
+          console.log("🔍 SERVICE WORKER: API failed, checking for stale cache");
           if (cached && cached.chains) {
-            console.warn("API failed, returning stale cached chains");
+            console.warn("🔍 SERVICE WORKER: API failed, returning stale cached chains");
             return { success: true, chains: cached.chains };
           }
           throw new Error(apiResult.error);
         }
       } catch (error) {
-        console.error("Failed to get chain patterns:", error);
+        console.error("🔍 SERVICE WORKER: Error in getChainPatterns:", error);
         return { success: false, chains: [], error: error.message };
       }
     }
@@ -786,7 +870,7 @@
       this.syncInProgress = true;
       console.log("Starting data sync...");
       try {
-        await chrome.storage.local.remove(["chains"]);
+        await chrome.storage.local.remove([CONFIG.STORAGE_KEYS.CHAINS]);
         await this.getChainPatterns();
         await chrome.storage.local.set({
           lastSync: Date.now()

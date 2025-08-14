@@ -61,8 +61,13 @@ export class ApiClient {
   /**
    * Get nearby LFA businesses
    */
-  async getNearbyBusinesses(lat, lng, radius = CONFIG.FILTERING.DEFAULT_RADIUS) {
-    const url = `${this.baseUrl}/api/businesses/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+  async getNearbyBusinesses(lat, lng, radius = CONFIG.FILTERING.DEFAULT_RADIUS, category = null) {
+    let url = `${this.baseUrl}/api/businesses/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+    
+    // Add category filter if specified
+    if (category && category !== 'other') {
+      url += `&category=${encodeURIComponent(category)}`;
+    }
     
     try {
       const data = await this.request(url);
@@ -72,6 +77,7 @@ export class ApiClient {
         total: data.total || 0,
         center: data.center,
         radius: data.radius,
+        category: category,
       };
     } catch (error) {
       console.error('Failed to fetch nearby businesses:', error);
@@ -90,16 +96,34 @@ export class ApiClient {
   async getChainPatterns() {
     const url = `${this.baseUrl}/api/chains`;
     
+    console.log('🔍 API CLIENT: Making request to:', url);
+    
     try {
       const data = await this.request(url);
-      return {
+      console.log('🔍 API CLIENT: Raw response data:', {
+        total: data.total,
+        chainsLength: data.chains?.length,
+        hasTracer: data.chains?.some(c => c.name.includes('TRACER')),
+        firstFewChains: data.chains?.slice(0, 3).map(c => c.name)
+      });
+      
+      const result = {
         success: true,
         chains: data.chains || [],
         lastUpdated: data.lastUpdated,
         total: data.total || 0,
       };
+      
+      console.log('🔍 API CLIENT: Returning result:', {
+        success: result.success,
+        chainsLength: result.chains.length,
+        total: result.total,
+        hasTracer: result.chains.some(c => c.name.includes('TRACER'))
+      });
+      
+      return result;
     } catch (error) {
-      console.error('Failed to fetch chain patterns:', error);
+      console.error('🔍 API CLIENT: Request failed:', error);
       return {
         success: false,
         chains: [],

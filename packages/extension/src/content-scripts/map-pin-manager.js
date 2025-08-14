@@ -615,17 +615,34 @@ export class MapPinManager {
     try {
       let url;
       
-      if (business.placeId) {
-        url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
-      } else if (business.name && business.address) {
+      // Priority 1: Search by name and address (most reliable for real businesses)
+      if (business.name && business.address) {
+        console.log('MapPinManager: Using name+address search for', business.name);
         const query = encodeURIComponent(`${business.name} ${business.address}`);
-        url = `https://maps.google.com/maps/search/${query}`;
-      } else if (business.latitude && business.longitude) {
-        url = `https://maps.google.com/maps?q=${business.latitude},${business.longitude}`;
+        url = `https://www.google.com/maps/search/${query}`;
+      } 
+      // Priority 2: Use validated PlaceID if available (only for verified real PlaceIDs)
+      else if (business.placeId && business.placeId.length > 15 && !business.placeId.includes('Example') && !business.placeId.includes('ChIJ')) {
+        console.log('MapPinManager: Using validated PlaceID for', business.name, ':', business.placeId);
+        url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
+      }
+      // Priority 3: Search by coordinates with business name
+      else if (business.latitude && business.longitude && business.name) {
+        console.log('MapPinManager: Using coordinates+name search for', business.name);
+        const query = encodeURIComponent(`${business.name} Phoenix AZ`);
+        url = `https://www.google.com/maps/search/${query}/@${business.latitude},${business.longitude},17z`;
+      }
+      // Priority 4: Search by name only with Phoenix context
+      else if (business.name) {
+        console.log('MapPinManager: Using name-only search for', business.name);
+        const query = encodeURIComponent(`${business.name} Phoenix AZ`);
+        url = `https://www.google.com/maps/search/${query}`;
       } else {
+        console.warn('MapPinManager: No valid data to open business in maps:', business);
         return;
       }
       
+      console.log('MapPinManager: Opening URL:', url);
       window.open(url, '_blank');
     } catch (error) {
       console.error('MapPinManager: Failed to open business in maps:', error);

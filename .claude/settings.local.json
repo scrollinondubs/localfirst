@@ -52,8 +52,30 @@
       "mcp__playwright__browser_evaluate",
       "Bash(npx @playwright/mcp:*)",
       "mcp__playwright__browser_snapshot",
-      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension BUILD_TARGET=content npm run build)"
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension BUILD_TARGET=content npm run build)",
+      "mcp__playwright__browser_press_key",
+      "Bash(open:*)",
+      "mcp__sqlite__read_records",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node scripts/seed-chains.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api /usr/bin/env node scripts/seed-chains.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api npm run setup-db)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api npm run)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" node scripts/seed-chains.js)",
+      "mcp__sqlite__get_table_schema",
+      "mcp__sqlite__query",
+      "mcp__sqlite__create_record",
+      "Bash(kill:*)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api /usr/bin/env node temp-server.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension rm -rf dist)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension BUILD_TARGET=background npm run build)",
+      "Bash(BUILD_TARGET=background npm run build)",
+      "Bash(BUILD_TARGET=content npm run build)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node /Users/sean/NodeJSprojs/localfirst/packages/api/temp-server.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension cp -r public/* dist/)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension mkdir -p dist)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension cp public/manifest.json dist/)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

@@ -169,8 +169,13 @@ class ExtensionServiceWorker {
       
       switch (action) {
         case 'getNearbyBusinesses':
-          const businesses = await this.getNearbyBusinesses(data.lat, data.lng, data.radius);
+          const businesses = await this.getNearbyBusinesses(data.lat, data.lng, data.radius, data.category);
           sendResponse({ success: true, data: businesses });
+          break;
+          
+        case 'semanticSearch':
+          const semanticResults = await this.getSemanticSearch(data.query, data.lat, data.lng, data.radius, data.limit);
+          sendResponse({ success: true, data: semanticResults });
           break;
           
         case 'getChainPatterns':
@@ -270,23 +275,24 @@ class ExtensionServiceWorker {
   /**
    * Get nearby businesses with caching
    */
-  async getNearbyBusinesses(lat, lng, radius) {
+  async getNearbyBusinesses(lat, lng, radius, category = null) {
     try {
-      // Try to get from cache first
-      const cacheKey = `businesses_${lat}_${lng}_${radius}`;
+      // Try to get from cache first (include category in cache key)
+      const cacheKey = `businesses_${lat}_${lng}_${radius}_${category || 'all'}`;
       const cached = await this.getFromCache(cacheKey, 10 * 60 * 1000); // 10 minutes cache
       
       if (cached) {
-        console.log('Returning cached businesses');
+        console.log(`Returning cached businesses for category: ${category || 'all'}`);
         return cached;
       }
       
       // Fetch from API
-      const result = await apiClient.getNearbyBusinesses(lat, lng, radius);
+      const result = await apiClient.getNearbyBusinesses(lat, lng, radius, category);
       
       if (result.success) {
         // Cache the result
         await this.setCache(cacheKey, result);
+        console.log(`Cached ${result.businesses.length} businesses for category: ${category || 'all'}`);
         return result;
       } else {
         throw new Error(result.error);
@@ -298,43 +304,117 @@ class ExtensionServiceWorker {
   }
 
   /**
+   * Get semantic search results for businesses
+   */
+  async getSemanticSearch(query, lat, lng, radius = 10, limit = 8) {
+    try {
+      console.log(`SERVICE WORKER: Semantic search for "${query}" near ${lat},${lng}`);
+      
+      // Build API URL
+      const apiUrl = `${CONFIG.API_BASE_URL}/api/businesses/semantic-search`;
+      const params = new URLSearchParams({
+        query: query,
+        lat: lat.toString(),
+        lng: lng.toString(),
+        radius: radius.toString(),
+        limit: limit.toString()
+      });
+      
+      const url = `${apiUrl}?${params.toString()}`;
+      console.log('SERVICE WORKER: Calling semantic search API:', url);
+      
+      // Make API request
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log(`SERVICE WORKER: Found ${result.businesses.length} semantic matches`);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('SERVICE WORKER: Failed to get semantic search results:', error);
+      return { success: false, businesses: [], error: error.message };
+    }
+  }
+
+  /**
    * Get chain patterns with caching
    */
   async getChainPatterns() {
+    console.log('🔍 SERVICE WORKER: getChainPatterns() called');
+    console.log('🔍 SERVICE WORKER: Using storage key:', CONFIG.STORAGE_KEYS.CHAINS);
+    
     try {
-      const result = await chrome.storage.local.get(['chains']);
-      const cached = result.chains;
+      const result = await chrome.storage.local.get([CONFIG.STORAGE_KEYS.CHAINS]);
+      const cached = result[CONFIG.STORAGE_KEYS.CHAINS];
+      
+      console.log('🔍 SERVICE WORKER: Cache check result:', {
+        hasCached: !!cached,
+        cachedTimestamp: cached?.timestamp,
+        currentTime: Date.now(),
+        cacheAge: cached?.timestamp ? (Date.now() - cached.timestamp) : 'N/A',
+        syncInterval: CONFIG.SYNC_INTERVAL,
+        isCacheValid: cached && cached.timestamp && (Date.now() - cached.timestamp) < CONFIG.SYNC_INTERVAL
+      });
       
       // Check if cache is still valid (24 hours)
       if (cached && cached.timestamp && (Date.now() - cached.timestamp) < CONFIG.SYNC_INTERVAL) {
-        console.log('Returning cached chain patterns');
+        console.log('🔍 SERVICE WORKER: Using cached chain patterns');
+        console.log('🔍 SERVICE WORKER: Cached data:', {
+          chainsLength: cached.chains?.length,
+          hasTracer: cached.chains?.some(c => c.name.includes('TRACER')),
+          firstFewChains: cached.chains?.slice(0, 3).map(c => c.name)
+        });
         return { success: true, chains: cached.chains };
       }
+      
+      console.log('🔍 SERVICE WORKER: Cache invalid/missing, fetching fresh data from API');
       
       // Fetch fresh data
       const apiResult = await apiClient.getChainPatterns();
       
+      console.log('🔍 SERVICE WORKER: API result:', {
+        success: apiResult.success,
+        chainsLength: apiResult.chains?.length,
+        hasTracer: apiResult.chains?.some(c => c.name.includes('TRACER')),
+        total: apiResult.total
+      });
+      
       if (apiResult.success) {
-        // Cache the result
-        await chrome.storage.local.set({
-          chains: {
-            chains: apiResult.chains,
-            timestamp: Date.now(),
-            lastUpdated: apiResult.lastUpdated,
-          }
+        const cacheData = {
+          chains: apiResult.chains,
+          timestamp: Date.now(),
+          lastUpdated: apiResult.lastUpdated,
+        };
+        
+        console.log('🔍 SERVICE WORKER: Caching result under key:', CONFIG.STORAGE_KEYS.CHAINS);
+        console.log('🔍 SERVICE WORKER: Caching data:', {
+          chainsLength: cacheData.chains.length,
+          timestamp: cacheData.timestamp,
+          hasTracer: cacheData.chains.some(c => c.name.includes('TRACER'))
         });
         
+        // Cache the result
+        await chrome.storage.local.set({
+          [CONFIG.STORAGE_KEYS.CHAINS]: cacheData
+        });
+        
+        console.log('🔍 SERVICE WORKER: Successfully cached and returning API result');
         return apiResult;
       } else {
+        console.log('🔍 SERVICE WORKER: API failed, checking for stale cache');
         // Return cached data if API fails
         if (cached && cached.chains) {
-          console.warn('API failed, returning stale cached chains');
+          console.warn('🔍 SERVICE WORKER: API failed, returning stale cached chains');
           return { success: true, chains: cached.chains };
         }
         throw new Error(apiResult.error);
       }
     } catch (error) {
-      console.error('Failed to get chain patterns:', error);
+      console.error('🔍 SERVICE WORKER: Error in getChainPatterns:', error);
       return { success: false, chains: [], error: error.message };
     }
   }
@@ -417,7 +497,7 @@ class ExtensionServiceWorker {
     
     try {
       // Force refresh chain patterns
-      await chrome.storage.local.remove(['chains']);
+      await chrome.storage.local.remove([CONFIG.STORAGE_KEYS.CHAINS]);
       await this.getChainPatterns();
       
       // Update last sync timestamp

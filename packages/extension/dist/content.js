@@ -102,9 +102,7 @@
   class BusinessMatcher {
     constructor() {
       this.chainPatterns = [];
-      this.localBusinesses = [];
       this.lastChainUpdate = null;
-      this.lastBusinessUpdate = null;
     }
     /**
      * Update chain patterns for matching
@@ -113,23 +111,42 @@
       this.chainPatterns = chains || [];
       this.lastChainUpdate = Date.now();
       console.log(`BusinessMatcher: Updated with ${this.chainPatterns.length} chain patterns`);
+      if (this.chainPatterns.length > 0) {
+        console.log(
+          "BusinessMatcher: Sample chain patterns:",
+          this.chainPatterns.slice(0, 10).map((chain) => ({
+            name: chain.name,
+            patterns: chain.patterns,
+            category: chain.category,
+            confidenceScore: chain.confidenceScore
+          }))
+        );
+        const expectedChains = ["Gap", "Urban Outfitters", "T.J. Maxx", "H&M", "TJ Maxx", "Gap Factory"];
+        const foundChains = expectedChains.filter(
+          (name) => this.chainPatterns.some(
+            (chain) => chain.name.toLowerCase().includes(name.toLowerCase()) || Array.isArray(chain.patterns) && chain.patterns.some(
+              (pattern) => pattern.toLowerCase().includes(name.toLowerCase())
+            )
+          )
+        );
+        console.log(`BusinessMatcher: Found expected chains: ${foundChains.join(", ")}`);
+      }
     }
     /**
-     * Update local businesses for matching
+     * Removed: updateLocalBusinesses() - No longer managing local business arrays
+     * Local businesses are now fetched dynamically via API calls
      */
-    updateLocalBusinesses(businesses) {
-      this.localBusinesses = businesses || [];
-      this.lastBusinessUpdate = Date.now();
-      console.log(`BusinessMatcher: Updated with ${this.localBusinesses.length} local businesses`);
-    }
     /**
      * Check if a business name matches any chain patterns
      */
     isChainBusiness(businessName, confidenceThreshold = CONFIG.FILTERING.CONFIDENCE_THRESHOLD) {
       if (!businessName || this.chainPatterns.length === 0) {
+        console.log("BusinessMatcher: No business name or no chain patterns", { businessName, patternCount: this.chainPatterns.length });
         return { isChain: false, confidence: 0, matchedChain: null };
       }
       const normalizedName = this.normalizeName(businessName);
+      console.log(`BusinessMatcher: Checking "${businessName}" (normalized: "${normalizedName}") against ${this.chainPatterns.length} patterns with threshold ${confidenceThreshold}`);
+      let bestMatch = { confidence: 0, pattern: null };
       for (const chain of this.chainPatterns) {
         if (chain.confidenceScore < confidenceThreshold) {
           continue;
@@ -137,7 +154,11 @@
         const patterns = Array.isArray(chain.patterns) ? chain.patterns : [chain.name];
         for (const pattern of patterns) {
           const confidence = this.calculateMatchConfidence(normalizedName, pattern);
+          if (confidence > bestMatch.confidence) {
+            bestMatch = { confidence, chain, pattern };
+          }
           if (confidence >= confidenceThreshold) {
+            console.log(`BusinessMatcher: MATCH! "${businessName}" matched "${pattern}" (confidence: ${confidence})`);
             return {
               isChain: true,
               confidence,
@@ -152,76 +173,124 @@
           }
         }
       }
+      console.log(`BusinessMatcher: No match for "${businessName}". Best match was "${bestMatch.pattern}" with confidence ${bestMatch.confidence}`);
       return { isChain: false, confidence: 0, matchedChain: null };
     }
     /**
-     * Find matching local business by name and location
+     * Removed: findLocalMatch() - No longer matching against local business arrays
+     * Local business identification now happens via API-based search
      */
-    findLocalMatch(businessName, location = null) {
-      if (!businessName || this.localBusinesses.length === 0) {
-        return null;
-      }
-      const normalizedName = this.normalizeName(businessName);
-      let bestMatch = null;
-      let bestScore = 0;
-      for (const business of this.localBusinesses) {
-        const businessNormalized = this.normalizeName(business.name);
-        const nameScore = this.calculateNameSimilarity(normalizedName, businessNormalized);
-        let locationScore = 0;
-        if (location && business.latitude && business.longitude) {
-          const distance = this.calculateDistance(
-            location.lat,
-            location.lng,
-            business.latitude,
-            business.longitude
-          );
-          locationScore = Math.max(0, 1 - distance / 0.5);
-        }
-        const totalScore = nameScore * 0.8 + locationScore * 0.2;
-        if (totalScore > bestScore && nameScore > 0.7) {
-          bestScore = totalScore;
-          bestMatch = {
-            ...business,
-            matchScore: totalScore,
-            nameScore,
-            locationScore
-          };
-        }
-      }
-      return bestMatch;
-    }
     /**
-     * Find local alternatives in the same category
+     * Find local alternatives using semantic search API
      */
-    findLocalAlternatives(chainBusiness, location) {
-      console.log("BusinessMatcher: findLocalAlternatives called with:", chainBusiness, location, "localBusinesses:", this.localBusinesses.length);
-      if (!chainBusiness || !location || this.localBusinesses.length === 0) {
-        console.log("BusinessMatcher: Early return - missing data");
+    async findLocalAlternatives(chainBusiness, location) {
+      console.log("BusinessMatcher: findLocalAlternatives called with:", chainBusiness, location);
+      if (!chainBusiness || !location) {
+        console.log("BusinessMatcher: Early return - missing chain business or location");
         return [];
       }
-      const category = chainBusiness.category || "other";
-      console.log("BusinessMatcher: Looking for category:", category);
-      const categoryBusinesses = this.localBusinesses.filter(
-        (business) => business.category === category || category === "other"
-      );
-      console.log("BusinessMatcher: Found", categoryBusinesses.length, "businesses in category:", categoryBusinesses);
-      const businessesInView = categoryBusinesses.filter((business) => {
-        return business.latitude && business.longitude;
-      }).map((business) => {
-        const distance = this.calculateDistance(
-          location.lat,
-          location.lng,
-          business.latitude,
-          business.longitude
-        );
-        return {
-          ...business,
-          distance
-        };
-      }).sort((a, b) => a.distance - b.distance);
-      console.log("BusinessMatcher: Found", businessesInView.length, "local alternatives sorted by distance");
-      return businessesInView;
+      const userQuery = this.extractUserSearchQuery();
+      console.log("BusinessMatcher: Extracted user search query:", userQuery);
+      try {
+        const searchQuery = userQuery || this.generateFallbackQuery(chainBusiness.category || "other");
+        console.log(`BusinessMatcher: Using search query: "${searchQuery}"`);
+        const apiResponse = await this.callSemanticSearchAPI(searchQuery, location);
+        if (apiResponse && apiResponse.businesses && apiResponse.businesses.length > 0) {
+          console.log(`BusinessMatcher: Found ${apiResponse.businesses.length} semantic alternatives via API`);
+          console.log("BusinessMatcher: Top alternatives:", apiResponse.businesses.slice(0, 3).map((b) => ({ name: b.name, score: b.relevanceScore })));
+          return apiResponse.businesses.slice(0, 5);
+        } else {
+          console.log("BusinessMatcher: No local alternatives found via semantic search API");
+          return [];
+        }
+      } catch (error) {
+        console.error("BusinessMatcher: Failed to search for local alternatives:", error);
+        return [];
+      }
     }
+    /**
+     * Extract the user's current search query from Google Maps URL or search box
+     */
+    extractUserSearchQuery() {
+      try {
+        const url = window.location.href;
+        const searchMatch = url.match(/\/maps\/search\/([^\/\?]+)/);
+        if (searchMatch) {
+          const searchTerm = decodeURIComponent(searchMatch[1]).replace(/\+/g, " ");
+          console.log("BusinessMatcher: Found search in URL path:", searchTerm);
+          return searchTerm;
+        }
+        const searchBox = document.querySelector('#searchboxinput, [data-value="Search"], input[placeholder*="Search"]');
+        if (searchBox && searchBox.value && searchBox.value.trim()) {
+          console.log("BusinessMatcher: Found search in search box:", searchBox.value);
+          return searchBox.value.trim();
+        }
+        const urlObj = new URL(url);
+        const query = urlObj.searchParams.get("q") || urlObj.searchParams.get("query");
+        if (query) {
+          console.log("BusinessMatcher: Found search in URL params:", query);
+          return query;
+        }
+        console.log("BusinessMatcher: No user search query found");
+        return null;
+      } catch (error) {
+        console.error("BusinessMatcher: Error extracting user search query:", error);
+        return null;
+      }
+    }
+    /**
+     * Generate fallback search query based on chain business category
+     */
+    generateFallbackQuery(category) {
+      const fallbackQueries = {
+        "grocery": "grocery stores",
+        "restaurant": "restaurants",
+        "retail": "stores shops",
+        "professional_services": "professional services",
+        "health_wellness": "health wellness services",
+        "home_garden": "home garden stores",
+        "arts_entertainment": "entertainment venues",
+        "automotive": "auto repair services",
+        "financial": "financial services",
+        "other": "local businesses"
+      };
+      return fallbackQueries[category] || "local businesses";
+    }
+    /**
+     * Call semantic search API via Chrome runtime messaging
+     */
+    async callSemanticSearchAPI(query, location) {
+      try {
+        console.log("BusinessMatcher: Calling semantic search API via runtime messaging");
+        const message = {
+          action: "semanticSearch",
+          data: {
+            query,
+            lat: location.lat,
+            lng: location.lng,
+            radius: 10,
+            // 10 mile search radius
+            limit: 8
+            // Get up to 8 alternatives
+          }
+        };
+        console.log("BusinessMatcher: Sending message to service worker:", message);
+        const response = await chrome.runtime.sendMessage(message);
+        if (response && response.success) {
+          console.log("BusinessMatcher: Semantic search API response:", response.data);
+          return response.data;
+        } else {
+          throw new Error((response == null ? void 0 : response.error) || "Unknown error from service worker");
+        }
+      } catch (error) {
+        console.error("BusinessMatcher: Error calling semantic search API:", error);
+        throw error;
+      }
+    }
+    /**
+     * Removed: extractBusinessesFromDocument() and extractCoordsFromContainer()
+     * Now using semantic search API instead of DOM extraction
+     */
     /**
      * Calculate match confidence between business name and pattern
      */
@@ -376,14 +445,18 @@
       return lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
     }
     /**
+     * Removed: PlaceID validation methods - No longer needed with dynamic API-based search
+     * The API now returns businesses with proper linking information
+     */
+    /**
      * Get matcher status for debugging
      */
     getStatus() {
       return {
         chainPatterns: this.chainPatterns.length,
-        localBusinesses: this.localBusinesses.length,
         lastChainUpdate: this.lastChainUpdate,
-        lastBusinessUpdate: this.lastBusinessUpdate
+        dynamicBusinessSearch: true,
+        apiBasedAlternatives: true
       };
     }
   }
@@ -631,10 +704,26 @@
         return false;
       }
       const text = element.textContent.toLowerCase();
-      const hasBusinessIndicators = element.querySelector('[data-value="Directions"]') || element.querySelector('[role="heading"]') || text.includes("directions") || text.includes("call") || text.includes("website") || text.includes("reviews") || text.includes("hours") || element.hasAttribute("data-result-index") || element.classList.contains("section-result");
+      const hasModernBusinessIndicators = (
+        // Modern business card classes
+        element.classList.contains("Nv2PK") || // New business card class
+        element.classList.contains("lI9IFe") || // Business listing class
+        element.classList.contains("qBF1Pd") || // Business name class
+        // Traditional indicators (keep for backward compatibility)
+        element.querySelector('[data-value="Directions"]') || element.querySelector('[role="heading"]') || element.hasAttribute("data-result-index") || element.classList.contains("section-result") || // Text-based indicators for business content
+        text.includes("⋅") && (text.includes("opens") || text.includes("closed") || text.includes("hours")) || // "Closed ⋅ Opens 10 am"
+        text.includes("€") && text.includes("store") || // "€€ Clothing store"
+        text.includes("clothing store") || text.includes("boutique") || text.includes("shop") || text.match(/\d+\.\d+\(\d+\)/) && text.includes("·") || // Rating pattern like "4.2(166) ·"
+        text.includes("directions") || text.includes("call") || text.includes("website") || text.includes("reviews")
+      );
       const isNotFooter = !element.closest("footer") && !element.closest('[role="contentinfo"]');
       const isNotNavigation = !element.closest("nav") && !element.closest('[role="navigation"]');
-      return hasBusinessIndicators && isNotFooter && isNotNavigation;
+      const isNotControlElement = !text.includes("collapse side panel") && !text.includes("savedrecentsget the app") && !text.includes("all filters") && text.length > 10;
+      const result = hasModernBusinessIndicators && isNotFooter && isNotNavigation && isNotControlElement;
+      if (result) {
+        console.log(`BusinessDetector: Accepted container with text: "${text.slice(0, 100)}"`);
+      }
+      return result;
     }
     /**
      * Extract business information from a container element
@@ -1799,16 +1888,26 @@
     openBusinessInMaps(business) {
       try {
         let url;
-        if (business.placeId) {
-          url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
-        } else if (business.name && business.address) {
+        if (business.name && business.address) {
+          console.log("MapPinManager: Using name+address search for", business.name);
           const query = encodeURIComponent(`${business.name} ${business.address}`);
-          url = `https://maps.google.com/maps/search/${query}`;
-        } else if (business.latitude && business.longitude) {
-          url = `https://maps.google.com/maps?q=${business.latitude},${business.longitude}`;
+          url = `https://www.google.com/maps/search/${query}`;
+        } else if (business.placeId && business.placeId.length > 15 && !business.placeId.includes("Example") && !business.placeId.includes("ChIJ")) {
+          console.log("MapPinManager: Using validated PlaceID for", business.name, ":", business.placeId);
+          url = `https://www.google.com/maps/place/?q=place_id:${business.placeId}`;
+        } else if (business.latitude && business.longitude && business.name) {
+          console.log("MapPinManager: Using coordinates+name search for", business.name);
+          const query = encodeURIComponent(`${business.name} Phoenix AZ`);
+          url = `https://www.google.com/maps/search/${query}/@${business.latitude},${business.longitude},17z`;
+        } else if (business.name) {
+          console.log("MapPinManager: Using name-only search for", business.name);
+          const query = encodeURIComponent(`${business.name} Phoenix AZ`);
+          url = `https://www.google.com/maps/search/${query}`;
         } else {
+          console.warn("MapPinManager: No valid data to open business in maps:", business);
           return;
         }
+        console.log("MapPinManager: Opening URL:", url);
         window.open(url, "_blank");
       } catch (error) {
         console.error("MapPinManager: Failed to open business in maps:", error);
@@ -3560,14 +3659,34 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
      * Load chain patterns from background script
      */
     async loadChainPatterns() {
+      var _a, _b, _c, _d;
+      console.log("🔍 CONTENT SCRIPT: loadChainPatterns() called");
       try {
+        console.log("🔍 CONTENT SCRIPT: Sending getChainPatterns message to service worker");
         const response = await chrome.runtime.sendMessage({ action: "getChainPatterns" });
+        console.log("🔍 CONTENT SCRIPT: Received response from service worker:", {
+          hasResponse: !!response,
+          success: response == null ? void 0 : response.success,
+          hasData: !!(response == null ? void 0 : response.data),
+          hasChains: !!((_a = response == null ? void 0 : response.data) == null ? void 0 : _a.chains),
+          chainsLength: (_c = (_b = response == null ? void 0 : response.data) == null ? void 0 : _b.chains) == null ? void 0 : _c.length,
+          total: (_d = response == null ? void 0 : response.data) == null ? void 0 : _d.total
+        });
         if (response && response.success && response.data.chains) {
+          console.log("🔍 CONTENT SCRIPT: Response data analysis:", {
+            chainsLength: response.data.chains.length,
+            hasTracer: response.data.chains.some((c) => c.name.includes("TRACER")),
+            firstFewChains: response.data.chains.slice(0, 5).map((c) => c.name),
+            totalFromResponse: response.data.total
+          });
           businessMatcher.updateChainPatterns(response.data.chains);
-          console.log(`MapsModifier: Loaded ${response.data.chains.length} chain patterns`);
+          console.log(`🔍 CONTENT SCRIPT: Successfully loaded ${response.data.chains.length} chain patterns`);
+          console.log(`🔍 CONTENT SCRIPT: Updated with ${response.data.chains.length} chain patterns`);
+        } else {
+          console.error("🔍 CONTENT SCRIPT: Invalid response structure:", response);
         }
       } catch (error) {
-        console.error("MapsModifier: Failed to load chain patterns:", error);
+        console.error("🔍 CONTENT SCRIPT: Failed to load chain patterns:", error);
       }
     }
     /**
@@ -3744,9 +3863,6 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       console.log("MapsModifier: Processing current page...");
       try {
         const currentLocation = businessMatcher.extractLocationFromUrl();
-        if (currentLocation) {
-          await this.loadNearbyBusinesses(currentLocation);
-        }
         const businesses = businessDetector.scanForBusinesses();
         console.log(`MapsModifier: Found ${businesses.length} businesses to process`);
         let chainsFiltered = 0;
@@ -3785,192 +3901,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       }
     }
     /**
-     * Load nearby businesses for the current location
+     * Removed: loadNearbyBusinesses() - No longer using hardcoded business database
+     * Local businesses are now dynamically fetched via API when alternatives are needed
      */
-    async loadNearbyBusinesses(location) {
-      try {
-        const mockLocalBusinesses = [
-          // Central Phoenix
-          {
-            id: "local_1",
-            name: "Phoenix Public Market",
-            category: "grocery",
-            address: "721 N Central Ave, Phoenix, AZ",
-            latitude: 33.4734,
-            longitude: -112.074,
-            verified: true,
-            placeId: "ChIJN1t_tDeuAIERAGYS_wLBZiw",
-            // Example Phoenix Public Market Place ID
-            phone: "(602) 252-2204",
-            website: "https://phoenixpublicmarket.com"
-          },
-          {
-            id: "local_2",
-            name: "Arizona Natural Market",
-            category: "grocery",
-            address: "3045 N 16th St, Phoenix, AZ",
-            latitude: 33.4851,
-            longitude: -112.0379,
-            verified: false,
-            placeId: "ChIJc_eKY7arAIERAMZe7WqHFaE",
-            // Example place ID
-            phone: "(602) 279-3344"
-          },
-          {
-            id: "local_3",
-            name: "Desert Roots Market",
-            category: "grocery",
-            address: "1750 E Bell Rd, Phoenix, AZ",
-            latitude: 33.639,
-            longitude: -112.0277,
-            verified: true,
-            placeId: "ChIJwZHKP2CqAIERaGBt_2oYQfI",
-            // Example place ID
-            phone: "(602) 867-3663",
-            website: "https://desertrootsmarket.com"
-          },
-          // West Valley
-          {
-            id: "local_4",
-            name: "West Valley Fresh Market",
-            category: "grocery",
-            address: "7500 W Thomas Rd, Phoenix, AZ",
-            latitude: 33.4806,
-            longitude: -112.23,
-            verified: true,
-            placeId: "ChIJwVHKQ3CqAIERfGEt_2pYQfI",
-            phone: "(623) 846-2245"
-          },
-          {
-            id: "local_5",
-            name: "Avondale Organic Co-op",
-            category: "grocery",
-            address: "11025 W McDowell Rd, Avondale, AZ",
-            latitude: 33.465,
-            longitude: -112.349,
-            verified: false,
-            placeId: "ChIJ-XHKa3CqAIERbGEt_2qYQfI",
-            phone: "(623) 935-4483"
-          },
-          {
-            id: "local_6",
-            name: "Goodyear Farm Fresh",
-            category: "grocery",
-            address: "14500 W Indian School Rd, Goodyear, AZ",
-            latitude: 33.4942,
-            longitude: -112.3951,
-            verified: true,
-            placeId: "ChIJzXHKb3CqAIERcGEt_2rYQfI",
-            phone: "(623) 932-1234",
-            website: "https://goodyearfarmfresh.com"
-          },
-          // East Valley
-          {
-            id: "local_7",
-            name: "Ahwatukee Organic Foods",
-            category: "grocery",
-            address: "4045 E Chandler Blvd, Phoenix, AZ",
-            latitude: 33.3061,
-            longitude: -111.9973,
-            verified: false,
-            placeId: "ChIJyXHKc3CqAIERdGEt_2sYQfI",
-            phone: "(480) 753-2214"
-          },
-          {
-            id: "local_8",
-            name: "Scottsdale Fresh Market",
-            category: "grocery",
-            address: "7014 E Camelback Rd, Scottsdale, AZ",
-            latitude: 33.5026,
-            longitude: -111.9306,
-            verified: true,
-            placeId: "ChIJxXHKd3CqAIEReGEt_2tYQfI",
-            phone: "(480) 941-5566",
-            website: "https://scottsdalefresh.com"
-          },
-          {
-            id: "local_9",
-            name: "Tempe Community Market",
-            category: "grocery",
-            address: "1919 E Baseline Rd, Tempe, AZ",
-            latitude: 33.3781,
-            longitude: -111.9048,
-            verified: true,
-            placeId: "ChIJwXHKe3CqAIERfGEt_2uYQfI",
-            phone: "(480) 967-4455",
-            website: "https://tempemarket.org"
-          },
-          {
-            id: "local_10",
-            name: "Mesa Natural Foods",
-            category: "grocery",
-            address: "1065 N Country Club Dr, Mesa, AZ",
-            latitude: 33.4295,
-            longitude: -111.8568,
-            verified: false,
-            placeId: "ChIJvXHKf3CqAIERgGEt_2vYQfI",
-            phone: "(480) 832-7799"
-          },
-          // North Phoenix/Deer Valley
-          {
-            id: "local_11",
-            name: "Deer Valley Market",
-            category: "grocery",
-            address: "2102 W Union Hills Dr, Phoenix, AZ",
-            latitude: 33.65,
-            longitude: -112.105,
-            verified: true,
-            placeId: "ChIJuXHKg3CqAIERhGEt_2wYQfI",
-            phone: "(602) 867-3344",
-            website: "https://deervalleymarket.com"
-          },
-          {
-            id: "local_12",
-            name: "North Phoenix Co-op",
-            category: "grocery",
-            address: "17235 N Cave Creek Rd, Phoenix, AZ",
-            latitude: 33.648,
-            longitude: -112.0295,
-            verified: false,
-            placeId: "ChIJtXHKh3CqAIERiGEt_2xYQfI",
-            phone: "(602) 482-5566"
-          },
-          // South Phoenix
-          {
-            id: "local_13",
-            name: "South Mountain Market",
-            category: "grocery",
-            address: "5532 S Central Ave, Phoenix, AZ",
-            latitude: 33.395,
-            longitude: -112.074,
-            verified: true,
-            placeId: "ChIJsXHKi3CqAIERjGEt_2yYQfI",
-            phone: "(602) 276-1234",
-            website: "https://southmountainmarket.com"
-          },
-          {
-            id: "local_14",
-            name: "Laveen Village Market",
-            category: "grocery",
-            address: "5130 W Baseline Rd, Laveen, AZ",
-            latitude: 33.3781,
-            longitude: -112.175,
-            verified: false,
-            placeId: "ChIJrXHKj3CqAIERkGEt_2zYQfI",
-            phone: "(602) 237-8899"
-          }
-        ];
-        console.log("MapsModifier: Location for nearby businesses:", location);
-        console.log("MapsModifier: Mock local businesses available:", mockLocalBusinesses.length);
-        const nearbyBusinesses = mockLocalBusinesses.filter((business) => {
-          return business.latitude && business.longitude;
-        });
-        businessMatcher.updateLocalBusinesses(nearbyBusinesses);
-        console.log(`MapsModifier: Loaded ${nearbyBusinesses.length} nearby local businesses:`, nearbyBusinesses);
-      } catch (error) {
-        console.error("MapsModifier: Failed to load nearby businesses:", error);
-      }
-    }
     /**
      * Calculate distance between two points (Haversine formula)
      */
@@ -4005,17 +3938,17 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
           );
           if (this.settings.showAlternatives && currentLocation) {
             console.log("MapsModifier: Looking for alternatives for", chainResult.matchedChain.name, "at location", currentLocation);
-            const alternatives = businessMatcher.findLocalAlternatives(
-              chainResult.matchedChain,
-              currentLocation
-            );
-            console.log("MapsModifier: Found", alternatives.length, "alternatives:", alternatives);
-            if (alternatives.length > 0) {
-              console.log("MapsModifier: Showing alternatives for", chainResult.matchedChain.name);
-              uiInjector.showLocalAlternatives(business.element, chainResult.matchedChain, alternatives);
-            } else {
-              console.log("MapsModifier: No alternatives found for", chainResult.matchedChain.name);
-            }
+            businessMatcher.findLocalAlternatives(chainResult.matchedChain, currentLocation).then((alternatives) => {
+              console.log("MapsModifier: Found", alternatives.length, "alternatives via API:", alternatives);
+              if (alternatives.length > 0) {
+                console.log("MapsModifier: Showing alternatives for", chainResult.matchedChain.name);
+                uiInjector.showLocalAlternatives(business.element, chainResult.matchedChain, alternatives);
+              } else {
+                console.log("MapsModifier: No alternatives found via API for", chainResult.matchedChain.name);
+              }
+            }).catch((error) => {
+              console.error("MapsModifier: Error fetching alternatives:", error);
+            });
           } else {
             console.log("MapsModifier: Not showing alternatives - showAlternatives:", this.settings.showAlternatives, "currentLocation:", currentLocation);
           }
@@ -4025,18 +3958,6 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
             confidence: chainResult.confidence,
             filterLevel: this.settings.filterLevel
           });
-        } else {
-          const localMatch = businessMatcher.findLocalMatch(business.name, currentLocation);
-          if (localMatch && this.settings.showBadges) {
-            business.processed.isLocal = true;
-            business.processed.localInfo = localMatch;
-            uiInjector.addLFABadge(business.element, localMatch);
-            this.trackEvent("local_highlighted", {
-              businessName: business.name,
-              businessId: localMatch.id,
-              matchScore: localMatch.matchScore
-            });
-          }
         }
       } catch (error) {
         console.error(`MapsModifier: Error processing business ${business.name}:`, error);
