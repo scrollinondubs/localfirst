@@ -2696,40 +2696,70 @@
      */
     createChainReplacementPlaceholder(element, chainInfo) {
       try {
+        const existingInjected = this.injectedElements.get(element);
+        if (existingInjected && existingInjected.placeholder) {
+          console.log(`UIInjector: Placeholder already exists for ${chainInfo.name}, skipping`);
+          return;
+        }
+        const parentContainer = this.findPlaceholderParent(element);
+        if (!parentContainer) {
+          console.log(`UIInjector: Could not find suitable parent for placeholder for ${chainInfo.name}`);
+          return;
+        }
         const placeholder = document.createElement("div");
         placeholder.className = "lfa-chain-placeholder";
+        placeholder.setAttribute("data-chain-name", chainInfo.name);
         placeholder.style.cssText = `
         background: #f8f9fa !important;
         border: 1px solid #e8eaed !important;
         border-radius: 8px !important;
-        padding: 16px !important;
-        margin: 8px 0 !important;
+        padding: 12px !important;
+        margin: 4px 0 !important;
         display: block !important;
-        position: relative !important;
-        z-index: 1000 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
         color: #333 !important;
         font-family: Google Sans, Roboto, Arial, sans-serif !important;
-        font-size: 14px !important;
-        line-height: 20px !important;
-        min-height: 60px !important;
+        font-size: 13px !important;
+        line-height: 18px !important;
+        min-height: 50px !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        clear: both !important;
       `;
         placeholder.innerHTML = `
-        <div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">
-          <div style="font-weight: 500; margin-bottom: 8px;">🏪 Chain store hidden</div>
-          <div style="font-size: 12px;">Looking for local alternatives...</div>
+        <div style="color: #666; font-size: 13px; text-align: center; padding: 8px;">
+          <div style="font-weight: 500; margin-bottom: 4px;">🏪 Chain store hidden</div>
+          <div style="font-size: 11px;">Loading local alternatives...</div>
         </div>
       `;
-        element.parentNode.insertBefore(placeholder, element.nextSibling);
+        try {
+          parentContainer.appendChild(placeholder);
+          console.log(`UIInjector: Created placeholder for hidden ${chainInfo.name} in proper container`);
+        } catch (insertError) {
+          console.warn(`UIInjector: Container insertion failed, using fallback for ${chainInfo.name}:`, insertError);
+          element.parentNode.insertBefore(placeholder, element.nextSibling);
+        }
         if (this.injectedElements.has(element)) {
           this.injectedElements.get(element).placeholder = placeholder;
         } else {
           this.injectedElements.set(element, { placeholder, type: "chain-placeholder" });
         }
-        console.log(`UIInjector: Created placeholder for hidden ${chainInfo.name}`);
       } catch (error) {
         console.error("UIInjector: Failed to create chain placeholder:", error);
       }
+    }
+    /**
+     * Find appropriate parent container for placeholder placement
+     */
+    findPlaceholderParent(element) {
+      let current = element.parentElement;
+      while (current && current !== document.body) {
+        if (current.classList.contains("section-result") || current.classList.contains("section-result-content") || current.querySelector('[role="article"]') || current.style.display === "flex" && current.children.length > 1) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return element.parentElement;
     }
     /**
      * Show local alternatives when chain is filtered
@@ -3376,6 +3406,30 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       console.log("UIInjector: Pin clicked for business:", business.name);
     }
     /**
+     * Clean up orphaned placeholder elements that may be causing stacking issues
+     */
+    cleanupOrphanedPlaceholders() {
+      try {
+        const placeholders = document.querySelectorAll(".lfa-chain-placeholder");
+        console.log(`UIInjector: Found ${placeholders.length} placeholder elements for cleanup check`);
+        placeholders.forEach((placeholder, index) => {
+          var _a;
+          const chainName = placeholder.getAttribute("data-chain-name");
+          const parentRect = (_a = placeholder.parentElement) == null ? void 0 : _a.getBoundingClientRect();
+          if (parentRect && parentRect.left > window.innerWidth * 0.6) {
+            console.log(`UIInjector: Removing misplaced placeholder for ${chainName} (positioned at x: ${parentRect.left})`);
+            placeholder.remove();
+          }
+          if (index > 4) {
+            console.log(`UIInjector: Removing excess placeholder #${index} for ${chainName}`);
+            placeholder.remove();
+          }
+        });
+      } catch (error) {
+        console.error("UIInjector: Error cleaning up orphaned placeholders:", error);
+      }
+    }
+    /**
      * Clear all injected elements (for page navigation)
      */
     clearAllInjectedElements() {
@@ -3401,7 +3455,8 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
       document.querySelectorAll(".lfa-chain-business, .lfa-chain-hidden").forEach((element) => {
         element.classList.remove("lfa-chain-business", "lfa-chain-hidden");
       });
-      document.querySelectorAll(".lfa-badge, .lfa-alternatives").forEach((element) => {
+      this.cleanupOrphanedPlaceholders();
+      document.querySelectorAll(".lfa-badge, .lfa-alternatives, .lfa-chain-placeholder").forEach((element) => {
         element.remove();
       });
       document.querySelectorAll('[data-lfa-hidden="true"]').forEach((element) => {
@@ -3717,6 +3772,9 @@ ${business.distance ? business.distance.toFixed(1) + " mi away" : "Near you"}`;
           uiInjector.showFilterStatus(this.settings.filterLevel, chainsFiltered, localHighlighted);
         }
         console.log(`MapsModifier: Processing complete. Chains filtered: ${chainsFiltered}, Local highlighted: ${localHighlighted}`);
+        setTimeout(() => {
+          uiInjector.cleanupOrphanedPlaceholders();
+        }, 2e3);
       } catch (error) {
         console.error("MapsModifier: Error processing page:", error);
         this.trackEvent("error", {
