@@ -178,10 +178,7 @@ class ExtensionServiceWorker {
           sendResponse({ success: true, data: semanticResults });
           break;
           
-        case 'getChainPatterns':
-          const chains = await this.getChainPatterns();
-          sendResponse({ success: true, data: chains });
-          break;
+        // Removed: getChainPatterns - not needed for binary LFA/Google toggle
           
         case 'getSettings':
           const settings = await this.getSettings();
@@ -341,83 +338,8 @@ class ExtensionServiceWorker {
   }
 
   /**
-   * Get chain patterns with caching
+   * Removed: getChainPatterns() - Chain detection not needed for binary LFA/Google toggle
    */
-  async getChainPatterns() {
-    console.log('🔍 SERVICE WORKER: getChainPatterns() called');
-    console.log('🔍 SERVICE WORKER: Using storage key:', CONFIG.STORAGE_KEYS.CHAINS);
-    
-    try {
-      const result = await chrome.storage.local.get([CONFIG.STORAGE_KEYS.CHAINS]);
-      const cached = result[CONFIG.STORAGE_KEYS.CHAINS];
-      
-      console.log('🔍 SERVICE WORKER: Cache check result:', {
-        hasCached: !!cached,
-        cachedTimestamp: cached?.timestamp,
-        currentTime: Date.now(),
-        cacheAge: cached?.timestamp ? (Date.now() - cached.timestamp) : 'N/A',
-        syncInterval: CONFIG.SYNC_INTERVAL,
-        isCacheValid: cached && cached.timestamp && (Date.now() - cached.timestamp) < CONFIG.SYNC_INTERVAL
-      });
-      
-      // Check if cache is still valid (24 hours)
-      if (cached && cached.timestamp && (Date.now() - cached.timestamp) < CONFIG.SYNC_INTERVAL) {
-        console.log('🔍 SERVICE WORKER: Using cached chain patterns');
-        console.log('🔍 SERVICE WORKER: Cached data:', {
-          chainsLength: cached.chains?.length,
-          hasTracer: cached.chains?.some(c => c.name.includes('TRACER')),
-          firstFewChains: cached.chains?.slice(0, 3).map(c => c.name)
-        });
-        return { success: true, chains: cached.chains };
-      }
-      
-      console.log('🔍 SERVICE WORKER: Cache invalid/missing, fetching fresh data from API');
-      
-      // Fetch fresh data
-      const apiResult = await apiClient.getChainPatterns();
-      
-      console.log('🔍 SERVICE WORKER: API result:', {
-        success: apiResult.success,
-        chainsLength: apiResult.chains?.length,
-        hasTracer: apiResult.chains?.some(c => c.name.includes('TRACER')),
-        total: apiResult.total
-      });
-      
-      if (apiResult.success) {
-        const cacheData = {
-          chains: apiResult.chains,
-          timestamp: Date.now(),
-          lastUpdated: apiResult.lastUpdated,
-        };
-        
-        console.log('🔍 SERVICE WORKER: Caching result under key:', CONFIG.STORAGE_KEYS.CHAINS);
-        console.log('🔍 SERVICE WORKER: Caching data:', {
-          chainsLength: cacheData.chains.length,
-          timestamp: cacheData.timestamp,
-          hasTracer: cacheData.chains.some(c => c.name.includes('TRACER'))
-        });
-        
-        // Cache the result
-        await chrome.storage.local.set({
-          [CONFIG.STORAGE_KEYS.CHAINS]: cacheData
-        });
-        
-        console.log('🔍 SERVICE WORKER: Successfully cached and returning API result');
-        return apiResult;
-      } else {
-        console.log('🔍 SERVICE WORKER: API failed, checking for stale cache');
-        // Return cached data if API fails
-        if (cached && cached.chains) {
-          console.warn('🔍 SERVICE WORKER: API failed, returning stale cached chains');
-          return { success: true, chains: cached.chains };
-        }
-        throw new Error(apiResult.error);
-      }
-    } catch (error) {
-      console.error('🔍 SERVICE WORKER: Error in getChainPatterns:', error);
-      return { success: false, chains: [], error: error.message };
-    }
-  }
 
   /**
    * Update extension settings
@@ -447,8 +369,7 @@ class ExtensionServiceWorker {
     console.log('Performing initial data sync...');
     
     try {
-      // Sync chain patterns
-      await this.getChainPatterns();
+      // Removed: Chain patterns sync - not needed for binary LFA/Google toggle
       
       // Set last sync timestamp
       await chrome.storage.local.set({
@@ -496,9 +417,7 @@ class ExtensionServiceWorker {
     console.log('Starting data sync...');
     
     try {
-      // Force refresh chain patterns
-      await chrome.storage.local.remove([CONFIG.STORAGE_KEYS.CHAINS]);
-      await this.getChainPatterns();
+      // Removed: Chain patterns refresh - not needed for binary LFA/Google toggle
       
       // Update last sync timestamp
       await chrome.storage.local.set({

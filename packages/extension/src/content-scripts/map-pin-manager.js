@@ -430,11 +430,14 @@ export class MapPinManager {
   handlePinHover(event, business, isEntering) {
     const pin = event.currentTarget;
     
+    console.log(`MapPinManager: handlePinHover called - ${isEntering ? 'ENTER' : 'LEAVE'} for business:`, business.name, 'ID:', business.id);
+    
     if (isEntering) {
       pin.style.transform = 'translate(-50%, -100%) scale(1.1)';
       pin.style.zIndex = '200';
       
       // Highlight corresponding sidebar listing
+      console.log('MapPinManager: Attempting to highlight sidebar listing for business ID:', business.id);
       this.highlightSidebarListing(business.id, true);
       
       // Call external hover callback if set
@@ -448,6 +451,7 @@ export class MapPinManager {
       pin.style.zIndex = '';
       
       // Remove sidebar listing highlight
+      console.log('MapPinManager: Attempting to remove sidebar listing highlight for business ID:', business.id);
       this.highlightSidebarListing(business.id, false);
       
       // Call external hover callback if set
@@ -654,28 +658,30 @@ export class MapPinManager {
    */
   highlightSidebarListing(businessId, highlight = true) {
     try {
-      // Find the corresponding sidebar element by business ID or name
-      const business = this.businessData.get(businessId);
-      if (!business) return;
+      // Find the corresponding sidebar element by business ID
+      const lfaBusinessItem = document.querySelector(`[data-lfa-business="${businessId}"]`);
       
-      // Look for alternative listings that match this business
-      const alternativeItems = document.querySelectorAll('.lfa-alternative-item');
-      
-      alternativeItems.forEach(item => {
-        const nameElement = item.querySelector('.lfa-alternative-name');
-        if (nameElement && nameElement.textContent.trim() === business.name) {
-          if (highlight) {
-            item.style.backgroundColor = '#f0f8ff';
-            item.style.transform = 'scale(1.02)';
-            item.style.transition = 'all 0.2s ease';
-            item.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-          } else {
-            item.style.backgroundColor = '';
-            item.style.transform = '';
-            item.style.boxShadow = '';
-          }
+      if (lfaBusinessItem) {
+        if (highlight) {
+          // Apply highlighting effects that match the existing hover style from UI injector
+          lfaBusinessItem.style.backgroundColor = '#f8f9fa';
+          lfaBusinessItem.style.transform = 'translateX(2px)';
+          lfaBusinessItem.style.transition = 'all 0.2s ease';
+          lfaBusinessItem.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        } else {
+          // Remove highlighting effects
+          lfaBusinessItem.style.backgroundColor = '';
+          lfaBusinessItem.style.transform = '';
+          lfaBusinessItem.style.boxShadow = '';
         }
-      });
+        
+        console.log(`MapPinManager: ${highlight ? 'Highlighted' : 'Unhighlighted'} sidebar listing for business ${businessId}`);
+      } else {
+        // More detailed debugging when sidebar listing is not found
+        console.log(`MapPinManager: No sidebar listing found for business ${businessId}`);
+        console.log('MapPinManager: Available LFA business items:', 
+          Array.from(document.querySelectorAll('[data-lfa-business]')).map(el => el.getAttribute('data-lfa-business')));
+      }
     } catch (error) {
       console.warn('MapPinManager: Error highlighting sidebar listing:', error);
     }

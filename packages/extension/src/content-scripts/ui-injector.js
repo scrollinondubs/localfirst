@@ -1,5 +1,6 @@
 import { CONFIG } from '../shared/constants.js';
 import { mapPinManager } from './map-pin-manager.js';
+import { businessMatcher } from '../shared/business-matcher.js';
 
 /**
  * UI Injector for Local First Arizona Extension
@@ -911,6 +912,13 @@ export class UIInjector {
       mutations.forEach(mutation => {
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
+            // Don't hide our own LFA elements
+            if (node.classList && (node.classList.contains('lfa-alternatives') || 
+                                   node.classList.contains('lfa-placeholder') ||
+                                   node.classList.contains('lfa-status-bar'))) {
+              return;
+            }
+            
             // Check if this new element is a map pin for our business
             const text = (node.textContent || node.getAttribute('aria-label') || '').toLowerCase();
             if (text.includes(normalizedName)) {
@@ -918,9 +926,14 @@ export class UIInjector {
               console.log(`UIInjector: Hidden dynamically added pin for ${businessName}:`, node);
             }
             
-            // Also check child elements
+            // Also check child elements (but skip our LFA elements)
             const childPins = node.querySelectorAll('[role="button"], button, [data-value]');
             childPins.forEach(pin => {
+              // Don't hide elements within our LFA containers
+              if (pin.closest('.lfa-alternatives, .lfa-placeholder, .lfa-status-bar')) {
+                return;
+              }
+              
               const pinText = (pin.textContent || pin.getAttribute('aria-label') || '').toLowerCase();
               if (pinText.includes(normalizedName)) {
                 pin.style.display = 'none';
@@ -1044,13 +1057,13 @@ export class UIInjector {
   /**
    * Show local alternatives when chain is filtered
    */
-  showLocalAlternatives(element, chainInfo, alternatives) {
+  showLocalAlternatives(element, chainInfo, alternatives, isProactive = false) {
     if (!alternatives || alternatives.length === 0) {
       return;
     }
 
     try {
-      const alternativesElement = this.createAlternativesElement(alternatives, chainInfo);
+      const alternativesElement = this.createAlternativesElement(alternatives, chainInfo, isProactive);
       
       // Check if this chain is hidden and has a placeholder
       const injectedData = this.injectedElements.get(element);
@@ -1082,6 +1095,40 @@ export class UIInjector {
           
           // Show map pins using MapPinManager
           this.showAlternativeMapPins(alternatives);
+        } else if (isProactive) {
+          // For proactive alternatives, insert at the top of the search results
+          // Look for the main results container in the sidebar
+          const resultsContainer = document.querySelector('[role="main"] > div > div') || 
+                                   document.querySelector('.m6QErb.WNBkOb.XiKgde') ||
+                                   document.querySelector('[role="main"]');
+          
+          if (resultsContainer) {
+            // Find the first actual result (after any headers or sponsored content)
+            const firstResult = resultsContainer.querySelector('.Nv2PK.THOPZb.CpccDe') ||
+                               resultsContainer.querySelector('[jsaction*="mouseover"]');
+            
+            if (firstResult && firstResult.parentElement) {
+              // Insert before the first result
+              firstResult.parentElement.insertBefore(alternativesElement, firstResult);
+            } else {
+              // Fallback: insert at the beginning
+              resultsContainer.insertBefore(alternativesElement, resultsContainer.firstChild);
+            }
+            
+            // Store reference for cleanup
+            this.injectedElements.set(element, { 
+              alternatives: alternativesElement, 
+              type: 'proactive-alternatives',
+              container: resultsContainer
+            });
+            
+            console.log(`UIInjector: Added ${alternatives.length} proactive alternatives to sidebar`);
+            
+            // Show map pins
+            this.showAlternativeMapPins(alternatives);
+          } else {
+            console.error('UIInjector: Could not find results container for proactive alternatives');
+          }
         }
       }
     } catch (error) {
@@ -1092,29 +1139,108 @@ export class UIInjector {
   /**
    * Create local alternatives element
    */
-  createAlternativesElement(alternatives, chainInfo) {
+  createAlternativesElement(alternatives, chainInfo, isProactive = false) {
     const container = document.createElement('div');
     container.className = 'lfa-alternatives';
+    container.style.cssText = 'margin-bottom: 16px;';
 
+    // Create a subtle header section
     const header = document.createElement('div');
-    header.className = 'lfa-alternatives-header';
-    header.innerHTML = `
-      <strong>🏪 Local alternatives to ${chainInfo.name}:</strong>
-      <div style="font-size: 11px; font-weight: normal; margin-top: 2px; color: #666;">
-        Supporting local businesses in your community
-      </div>
+    header.style.cssText = `
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px 8px 0 0;
     `;
+    
+    if (isProactive) {
+      header.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">🏪</span>
+          <div>
+            <div>Local businesses you might like</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Supporting your community</div>
+          </div>
+        </div>`;
+    } else {
+      header.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">🏪</span>
+          <div>
+            <div>Local alternatives to ${chainInfo.name}</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">Supporting your community</div>
+          </div>
+        </div>`;
+    }
+    
     container.appendChild(header);
 
-    alternatives.forEach(business => {
+    // Create listings container with border
+    const listingsContainer = document.createElement('div');
+    listingsContainer.style.cssText = `
+      background: white;
+      border-left: 1px solid #e8eaed;
+      border-right: 1px solid #e8eaed;
+      border-bottom: 1px solid #e8eaed;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+    `;
+    
+    alternatives.slice(0, 5).forEach((business, index) => {
+      // Create a Google Maps-like listing container
       const item = document.createElement('div');
-      item.className = 'lfa-alternative-item';
+      item.className = 'Nv2PK THOPZb CpccDe lfa-alternative-item';
+      item.style.cssText = `
+        padding: 16px; 
+        border-bottom: ${index < alternatives.slice(0, 5).length - 1 ? '1px solid #e8eaed' : 'none'}; 
+        cursor: pointer;
+        transition: background-color 0.2s;
+      `;
+      
+      // Add hover effect
+      item.addEventListener('mouseenter', () => {
+        item.style.backgroundColor = '#f8f9fa';
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.backgroundColor = 'white';
+      });
       item.setAttribute('data-business-id', business.id);
 
-      const name = document.createElement('span');
-      name.className = 'lfa-alternative-name';
-      name.textContent = business.name;
-      name.addEventListener('click', () => {
+      // Create Google Maps-style listing content
+      const contentHtml = `
+        <div class="bJzME" style="padding: 0;">
+          <div class="qBF1Pd fontHeadlineSmall" style="font-weight: 500; color: #1a73e8; margin-bottom: 4px;">
+            ${business.name}
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; color: #70757a; font-size: 14px;">
+            <span style="color: #fbbc04;">★★★★★</span>
+            <span>Local Business</span>
+            ${business.category && business.category !== 'other' ? `<span>· ${business.category}</span>` : ''}
+          </div>
+          ${business.address ? `
+            <div style="color: #70757a; font-size: 14px; margin-top: 4px;">
+              ${business.address}
+            </div>
+          ` : ''}
+          ${business.distance ? `
+            <div style="color: #188038; font-size: 14px; margin-top: 4px;">
+              ${business.distance.toFixed(1)} mi away
+            </div>
+          ` : ''}
+          <div style="color: #188038; font-weight: 500; font-size: 12px; margin-top: 8px;">
+            VERIFIED LOCAL
+          </div>
+        </div>
+      `;
+      
+      item.innerHTML = contentHtml;
+      
+      // Add click handler to the business name
+      const nameElement = item.querySelector('.qBF1Pd');
+      nameElement.style.cursor = 'pointer';
+      nameElement.addEventListener('click', () => {
         this.handleAlternativeClick(business, chainInfo);
       });
       
@@ -1133,11 +1259,8 @@ export class UIInjector {
       
       // Add click handler to entire item for better UX
       item.addEventListener('click', (event) => {
-        // Only trigger if clicking on the item itself, not the name link
-        if (event.target === item || event.target.classList.contains('lfa-alternative-info') || 
-            event.target.classList.contains('lfa-alternative-address') || 
-            event.target.classList.contains('lfa-alternative-distance')) {
-          
+        // Only trigger if not clicking on the name link
+        if (!event.target.classList.contains('qBF1Pd')) {
           if (mapPinManager.isInitialized) {
             // Highlight the pin and center view on it
             mapPinManager.highlightPinForBusiness(business.id, true);
@@ -1152,48 +1275,10 @@ export class UIInjector {
         }
       });
 
-      // Create info section with address and distance
-      const info = document.createElement('div');
-      info.className = 'lfa-alternative-info';
-      
-      if (business.address) {
-        const address = document.createElement('span');
-        address.className = 'lfa-alternative-address';
-        address.textContent = business.address;
-        info.appendChild(address);
-      }
-
-      const distanceContainer = document.createElement('span');
-      distanceContainer.className = 'lfa-alternative-distance';
-      
-      const distanceText = business.distance ? `${business.distance.toFixed(1)} mi away` : 'Near you';
-      distanceContainer.textContent = distanceText;
-
-      // Add verified badge if applicable
-      if (business.verified) {
-        const badge = document.createElement('span');
-        badge.style.cssText = `
-          background: #4CAF50 !important;
-          color: white !important;
-          font-size: 12px !important;
-          padding: 2px 6px !important;
-          border-radius: 4px !important;
-          margin-left: 8px !important;
-          font-weight: 500 !important;
-          text-transform: uppercase !important;
-          letter-spacing: 0.5px !important;
-        `;
-        badge.textContent = 'VERIFIED';
-        distanceContainer.appendChild(badge);
-      }
-
-      info.appendChild(distanceContainer);
-      
-      item.appendChild(name);
-      item.appendChild(info);
-      container.appendChild(item);
+      listingsContainer.appendChild(item);
     });
-
+    
+    container.appendChild(listingsContainer);
     return container;
   }
 
@@ -1890,11 +1975,22 @@ export class UIInjector {
    * Clear all injected elements (for page navigation)
    */
   clearAllInjectedElements() {
+    // Check if LFA sidebar exists - we want to preserve it across navigation
+    const preserveLFASidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    
+    if (preserveLFASidebar) {
+      console.log('UIInjector: Preserving LFA sidebar during clear operation');
+      // Don't clear anything when LFA sidebar is active - preserve the entire LFA experience
+      return;
+    }
+    
+    console.log('UIInjector: Clearing all injected elements (no LFA sidebar to preserve)');
+    
     // Remove filter status
     this.hideFilterStatus();
     
-    // Clear MapPinManager pins
-    if (mapPinManager.isInitialized) {
+    // Clear MapPinManager pins only if not preserving LFA sidebar
+    if (mapPinManager.isInitialized && !preserveLFASidebar) {
       mapPinManager.clearAllPins();
     }
     
@@ -1927,7 +2023,7 @@ export class UIInjector {
     // Clean up orphaned placeholders first
     this.cleanupOrphanedPlaceholders();
     
-    // Remove all injected elements including placeholders
+    // Remove all injected elements including placeholders (but not LFA sidebar)
     document.querySelectorAll('.lfa-badge, .lfa-alternatives, .lfa-chain-placeholder').forEach(element => {
       element.remove();
     });
@@ -1962,6 +2058,832 @@ export class UIInjector {
       hasStyleSheet: !!this.styleSheet,
       injectedElementsCount: this.injectedElements.size || 'unknown', // WeakMap doesn't have size
     };
+  }
+
+  /**
+   * Replace Google sidebar with LFA businesses
+   */
+  async replaceSidebarWithLFA() {
+    try {
+      console.log('UIInjector: Replacing Google business listings with LFA businesses');
+      
+      // Store original Google content for restoration
+      this.storeOriginalGoogleContent();
+      
+      // Find Google's feed container where business listings are displayed
+      const feedContainer = this.findGoogleFeedContainer();
+      if (!feedContainer) {
+        console.error('UIInjector: Could not find Google feed container');
+        return;
+      }
+      
+      // Get search query and location
+      const userQuery = businessMatcher.extractUserSearchQuery();
+      const currentLocation = businessMatcher.extractLocationFromUrl();
+      
+      console.log('UIInjector: Extracted query and location:', { userQuery, currentLocation });
+      
+      if (!userQuery || !currentLocation) {
+        console.log('UIInjector: Missing query or location for LFA replacement');
+        return;
+      }
+      
+      // Always use cached LFA businesses if available (fixes timing issue)
+      let lfaBusinesses = window.LFA_cachedBusinesses;
+      if (lfaBusinesses && lfaBusinesses.length > 0) {
+        console.log(`UIInjector: Using cached LFA businesses (${lfaBusinesses.length} businesses)`);
+      } else {
+        console.log('UIInjector: No cached businesses, calling findLFABusinesses with:', { userQuery, currentLocation });
+        lfaBusinesses = await businessMatcher.findLFABusinesses(userQuery, currentLocation);
+        console.log('UIInjector: findLFABusinesses returned:', lfaBusinesses?.length || 0, 'businesses');
+        // Cache the results for consistency
+        window.LFA_cachedBusinesses = lfaBusinesses;
+      }
+      
+      if (lfaBusinesses && lfaBusinesses.length > 0) {
+        // Replace Google business listings with LFA businesses using Google's exact structure
+        this.injectLFABusinessListings(feedContainer, lfaBusinesses, userQuery);
+        console.log(`UIInjector: Replaced Google listings with ${lfaBusinesses.length} LFA businesses`);
+      } else {
+        console.log('UIInjector: No LFA businesses found for replacement');
+        this.showNoLFABusinessesMessage(feedContainer, userQuery);
+      }
+      
+    } catch (error) {
+      console.error('UIInjector: Error replacing business listings:', error);
+    }
+  }
+
+  /**
+   * Restore original Google sidebar content
+   */
+  restoreGoogleSidebar() {
+    try {
+      console.log('UIInjector: Restoring Google sidebar');
+      
+      // Remove LFA sidebar
+      this.removeLFASidebar();
+      
+      // Restore Google content
+      this.showGoogleSidebar();
+      
+    } catch (error) {
+      console.error('UIInjector: Error restoring Google sidebar:', error);
+    }
+  }
+
+  /**
+   * Find Google's feed container where business listings are displayed
+   * This is the role="feed" container that holds all business results
+   */
+  findGoogleFeedContainer() {
+    // Look for the main feed container with role="feed"
+    const feedContainer = document.querySelector('[role="feed"][aria-label*="Results"]');
+    if (feedContainer) {
+      console.log('UIInjector: Found Google feed container with role="feed"');
+      return feedContainer;
+    }
+    
+    // Fallback: look for containers with Google's feed classes
+    const feedByClass = document.querySelector('.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde.ecceSd');
+    if (feedByClass) {
+      console.log('UIInjector: Found Google feed container by class names');
+      return feedByClass;
+    }
+    
+    // Last resort: look for any container with role="feed"
+    const anyFeed = document.querySelector('[role="feed"]');
+    if (anyFeed) {
+      console.log('UIInjector: Found feed container (any role="feed")');
+      return anyFeed;
+    }
+    
+    console.error('UIInjector: Could not find Google feed container');
+    return null;
+  }
+
+  /**
+   * Inject LFA business listings directly into Google's feed container
+   * Each business uses Google's exact class structure for perfect integration
+   */
+  injectLFABusinessListings(feedContainer, lfaBusinesses, userQuery) {
+    try {
+      console.log(`UIInjector: Injecting ${lfaBusinesses.length} LFA businesses into feed container`);
+      
+      // Hide existing Google business listings
+      this.hideGoogleBusinessListings(feedContainer);
+      
+      // Inject each LFA business as an individual listing using Google's structure
+      // (No header needed since we have the status bar at top)
+      lfaBusinesses.forEach((business, index) => {
+        const businessElement = this.createGoogleStyleBusinessListing(business, index);
+        feedContainer.appendChild(businessElement);
+        
+        // Mark element for cleanup
+        businessElement.setAttribute('data-lfa-business-listing', 'true');
+      });
+      
+      console.log(`UIInjector: Successfully injected ${lfaBusinesses.length} LFA business listings`);
+      
+    } catch (error) {
+      console.error('UIInjector: Error injecting LFA business listings:', error);
+    }
+  }
+
+  /**
+   * Hide Google's business listings while preserving the feed container structure
+   */
+  hideGoogleBusinessListings(feedContainer) {
+    // Hide individual business result items using Google's class patterns
+    const businessItems = feedContainer.querySelectorAll('.Nv2PK.THOPZb.CpccDe, [data-result-index], .section-result');
+    businessItems.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    // Hide sponsored results and ads
+    const sponsoredItems = feedContainer.querySelectorAll('[data-result-ad-type], .section-result-sponsored, .bfdHYd.Ppzolf.OFBs3e.Jv9l1d');
+    sponsoredItems.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    // Hide loading spinners and empty divs that create spacing
+    const loadingElements = feedContainer.querySelectorAll('.loading, .spinner, [class*="loading"], [class*="spinner"]');
+    loadingElements.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    // Hide empty divs that might contain loading content
+    const emptyDivs = Array.from(feedContainer.children).filter(child => 
+      child.tagName === 'DIV' && 
+      !child.textContent.trim() && 
+      !child.querySelector('img, svg, canvas') &&
+      !child.hasAttribute('data-lfa-results-header') &&
+      !child.hasAttribute('data-lfa-business-listing')
+    );
+    emptyDivs.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    console.log(`UIInjector: Hidden ${businessItems.length} business items, ${sponsoredItems.length} sponsored items, ${loadingElements.length} loading elements, and ${emptyDivs.length} empty divs`);
+  }
+
+  /**
+   * Create a header element to indicate LFA businesses are being shown
+   */
+  createLFAResultsHeader(userQuery, businessCount) {
+    const header = document.createElement('div');
+    header.className = 'lfa-results-header';
+    header.setAttribute('data-lfa-results-header', 'true');
+    header.style.cssText = `
+      background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
+      color: white !important;
+      padding: 12px 16px !important;
+      margin: 0 0 8px 0 !important;
+      border-radius: 8px !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    `;
+    
+    header.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">🏪</span>
+        <div>
+          <div style="font-weight: 600; font-size: 14px;">
+            Showing Local First Arizona businesses
+          </div>
+          <div style="font-size: 12px; opacity: 0.9;">
+            ${businessCount} local businesses found for "${userQuery}"
+          </div>
+        </div>
+      </div>
+    `;
+    
+    return header;
+  }
+
+  /**
+   * Create a business listing element that mimics Google's exact structure
+   */
+  createGoogleStyleBusinessListing(business, index) {
+    const businessItem = document.createElement('div');
+    businessItem.className = 'Nv2PK THOPZb CpccDe lfa-business-item';
+    businessItem.setAttribute('data-lfa-business', business.id);
+    
+    // Distance calculation for display
+    const distance = business.distance ? `${business.distance.toFixed(1)} mi` : 'Near you';
+    
+    businessItem.innerHTML = `
+      <div class="bfdHYd Ppzolf OFBs3e">
+        <div class="lI9IFe">
+          <div class="y7PRA">
+            <div class="Lui3Od T7Wufd">
+              <div class="Z8fK3b">
+                <div class="UaQhfb fontBodyMedium">
+                  <div class="NrDZNb">
+                    <div class="qBF1Pd fontHeadlineSmall lfa-business-name">${business.name}</div>
+                  </div>
+                  <div class="W4Efsd">
+                    <div class="W4Efsd">
+                      <span><span>${business.category || 'Local Business'}</span></span>
+                      ${business.address ? `<span> <span aria-hidden="true">·</span> <span>${business.address}</span></span>` : ''}
+                    </div>
+                    ${business.phone ? `<div class="W4Efsd"><span class="UsdlK">${business.phone}</span></div>` : ''}
+                    <div class="W4Efsd">
+                      <span style="color: #1976D2; font-weight: 500;">${distance} away</span>
+                      ${business.website ? ` <span aria-hidden="true">·</span> <a href="${business.website}" target="_blank" style="color: #1976D2; text-decoration: none;">Website</a>` : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add click handler to open business details
+    businessItem.addEventListener('click', () => {
+      this.handleLFABusinessClick(business);
+    });
+    
+    // Add hover effects to interact with map pins
+    businessItem.addEventListener('mouseenter', () => {
+      this.highlightMapPinForBusiness(business, true);
+      // Add slight visual emphasis to the listing
+      businessItem.style.backgroundColor = '#f8f9fa';
+      businessItem.style.transform = 'translateX(2px)';
+      businessItem.style.transition = 'all 0.2s ease';
+    });
+    
+    businessItem.addEventListener('mouseleave', () => {
+      this.highlightMapPinForBusiness(business, false);
+      // Remove visual emphasis
+      businessItem.style.backgroundColor = '';
+      businessItem.style.transform = '';
+    });
+    
+    return businessItem;
+  }
+
+  /**
+   * Handle click on LFA business listing
+   */
+  handleLFABusinessClick(business) {
+    console.log('UIInjector: LFA business clicked:', business.name);
+    
+    // If business has a website, open it
+    if (business.website) {
+      window.open(business.website, '_blank');
+    }
+    
+    // Track the click for analytics
+    this.trackEvent('lfa_business_click', {
+      businessId: business.id,
+      businessName: business.name,
+      hasWebsite: !!business.website
+    });
+  }
+
+  /**
+   * Highlight map pin for a business when hovering over listing
+   */
+  highlightMapPinForBusiness(business, isHighlighted) {
+    try {
+      // Get the map pin manager
+      const pinManager = window.LFA_mapPinManager || mapPinManager;
+      if (!pinManager || !pinManager.isInitialized) {
+        console.log('UIInjector: Map pin manager not available for highlighting');
+        return;
+      }
+      
+      // Use the map pin manager's highlight method if available
+      if (pinManager.highlightPinForBusiness) {
+        pinManager.highlightPinForBusiness(business.id, isHighlighted);
+      } else {
+        // Fallback: manually find and highlight the pin
+        this.manuallyHighlightMapPin(business, isHighlighted);
+      }
+      
+    } catch (error) {
+      console.error('UIInjector: Error highlighting map pin:', error);
+    }
+  }
+
+  /**
+   * Manually highlight map pin if automatic method not available
+   */
+  manuallyHighlightMapPin(business, isHighlighted) {
+    // Find map pin with matching business ID or name
+    const mapPins = document.querySelectorAll('[data-lfa-pin], .lfa-map-pin');
+    
+    for (const pin of mapPins) {
+      const pinBusinessId = pin.getAttribute('data-business-id');
+      const pinBusinessName = pin.getAttribute('data-business-name');
+      
+      if (pinBusinessId === business.id || pinBusinessName === business.name) {
+        if (isHighlighted) {
+          // Increase pin size and add glow effect
+          pin.style.transform = 'scale(1.3)';
+          pin.style.filter = 'drop-shadow(0 0 8px rgba(76, 175, 80, 0.8))';
+          pin.style.zIndex = '1000';
+          pin.style.transition = 'all 0.2s ease';
+        } else {
+          // Reset pin to normal size
+          pin.style.transform = '';
+          pin.style.filter = '';
+          pin.style.zIndex = '';
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Show message when no LFA businesses are found
+   */
+  showNoLFABusinessesMessage(feedContainer, userQuery) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'lfa-no-results-message';
+    messageElement.setAttribute('data-lfa-no-results', 'true');
+    messageElement.style.cssText = `
+      background: #f8f9fa !important;
+      border: 2px dashed #ddd !important;
+      padding: 24px !important;
+      margin: 16px 0 !important;
+      border-radius: 8px !important;
+      text-align: center !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    `;
+    
+    messageElement.innerHTML = `
+      <div style="color: #666; font-size: 14px;">
+        <div style="font-size: 18px; margin-bottom: 8px;">🏪</div>
+        <div style="font-weight: 600; margin-bottom: 4px;">No Local First Arizona businesses found</div>
+        <div>for "${userQuery}" in this area</div>
+      </div>
+    `;
+    
+    feedContainer.appendChild(messageElement);
+  }
+
+  /**
+   * Find the proper insertion point within Google's sidebar for LFA businesses
+   * This mimics the working approach from chain filtering
+   */
+  findSidebarInsertionPoint(sidebarContainer) {
+    // Look for the main results container where Google lists businesses
+    const resultsList = sidebarContainer.querySelector('[role="feed"], [role="list"], .section-listbox');
+    if (resultsList) {
+      console.log('UIInjector: Found results list container');
+      return resultsList;
+    }
+    
+    // Look for any scrollable container with results
+    const scrollableContainers = sidebarContainer.querySelectorAll('[style*="overflow"], [style*="scroll"]');
+    for (const container of scrollableContainers) {
+      if (container.children.length > 0) {
+        console.log('UIInjector: Found scrollable container with children');
+        return container;
+      }
+    }
+    
+    // Fallback to the main sidebar container
+    console.log('UIInjector: Using sidebar container as fallback insertion point');
+    return sidebarContainer;
+  }
+
+  /**
+   * Hide Google business listings while preserving structure
+   */
+  hideGoogleListings(sidebarContainer) {
+    // Hide individual business result items
+    const businessItems = sidebarContainer.querySelectorAll('[data-result-index], .section-result, [role="article"]');
+    businessItems.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    // Hide sponsored results
+    const sponsoredItems = sidebarContainer.querySelectorAll('[data-result-ad-type], .section-result-sponsored');
+    sponsoredItems.forEach(item => {
+      item.style.display = 'none';
+      item.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    console.log(`UIInjector: Hidden ${businessItems.length} business items and ${sponsoredItems.length} sponsored items`);
+  }
+
+  /**
+   * Store original Google content for later restoration
+   */
+  storeOriginalGoogleContent() {
+    if (this.originalGoogleContent) {
+      return; // Already stored
+    }
+    
+    const sidebarContainer = this.findGoogleSidebarContainer();
+    if (sidebarContainer) {
+      this.originalGoogleContent = {
+        container: sidebarContainer,
+        display: sidebarContainer.style.display,
+        visibility: sidebarContainer.style.visibility
+      };
+      console.log('UIInjector: Stored original Google content');
+    }
+  }
+
+  /**
+   * Hide Google sidebar content
+   */
+  hideGoogleSidebar() {
+    // Hide multiple levels of Google content for complete replacement
+    const selectors = [
+      '[role="main"] > div > div > div', // Main results container
+      '.m6QErb.WNBkOb.XiKgde', // Results list container
+      '[role="main"] > div', // Results wrapper
+      '#pane > div > div', // Pane content
+      '.section-result', // Individual results
+      '.sponsored-result', // Sponsored content
+      '.result-snippet' // Result snippets
+    ];
+    
+    selectors.forEach(selector => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach(element => {
+        if (!element.closest('[data-lfa-sidebar="true"]')) {
+          element.style.display = 'none';
+          element.setAttribute('data-lfa-hidden-google', 'true');
+        }
+      });
+    });
+    
+    // Also hide sponsored and ads content specifically
+    document.querySelectorAll('[data-ads-integration], [data-sponsored], .sponsored').forEach(element => {
+      element.style.display = 'none';
+      element.setAttribute('data-lfa-hidden-google', 'true');
+    });
+    
+    console.log('UIInjector: Hidden Google sidebar and sponsored content');
+  }
+
+  /**
+   * Show Google sidebar content
+   */
+  showGoogleSidebar() {
+    // Remove all LFA business listings and headers
+    document.querySelectorAll('[data-lfa-business-listing="true"], [data-lfa-results-header="true"], [data-lfa-no-results="true"], .lfa-results-header').forEach(element => {
+      element.remove();
+    });
+    
+    // Restore all hidden Google content
+    document.querySelectorAll('[data-lfa-hidden-google="true"]').forEach(element => {
+      element.style.display = '';
+      element.style.visibility = '';
+      element.removeAttribute('data-lfa-hidden-google');
+    });
+    
+    // Reset parent container styles
+    const parentContainers = document.querySelectorAll('[role="main"], [role="main"] > div');
+    parentContainers.forEach(container => {
+      container.style.position = '';
+      container.style.height = '';
+      container.style.overflow = '';
+    });
+    
+    console.log('UIInjector: Restored all hidden Google content and removed LFA listings');
+  }
+
+  /**
+   * Find the main Google sidebar container
+   */
+  findGoogleSidebarContainer() {
+    // Try different selectors for Google sidebar
+    const selectors = [
+      '[role="main"] > div > div > div', // Main results container
+      '.m6QErb.WNBkOb.XiKgde', // Results list container
+      '[role="main"]', // Fallback to main area
+      '#pane' // Google Maps pane selector
+    ];
+    
+    console.log('UIInjector: Searching for Google sidebar container...');
+    
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      console.log(`UIInjector: Selector "${selector}":`, {
+        found: !!element,
+        hasContent: !!(element?.textContent?.trim()),
+        rect: element?.getBoundingClientRect(),
+        childCount: element?.children?.length,
+        className: element?.className,
+        visible: element ? window.getComputedStyle(element).display !== 'none' : false
+      });
+      
+      if (element && element.textContent.trim()) {
+        console.log(`UIInjector: Selected sidebar container using selector: ${selector}`);
+        return element;
+      }
+    }
+    
+    console.log('UIInjector: No suitable sidebar container found');
+    return null;
+  }
+
+  /**
+   * Create LFA sidebar with businesses
+   */
+  createLFASidebar(businesses, userQuery) {
+    console.log('UIInjector: Creating LFA sidebar - START', { businessCount: businesses.length, userQuery });
+    
+    // Remove any existing LFA sidebar first (but only if different content)
+    const existingSidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    if (existingSidebar) {
+      // Check if it's the same query to avoid unnecessary removal
+      const existingQuery = existingSidebar.getAttribute('data-lfa-query');
+      if (existingQuery !== userQuery) {
+        console.log('UIInjector: Removing existing sidebar for different query:', existingQuery, '->', userQuery);
+        this.removeLFASidebar();
+      } else {
+        console.log('UIInjector: Keeping existing LFA sidebar for same query');
+        return; // Don't recreate if same query
+      }
+    }
+    
+    const sidebarContainer = this.findGoogleSidebarContainer();
+    console.log('UIInjector: Found sidebar container:', {
+      found: !!sidebarContainer,
+      hasParent: !!(sidebarContainer?.parentElement),
+      selector: sidebarContainer?.tagName + (sidebarContainer?.className ? '.' + sidebarContainer.className : ''),
+      rect: sidebarContainer?.getBoundingClientRect(),
+      visible: sidebarContainer ? window.getComputedStyle(sidebarContainer).display !== 'none' : false
+    });
+    
+    if (!sidebarContainer || !sidebarContainer.parentElement) {
+      console.error('UIInjector: Could not find sidebar container for LFA injection');
+      return;
+    }
+    
+    // Create LFA sidebar
+    const lfaSidebar = document.createElement('div');
+    lfaSidebar.className = 'lfa-sidebar';
+    lfaSidebar.setAttribute('data-lfa-sidebar', 'true');
+    lfaSidebar.setAttribute('data-lfa-query', userQuery); // Track the query to avoid unnecessary recreation
+    // Style the LFA sidebar to mimic Google's business listing appearance
+    lfaSidebar.style.cssText = `
+      background: white !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      position: relative !important;
+      z-index: 1 !important;
+    `;
+    
+    console.log('UIInjector: Created LFA sidebar element with styles');
+    
+    // Create header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+      color: white !important;
+      padding: 16px !important;
+      font-weight: 600 !important;
+      font-size: 16px !important;
+      display: block !important;
+    `;
+    header.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 20px;">🏪</span>
+        <div>
+          <div>Local First Arizona Results</div>
+          <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
+            ${businesses.length} local business${businesses.length !== 1 ? 'es' : ''} for "${userQuery}"
+          </div>
+        </div>
+      </div>
+    `;
+    
+    lfaSidebar.appendChild(header);
+    console.log('UIInjector: Added header to LFA sidebar');
+    
+    // Create business listings
+    const listContainer = document.createElement('div');
+    listContainer.className = 'lfa-business-list';
+    listContainer.style.cssText = `
+      padding: 16px !important; 
+      display: block !important;
+      background: #f8f9fa !important;
+      min-height: 200px !important;
+      overflow-y: auto !important;
+    `;
+    
+    console.log(`UIInjector: Creating listings for ${businesses.length} businesses`);
+    
+    businesses.forEach((business, index) => {
+      const businessElement = this.createLFABusinessListing(business, index);
+      listContainer.appendChild(businessElement);
+      console.log(`UIInjector: Added business ${index + 1}/${businesses.length}: ${business.name || business.business_name}`);
+      
+      // Check element after it's added to DOM
+      setTimeout(() => {
+        const rect = businessElement.getBoundingClientRect();
+        console.log(`UIInjector: Business element ${index + 1} dimensions:`, {
+          width: rect.width,
+          height: rect.height,
+          visible: rect.width > 0 && rect.height > 0,
+          display: window.getComputedStyle(businessElement).display,
+          visibility: window.getComputedStyle(businessElement).visibility
+        });
+      }, 100);
+    });
+    
+    lfaSidebar.appendChild(listContainer);
+    console.log('UIInjector: Added list container to LFA sidebar');
+    
+    // Verify list container dimensions
+    setTimeout(() => {
+      const listRect = listContainer.getBoundingClientRect();
+      console.log('UIInjector: List container final dimensions:', {
+        width: listRect.width,
+        height: listRect.height,
+        visible: listRect.width > 0 && listRect.height > 0,
+        childCount: listContainer.children.length
+      });
+    }, 200);
+    
+    // Replace Google sidebar container completely
+    console.log('UIInjector: Replacing Google sidebar container completely');
+    console.log('UIInjector: Parent element:', sidebarContainer.parentElement);
+    console.log('UIInjector: Target container:', sidebarContainer);
+    
+    // Use the working insertion method from chain filtering approach
+    // Find the proper insertion point in the Google sidebar container
+    const insertionPoint = this.findSidebarInsertionPoint(sidebarContainer);
+    if (insertionPoint) {
+      // Hide Google listings but keep structure intact
+      this.hideGoogleListings(sidebarContainer);
+      
+      // Insert LFA businesses at the top of the results area
+      insertionPoint.insertBefore(lfaSidebar, insertionPoint.firstChild);
+      console.log('UIInjector: Inserted LFA sidebar using working chain filtering method');
+    } else {
+      // Fallback: find the main role container and replace its content
+      const mainContainer = document.querySelector('[role="main"]');
+      if (mainContainer) {
+        mainContainer.style.position = 'relative';
+        mainContainer.style.height = 'calc(100vh - 120px)';
+        mainContainer.style.width = '400px';
+        mainContainer.style.minHeight = '600px';
+        mainContainer.style.minWidth = '400px';
+        mainContainer.style.overflow = 'hidden';
+        mainContainer.insertBefore(lfaSidebar, mainContainer.firstChild);
+      }
+    }
+    
+    // Verify insertion and positioning
+    const insertedSidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    const rect = insertedSidebar?.getBoundingClientRect();
+    const computedStyle = insertedSidebar ? window.getComputedStyle(insertedSidebar) : null;
+    
+    console.log('UIInjector: LFA sidebar insertion verification:', {
+      found: !!insertedSidebar,
+      rect: rect,
+      computedDisplay: computedStyle?.display,
+      computedVisibility: computedStyle?.visibility,
+      computedOpacity: computedStyle?.opacity,
+      computedPosition: computedStyle?.position,
+      computedTop: computedStyle?.top,
+      computedLeft: computedStyle?.left,
+      computedRight: computedStyle?.right,
+      computedBottom: computedStyle?.bottom,
+      computedWidth: computedStyle?.width,
+      computedHeight: computedStyle?.height,
+      computedZIndex: computedStyle?.zIndex,
+      inViewport: rect ? (rect.top >= 0 && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth) : false,
+      parentRect: insertedSidebar?.parentElement?.getBoundingClientRect(),
+      parentComputedStyle: insertedSidebar?.parentElement ? {
+        display: window.getComputedStyle(insertedSidebar.parentElement).display,
+        position: window.getComputedStyle(insertedSidebar.parentElement).position,
+        width: window.getComputedStyle(insertedSidebar.parentElement).width,
+        height: window.getComputedStyle(insertedSidebar.parentElement).height,
+        overflow: window.getComputedStyle(insertedSidebar.parentElement).overflow
+      } : null
+    });
+    
+    // Force visibility with additional methods
+    if (insertedSidebar) {
+      insertedSidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      console.log('UIInjector: Scrolled LFA sidebar into view');
+    }
+    
+    console.log('UIInjector: Created LFA sidebar with', businesses.length, 'businesses - COMPLETE');
+  }
+
+  /**
+   * Create empty LFA sidebar when no businesses found
+   */
+  createEmptyLFASidebar(userQuery) {
+    this.createLFASidebar([], userQuery);
+    
+    const lfaSidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    if (lfaSidebar) {
+      const emptyMessage = document.createElement('div');
+      emptyMessage.style.cssText = `
+        padding: 32px 16px;
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+      `;
+      emptyMessage.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+        <div>No Local First Arizona businesses found for "${userQuery}"</div>
+        <div style="margin-top: 8px; font-size: 12px;">
+          Try a different search term or browse our directory
+        </div>
+      `;
+      lfaSidebar.appendChild(emptyMessage);
+    }
+  }
+
+  /**
+   * Create individual LFA business listing
+   */
+  createLFABusinessListing(business, index) {
+    console.log(`UIInjector: Creating business listing for:`, business);
+    
+    const element = document.createElement('div');
+    element.className = 'lfa-business-listing';
+    element.style.cssText = `
+      border-bottom: 1px solid #e8eaed !important;
+      padding: 16px !important;
+      cursor: pointer !important;
+      display: block !important;
+      background: white !important;
+      margin-bottom: 8px !important;
+      min-height: 60px !important;
+      border-radius: 8px !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    `;
+    
+    // Create a simple, guaranteed visible business listing
+    const businessName = business.name || business.business_name || 'Local Business';
+    const businessCategory = business.category || 'Local Business';
+    const businessAddress = business.address || business.formatted_address || '';
+    const businessDescription = business.description || '';
+    
+    element.innerHTML = `
+      <div style="margin-bottom: 8px !important;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+          <h3 style="margin: 0 !important; font-size: 16px !important; font-weight: 600 !important; color: #1a73e8 !important; line-height: 1.3 !important;">
+            ${businessName}
+          </h3>
+          <span style="background: #4CAF50 !important; color: white !important; padding: 4px 8px !important; border-radius: 4px !important; font-size: 11px !important; font-weight: 600 !important; white-space: nowrap !important;">
+            LFA
+          </span>
+        </div>
+        
+        <div style="color: #5f6368 !important; font-size: 14px !important; margin-bottom: 4px !important;">
+          ${businessCategory}
+        </div>
+        
+        ${businessAddress ? `<div style="color: #5f6368 !important; font-size: 14px !important; margin-bottom: 4px !important;">${businessAddress}</div>` : ''}
+        
+        ${businessDescription ? `<div style="color: #3c4043 !important; font-size: 14px !important; margin-bottom: 8px !important;">${businessDescription}</div>` : ''}
+        
+        <div style="display: flex !important; gap: 12px !important; font-size: 13px !important; color: #1a73e8 !important;">
+          ${business.phone ? `<span>📞 ${business.phone}</span>` : ''}
+          ${business.website ? `<span>🌐 Website</span>` : ''}
+          <span style="color: #4CAF50; font-weight: 600;">LOCAL BUSINESS</span>
+        </div>
+      </div>
+    `;
+    
+    // Add click handler for business interaction
+    element.addEventListener('click', () => {
+      console.log('UIInjector: Business clicked:', businessName);
+      // Could trigger map pin focus, business details, etc.
+    });
+    
+    console.log(`UIInjector: Created business element HTML:`, element.innerHTML.substring(0, 200));
+    
+    return element;
+  }
+
+  /**
+   * Remove LFA sidebar
+   */
+  removeLFASidebar() {
+    const lfaSidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    if (lfaSidebar) {
+      lfaSidebar.remove();
+      console.log('UIInjector: Removed LFA sidebar');
+    }
   }
 }
 
