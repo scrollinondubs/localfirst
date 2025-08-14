@@ -193,7 +193,7 @@
     /**
      * Find local alternatives in the same category
      */
-    findLocalAlternatives(chainBusiness, location, maxResults = 8) {
+    findLocalAlternatives(chainBusiness, location) {
       console.log("BusinessMatcher: findLocalAlternatives called with:", chainBusiness, location, "localBusinesses:", this.localBusinesses.length);
       if (!chainBusiness || !location || this.localBusinesses.length === 0) {
         console.log("BusinessMatcher: Early return - missing data");
@@ -206,12 +206,7 @@
       );
       console.log("BusinessMatcher: Found", categoryBusinesses.length, "businesses in category:", categoryBusinesses);
       const businessesInView = categoryBusinesses.filter((business) => {
-        if (!business.latitude || !business.longitude) {
-          return false;
-        }
-        const withinBounds = this.isWithinBounds(business.latitude, business.longitude, location.bounds);
-        console.log(`BusinessMatcher: ${business.name} within bounds:`, withinBounds, location.bounds);
-        return withinBounds;
+        return business.latitude && business.longitude;
       }).map((business) => {
         const distance = this.calculateDistance(
           location.lat,
@@ -223,8 +218,8 @@
           ...business,
           distance
         };
-      }).sort((a, b) => a.distance - b.distance).slice(0, maxResults);
-      console.log("BusinessMatcher: After bounds filtering, found", businessesInView.length, "businesses");
+      }).sort((a, b) => a.distance - b.distance);
+      console.log("BusinessMatcher: Found", businessesInView.length, "local alternatives sorted by distance");
       return businessesInView;
     }
     /**
