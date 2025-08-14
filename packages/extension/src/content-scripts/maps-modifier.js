@@ -2,6 +2,7 @@ import { CONFIG } from '../shared/constants.js';
 import { businessDetector } from './business-detector.js';
 import { businessMatcher } from '../shared/business-matcher.js';
 import { uiInjector } from './ui-injector.js';
+import { mapPinManager } from './map-pin-manager.js';
 
 /**
  * Maps Modifier - Main orchestrator for Google Maps content script
@@ -38,9 +39,8 @@ class MapsModifier {
     console.log('MapsModifier: Initializing...');
 
     try {
-      // Load settings and data
+      // Load settings
       await this.loadSettings();
-      await this.loadChainPatterns();
       
       // Set up DOM observer
       this.setupMutationObserver();
@@ -103,42 +103,8 @@ class MapsModifier {
   }
 
   /**
-   * Load chain patterns from background script
+   * Removed: loadChainPatterns() - Chain patterns not needed for binary LFA/Google toggle
    */
-  async loadChainPatterns() {
-    console.log('🔍 CONTENT SCRIPT: loadChainPatterns() called');
-    
-    try {
-      console.log('🔍 CONTENT SCRIPT: Sending getChainPatterns message to service worker');
-      const response = await chrome.runtime.sendMessage({ action: 'getChainPatterns' });
-      
-      console.log('🔍 CONTENT SCRIPT: Received response from service worker:', {
-        hasResponse: !!response,
-        success: response?.success,
-        hasData: !!response?.data,
-        hasChains: !!response?.data?.chains,
-        chainsLength: response?.data?.chains?.length,
-        total: response?.data?.total
-      });
-      
-      if (response && response.success && response.data.chains) {
-        console.log('🔍 CONTENT SCRIPT: Response data analysis:', {
-          chainsLength: response.data.chains.length,
-          hasTracer: response.data.chains.some(c => c.name.includes('TRACER')),
-          firstFewChains: response.data.chains.slice(0, 5).map(c => c.name),
-          totalFromResponse: response.data.total
-        });
-        
-        businessMatcher.updateChainPatterns(response.data.chains);
-        console.log(`🔍 CONTENT SCRIPT: Successfully loaded ${response.data.chains.length} chain patterns`);
-        console.log(`🔍 CONTENT SCRIPT: Updated with ${response.data.chains.length} chain patterns`);
-      } else {
-        console.error('🔍 CONTENT SCRIPT: Invalid response structure:', response);
-      }
-    } catch (error) {
-      console.error('🔍 CONTENT SCRIPT: Failed to load chain patterns:', error);
-    }
-  }
 
   /**
    * Set up mutation observer to watch for DOM changes
@@ -169,7 +135,14 @@ class MapsModifier {
       return;
     }
 
-    // Check if there are significant changes
+    // COMPLETELY DISABLE mutation processing when LFA sidebar exists
+    const existingLFASidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    if (existingLFASidebar) {
+      console.log('MapsModifier: LFA sidebar active, ignoring all DOM mutations');
+      return;
+    }
+    
+    // Check if there are significant changes (but ignore minor hover/interaction changes)
     const hasSignificantChanges = mutations.some(mutation => 
       mutation.addedNodes.length > 0 && 
       Array.from(mutation.addedNodes).some(node => 
@@ -178,11 +151,15 @@ class MapsModifier {
           node.querySelector('[role="article"]') ||
           node.querySelector('.section-result') ||
           node.querySelector('[data-value="Directions"]')
-        ))
+        )) &&
+        // Don't trigger on our own LFA elements
+        !node.closest('[data-lfa-sidebar="true"]') &&
+        !node.classList?.contains('lfa-sidebar')
       )
     );
 
     if (hasSignificantChanges) {
+      console.log('MapsModifier: Significant DOM changes detected, processing page');
       // Throttle processing
       const now = Date.now();
       if (now - this.lastProcessTime > this.processThrottle) {
@@ -289,36 +266,135 @@ class MapsModifier {
    */
   setupToggleListener() {
     window.addEventListener('lfa-toggle-filter', () => {
-      this.toggleFilterMode();
+      this.toggleLFAMode();
     });
   }
 
   /**
-   * Toggle between strict and moderate filtering
+   * Toggle between LFA mode and Google mode
    */
-  toggleFilterMode() {
-    const currentLevel = this.settings.filterLevel;
-    const newLevel = currentLevel === 'strict' ? 'moderate' : 'strict';
+  toggleLFAMode() {
+    const wasEnabled = this.isEnabled;
+    const nowEnabled = !wasEnabled;
     
-    console.log(`MapsModifier: Switching from ${currentLevel} to ${newLevel} filtering`);
+    console.log(`MapsModifier: Switching from ${wasEnabled ? 'LFA' : 'Google'} mode to ${nowEnabled ? 'LFA' : 'Google'} mode`);
     
-    this.settings.filterLevel = newLevel;
+    this.isEnabled = nowEnabled;
     this.updateStatusBar();
     
-    // Clear existing modifications and reprocess
-    uiInjector.clearAllInjectedElements();
-    businessDetector.clearProcessedCache();
-    
-    // Reprocess current page with new settings
-    setTimeout(() => {
-      this.processCurrentPage();
-    }, 100);
+    if (nowEnabled) {
+      // Switching to LFA mode - replace Google results with LFA businesses
+      this.enableLFAMode();
+    } else {
+      // Switching to Google mode - restore original Google content
+      this.enableGoogleMode();
+    }
     
     // Track the toggle
-    this.trackEvent('filter_toggle', {
-      fromLevel: currentLevel,
-      toLevel: newLevel
+    this.trackEvent('mode_toggle', {
+      fromMode: wasEnabled ? 'lfa' : 'google',
+      toMode: nowEnabled ? 'lfa' : 'google'
     });
+  }
+
+  /**
+   * Enable LFA mode - replace Google results with LFA businesses
+   */
+  async enableLFAMode() {
+    console.log('MapsModifier: Enabling LFA mode');
+    
+    // Hide Google content and show LFA alternatives
+    await uiInjector.replaceSidebarWithLFA();
+    
+    // Hide Google map pins and show LFA pins
+    await this.processCurrentPageLFAMode();
+    
+    // Show the LFA status bar
+    uiInjector.showFilterStatus('lfa', 0, 0);
+  }
+
+  /**
+   * Enable Google mode - restore original Google content
+   */
+  enableGoogleMode() {
+    console.log('MapsModifier: Enabling Google mode');
+    
+    // Clear all LFA modifications
+    uiInjector.clearAllInjectedElements();
+    
+    // Restore Google sidebar content
+    uiInjector.restoreGoogleSidebar();
+    
+    // Hide LFA status elements except the main toggle bar
+    uiInjector.hideFilterStatus();
+    
+    // Clear map pins to restore Google pins
+    if (window.LFA_mapPinManager || mapPinManager) {
+      const pinManager = window.LFA_mapPinManager || mapPinManager;
+      pinManager.clearAllPins();
+    }
+  }
+
+  /**
+   * Process page for LFA mode - get LFA businesses and show pins
+   */
+  async processCurrentPageLFAMode() {
+    try {
+      const currentLocation = businessMatcher.extractLocationFromUrl();
+      const userQuery = businessMatcher.extractUserSearchQuery();
+      
+      if (!currentLocation || !userQuery) {
+        console.log('MapsModifier: Missing location or query for LFA mode');
+        return;
+      }
+
+      console.log(`MapsModifier: Searching LFA businesses for "${userQuery}" near ${currentLocation.lat}, ${currentLocation.lng}`);
+      
+      // Get LFA businesses via semantic search
+      const lfaBusinesses = await businessMatcher.findLFABusinesses(userQuery, currentLocation);
+      
+      if (lfaBusinesses && lfaBusinesses.length > 0) {
+        console.log(`MapsModifier: Found ${lfaBusinesses.length} LFA businesses`);
+        
+        // Store LFA businesses for sidebar use
+        window.LFA_cachedBusinesses = lfaBusinesses;
+        console.log('MapsModifier: Stored LFA businesses in window.LFA_cachedBusinesses for sidebar reuse');
+        
+        // Show LFA pins on map
+        try {
+          const pinManager = window.LFA_mapPinManager || mapPinManager;
+          console.log('MapsModifier: Showing pins using mapPinManager:', !!pinManager);
+          
+          if (pinManager) {
+            // Initialize pin manager if not already done
+            if (!pinManager.isInitialized) {
+              console.log('MapsModifier: Initializing MapPinManager...');
+              await pinManager.init();
+            }
+            
+            // Show pins for LFA businesses
+            console.log('MapsModifier: Calling showPinsForBusinesses with', lfaBusinesses.length, 'businesses');
+            await pinManager.showPinsForBusinesses(lfaBusinesses);
+            console.log('MapsModifier: Successfully showed pins for LFA businesses');
+          } else {
+            console.error('MapsModifier: MapPinManager not available');
+          }
+        } catch (error) {
+          console.error('MapsModifier: Error showing map pins:', error);
+        }
+        
+        // Update stats
+        this.stats.businessesProcessed = lfaBusinesses.length;
+        this.stats.localHighlighted = lfaBusinesses.length;
+        this.stats.chainsFiltered = 0;
+        this.stats.lastUpdate = Date.now();
+      } else {
+        console.log('MapsModifier: No LFA businesses found for this search');
+      }
+      
+    } catch (error) {
+      console.error('MapsModifier: Error in LFA mode processing:', error);
+    }
   }
 
   /**
@@ -327,19 +403,41 @@ class MapsModifier {
   updateStatusBar() {
     const statusMessage = document.getElementById('lfa-status-message');
     const toggleButton = document.getElementById('lfa-toggle-button');
+    const statusBar = document.getElementById('lfa-status-bar');
     
-    if (statusMessage && toggleButton) {
-      const isStrict = this.settings.filterLevel === 'strict';
+    if (statusMessage && toggleButton && statusBar) {
+      const isEnabled = this.isEnabled;
       
-      statusMessage.textContent = isStrict 
-        ? '🏪 Local First Arizona is hiding chain stores'
-        : '🏪 Local First Arizona is dimming chain stores';
+      statusMessage.textContent = isEnabled 
+        ? '🏪 Showing Local First Arizona businesses'
+        : '📍 Showing Google Maps results';
         
-      toggleButton.textContent = isStrict 
-        ? 'Switch to Dimming' 
-        : 'Switch to Hiding';
+      toggleButton.textContent = isEnabled 
+        ? 'Disable' 
+        : 'Enable';
+      
+      // Change status bar background color based on mode
+      statusBar.style.background = isEnabled 
+        ? 'linear-gradient(90deg, #2E7D32, #4CAF50)' // Green gradient when LFA enabled
+        : 'linear-gradient(90deg, #f8f9fa, #ffffff)';  // White gradient when disabled
+      
+      // Change text color for contrast
+      statusBar.style.color = isEnabled ? 'white' : '#1a73e8';
+      
+      // Update button styling based on mode
+      if (isEnabled) {
+        // LFA enabled - button has light background on green status bar
+        toggleButton.style.background = 'rgba(255,255,255,0.2)';
+        toggleButton.style.border = '1px solid rgba(255,255,255,0.3)';
+        toggleButton.style.color = 'white';
+      } else {
+        // LFA disabled - button needs to be green on white status bar
+        toggleButton.style.background = 'linear-gradient(135deg, #2E7D32, #4CAF50)';
+        toggleButton.style.border = '1px solid #1B5E20';
+        toggleButton.style.color = 'white';
+      }
         
-      console.log(`MapsModifier: Updated status bar for ${this.settings.filterLevel} mode`);
+      console.log(`MapsModifier: Updated status bar for ${isEnabled ? 'LFA' : 'Google'} mode`);
     }
   }
 
@@ -367,58 +465,18 @@ class MapsModifier {
    */
   async processCurrentPage() {
     if (!this.isEnabled) {
-      console.log('MapsModifier: Extension disabled, skipping processing');
+      console.log('MapsModifier: Extension disabled, using Google mode');
+      this.enableGoogleMode();
       return;
     }
 
-    console.log('MapsModifier: Processing current page...');
+    console.log('MapsModifier: Processing current page in LFA mode...');
     
     try {
-      // Get current location for alternative business searches
-      const currentLocation = businessMatcher.extractLocationFromUrl();
-
-      // Scan for businesses on the page
-      const businesses = businessDetector.scanForBusinesses();
-      console.log(`MapsModifier: Found ${businesses.length} businesses to process`);
-
-      let chainsFiltered = 0;
-      let localHighlighted = 0;
-
-      // Process each business
-      for (const business of businesses) {
-        try {
-          await this.processBusiness(business, currentLocation);
-          
-          // Update stats based on processing results
-          if (business.processed?.isChain) {
-            chainsFiltered++;
-          }
-          if (business.processed?.isLocal) {
-            localHighlighted++;
-          }
-          
-        } catch (error) {
-          console.error(`MapsModifier: Error processing business ${business.name}:`, error);
-        }
-      }
-
-      // Update stats
-      this.stats.businessesProcessed += businesses.length;
-      this.stats.chainsFiltered += chainsFiltered;
-      this.stats.localHighlighted += localHighlighted;
-      this.stats.lastUpdate = Date.now();
-
-      // Show filter status if anything was processed
-      if (chainsFiltered > 0 || localHighlighted > 0) {
-        uiInjector.showFilterStatus(this.settings.filterLevel, chainsFiltered, localHighlighted);
-      }
-
-      console.log(`MapsModifier: Processing complete. Chains filtered: ${chainsFiltered}, Local highlighted: ${localHighlighted}`);
-
-      // Clean up any orphaned placeholders that might be stacking up
-      setTimeout(() => {
-        uiInjector.cleanupOrphanedPlaceholders();
-      }, 2000);
+      // Enable LFA mode - replace Google content with LFA businesses
+      await this.enableLFAMode();
+      
+      console.log('MapsModifier: LFA mode enabled successfully');
 
     } catch (error) {
       console.error('MapsModifier: Error processing page:', error);
@@ -595,6 +653,71 @@ class MapsModifier {
     businessDetector.clearProcessedCache();
     
     console.log('MapsModifier: Cleanup complete');
+  }
+
+  /**
+   * Add local alternatives proactively for searches that benefit from local options
+   * This runs for relevant searches regardless of chain detection to ensure local options are always shown
+   */
+  async addProactiveAlternatives(currentLocation, businesses, chainsFiltered) {
+    try {
+      // Get the user's search query to determine if we should show proactive alternatives
+      const userQuery = businessMatcher.extractUserSearchQuery();
+      if (!userQuery) {
+        console.log('MapsModifier: No user query found, skipping proactive alternatives');
+        return;
+      }
+
+      // Check if this is a search that benefits from local alternatives
+      const searchTerms = userQuery.toLowerCase();
+      const shouldShowAlternatives = [
+        'clothing', 'clothes', 'apparel', 'fashion', 'boutique',
+        'hardware', 'tools', 'home improvement', 'garden center',
+        'restaurant', 'food', 'dining', 'cafe', 'bar',
+        'bookstore', 'books', 'gift shop', 'gifts',
+        'jewelry', 'art', 'crafts', 'salon', 'spa',
+        'pet store', 'pharmacy', 'florist', 'flowers'
+      ].some(term => searchTerms.includes(term));
+
+      // Show proactive alternatives if:
+      // 1. Search query suggests local alternatives would be valuable, OR
+      // 2. We found very few chains (less than 3) and could supplement with local options
+      const shouldShowProactive = shouldShowAlternatives || (chainsFiltered < 3);
+      
+      if (!shouldShowProactive) {
+        console.log('MapsModifier: Search query does not benefit from proactive alternatives:', userQuery, 'chains filtered:', chainsFiltered);
+        return;
+      }
+
+      console.log('MapsModifier: Adding proactive alternatives for search:', userQuery, 'chains filtered:', chainsFiltered);
+
+      // Find local alternatives using semantic search
+      const alternatives = await businessMatcher.findLocalAlternatives(
+        { name: 'Generic Local Business', category: 'other' }, // Dummy chain object
+        currentLocation
+      );
+
+      if (alternatives && alternatives.length > 0) {
+        console.log(`MapsModifier: Found ${alternatives.length} proactive alternatives`);
+        
+        // Add alternatives to the first business container or create a new section
+        const firstBusiness = businesses.find(b => b.element);
+        if (firstBusiness) {
+          // Create a special "Local Alternatives" section
+          uiInjector.showLocalAlternatives(
+            firstBusiness.element, 
+            { name: 'Local Alternatives', category: 'local' }, 
+            alternatives,
+            true // isProactive flag
+          );
+        }
+      } else {
+        console.log('MapsModifier: No proactive alternatives found');
+      }
+
+    } catch (error) {
+      console.error('MapsModifier: Error adding proactive alternatives:', error);
+    }
   }
 }
 

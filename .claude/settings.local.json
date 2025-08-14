@@ -73,7 +73,11 @@
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node /Users/sean/NodeJSprojs/localfirst/packages/api/temp-server.js)",
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension cp -r public/* dist/)",
       "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension mkdir -p dist)",
-      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension cp public/manifest.json dist/)"
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension cp public/manifest.json dist/)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension ls -la)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" node temp-server.js)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension npx vite build)",
+      "Bash(WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/extension BUILD_TARGET=content npx vite build)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

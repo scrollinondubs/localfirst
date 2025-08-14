@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Local First Arizona",
-  "version": "1.0.1",
-  "description": "Discover locally-owned businesses on Google Maps while filtering out chain stores",
+  "version": "2.0.0",
+  "description": "Replace Google Maps results with Local First Arizona member businesses",
   
   "permissions": [
     "storage",

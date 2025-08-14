@@ -2,144 +2,18 @@ import { CONFIG } from './constants.js';
 
 /**
  * Business Matcher Utility
- * Handles matching business names against chain patterns and local businesses
+ * Handles LFA business search and location extraction for binary toggle system
  */
 export class BusinessMatcher {
   constructor() {
-    this.chainPatterns = [];
-    this.lastChainUpdate = null;
-    // Removed: localBusinesses array - now using dynamic API calls
+    // Removed chain detection functionality - binary LFA/Google mode only
   }
 
   /**
-   * Update chain patterns for matching
+   * Removed: Chain detection methods (isChainBusiness, findLocalAlternatives) 
+   * - Binary LFA/Google mode doesn't need chain detection
+   * - LFA mode shows only LFA businesses, Google mode shows only Google results
    */
-  updateChainPatterns(chains) {
-    this.chainPatterns = chains || [];
-    this.lastChainUpdate = Date.now();
-    console.log(`BusinessMatcher: Updated with ${this.chainPatterns.length} chain patterns`);
-    
-    // DEBUG: Show sample chain patterns to verify we have the expected ones
-    if (this.chainPatterns.length > 0) {
-      console.log('BusinessMatcher: Sample chain patterns:', 
-        this.chainPatterns.slice(0, 10).map(chain => ({
-          name: chain.name,
-          patterns: chain.patterns,
-          category: chain.category,
-          confidenceScore: chain.confidenceScore
-        }))
-      );
-      
-      // Check for specific chains we expect
-      const expectedChains = ['Gap', 'Urban Outfitters', 'T.J. Maxx', 'H&M', 'TJ Maxx', 'Gap Factory'];
-      const foundChains = expectedChains.filter(name => 
-        this.chainPatterns.some(chain => 
-          chain.name.toLowerCase().includes(name.toLowerCase()) ||
-          (Array.isArray(chain.patterns) && chain.patterns.some(pattern => 
-            pattern.toLowerCase().includes(name.toLowerCase())
-          ))
-        )
-      );
-      console.log(`BusinessMatcher: Found expected chains: ${foundChains.join(', ')}`);
-    }
-  }
-
-  /**
-   * Removed: updateLocalBusinesses() - No longer managing local business arrays
-   * Local businesses are now fetched dynamically via API calls
-   */
-
-  /**
-   * Check if a business name matches any chain patterns
-   */
-  isChainBusiness(businessName, confidenceThreshold = CONFIG.FILTERING.CONFIDENCE_THRESHOLD) {
-    if (!businessName || this.chainPatterns.length === 0) {
-      console.log('BusinessMatcher: No business name or no chain patterns', { businessName, patternCount: this.chainPatterns.length });
-      return { isChain: false, confidence: 0, matchedChain: null };
-    }
-
-    const normalizedName = this.normalizeName(businessName);
-    console.log(`BusinessMatcher: Checking "${businessName}" (normalized: "${normalizedName}") against ${this.chainPatterns.length} patterns with threshold ${confidenceThreshold}`);
-    
-    let bestMatch = { confidence: 0, chain: null, pattern: null };
-    
-    for (const chain of this.chainPatterns) {
-      if (chain.confidenceScore < confidenceThreshold) {
-        continue;
-      }
-
-      const patterns = Array.isArray(chain.patterns) ? chain.patterns : [chain.name];
-      
-      for (const pattern of patterns) {
-        const confidence = this.calculateMatchConfidence(normalizedName, pattern);
-        
-        // Track best match for debugging
-        if (confidence > bestMatch.confidence) {
-          bestMatch = { confidence, chain, pattern };
-        }
-        
-        if (confidence >= confidenceThreshold) {
-          console.log(`BusinessMatcher: MATCH! "${businessName}" matched "${pattern}" (confidence: ${confidence})`);
-          return {
-            isChain: true,
-            confidence: confidence,
-            matchedChain: {
-              id: chain.id,
-              name: chain.name,
-              category: chain.category,
-              parentCompany: chain.parentCompany,
-              pattern: pattern,
-            }
-          };
-        }
-      }
-    }
-
-    console.log(`BusinessMatcher: No match for "${businessName}". Best match was "${bestMatch.pattern}" with confidence ${bestMatch.confidence}`);
-    return { isChain: false, confidence: 0, matchedChain: null };
-  }
-
-  /**
-   * Removed: findLocalMatch() - No longer matching against local business arrays
-   * Local business identification now happens via API-based search
-   */
-
-  /**
-   * Find local alternatives using semantic search API
-   */
-  async findLocalAlternatives(chainBusiness, location) {
-    console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location);
-    if (!chainBusiness || !location) {
-      console.log('BusinessMatcher: Early return - missing chain business or location');
-      return [];
-    }
-
-    // Extract the user's current search query from Google Maps
-    const userQuery = this.extractUserSearchQuery();
-    console.log('BusinessMatcher: Extracted user search query:', userQuery);
-
-    try {
-      // Use user's actual search query or fallback to category-based search
-      const searchQuery = userQuery || this.generateFallbackQuery(chainBusiness.category || 'other');
-      console.log(`BusinessMatcher: Using search query: "${searchQuery}"`);
-
-      // Call semantic search API
-      const apiResponse = await this.callSemanticSearchAPI(searchQuery, location);
-      
-      if (apiResponse && apiResponse.businesses && apiResponse.businesses.length > 0) {
-        console.log(`BusinessMatcher: Found ${apiResponse.businesses.length} semantic alternatives via API`);
-        console.log('BusinessMatcher: Top alternatives:', apiResponse.businesses.slice(0, 3).map(b => ({ name: b.name, score: b.relevanceScore })));
-        return apiResponse.businesses.slice(0, 5); // Limit to top 5 alternatives
-      } else {
-        console.log('BusinessMatcher: No local alternatives found via semantic search API');
-        return [];
-      }
-      
-    } catch (error) {
-      console.error('BusinessMatcher: Failed to search for local alternatives:', error);
-      return [];
-    }
-  }
 
   /**
    * Extract the user's current search query from Google Maps URL or search box
@@ -182,145 +56,11 @@ export class BusinessMatcher {
   }
 
   /**
-   * Generate fallback search query based on chain business category
+   * Removed: Chain-related utility methods (generateFallbackQuery, callSemanticSearchAPI, 
+   * calculateMatchConfidence, calculateNameSimilarity, calculateDistance) 
+   * - Not needed for binary LFA/Google toggle system
+   * - LFA business search uses dedicated findLFABusinesses method
    */
-  generateFallbackQuery(category) {
-    const fallbackQueries = {
-      'grocery': 'grocery stores',
-      'restaurant': 'restaurants',
-      'retail': 'stores shops',
-      'professional_services': 'professional services',
-      'health_wellness': 'health wellness services',
-      'home_garden': 'home garden stores',
-      'arts_entertainment': 'entertainment venues',
-      'automotive': 'auto repair services',
-      'financial': 'financial services',
-      'other': 'local businesses'
-    };
-    
-    return fallbackQueries[category] || 'local businesses';
-  }
-
-  /**
-   * Call semantic search API via Chrome runtime messaging
-   */
-  async callSemanticSearchAPI(query, location) {
-    try {
-      console.log('BusinessMatcher: Calling semantic search API via runtime messaging');
-      
-      const message = {
-        action: 'semanticSearch',
-        data: {
-          query: query,
-          lat: location.lat,
-          lng: location.lng,
-          radius: 10, // 10 mile search radius
-          limit: 8    // Get up to 8 alternatives
-        }
-      };
-      
-      console.log('BusinessMatcher: Sending message to service worker:', message);
-      
-      const response = await chrome.runtime.sendMessage(message);
-      
-      if (response && response.success) {
-        console.log('BusinessMatcher: Semantic search API response:', response.data);
-        return response.data;
-      } else {
-        throw new Error(response?.error || 'Unknown error from service worker');
-      }
-      
-    } catch (error) {
-      console.error('BusinessMatcher: Error calling semantic search API:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Removed: extractBusinessesFromDocument() and extractCoordsFromContainer()
-   * Now using semantic search API instead of DOM extraction
-   */
-
-  /**
-   * Calculate match confidence between business name and pattern
-   */
-  calculateMatchConfidence(businessName, pattern) {
-    const normalizedPattern = this.normalizeName(pattern);
-    
-    // Exact match
-    if (businessName === normalizedPattern) {
-      return 100;
-    }
-
-    // Contains pattern
-    if (businessName.includes(normalizedPattern)) {
-      return 90;
-    }
-
-    // Pattern contains business name
-    if (normalizedPattern.includes(businessName)) {
-      return 85;
-    }
-
-    // Fuzzy match using Levenshtein distance
-    const similarity = this.calculateNameSimilarity(businessName, normalizedPattern);
-    
-    if (similarity > 0.8) {
-      return 80;
-    } else if (similarity > 0.6) {
-      return 70;
-    } else if (similarity > 0.4) {
-      return 60;
-    }
-
-    return 0;
-  }
-
-  /**
-   * Calculate name similarity using Levenshtein distance
-   */
-  calculateNameSimilarity(name1, name2) {
-    if (name1 === name2) return 1;
-    
-    const len1 = name1.length;
-    const len2 = name2.length;
-    
-    if (len1 === 0) return len2 === 0 ? 1 : 0;
-    if (len2 === 0) return 0;
-
-    const matrix = Array(len2 + 1).fill().map(() => Array(len1 + 1).fill(0));
-
-    for (let i = 0; i <= len1; i++) matrix[0][i] = i;
-    for (let j = 0; j <= len2; j++) matrix[j][0] = j;
-
-    for (let j = 1; j <= len2; j++) {
-      for (let i = 1; i <= len1; i++) {
-        const cost = name1[i - 1] === name2[j - 1] ? 0 : 1;
-        matrix[j][i] = Math.min(
-          matrix[j - 1][i] + 1,     // deletion
-          matrix[j][i - 1] + 1,     // insertion
-          matrix[j - 1][i - 1] + cost // substitution
-        );
-      }
-    }
-
-    const maxLen = Math.max(len1, len2);
-    return 1 - (matrix[len2][len1] / maxLen);
-  }
-
-  /**
-   * Calculate distance between two points using Haversine formula
-   */
-  calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 3959; // Earth radius in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
 
   /**
    * Normalize business name for matching
@@ -459,14 +199,67 @@ export class BusinessMatcher {
    */
 
   /**
+   * Find LFA businesses for a search query and location
+   * This is the main method for LFA mode - returns all relevant local businesses
+   */
+  async findLFABusinesses(query, location) {
+    try {
+      console.log(`BusinessMatcher: Searching LFA businesses for "${query}" near ${location.lat}, ${location.lng}`);
+      
+      // Use semantic search to find LFA businesses matching the query
+      const searchData = {
+        query: query,
+        lat: location.lat,
+        lng: location.lng,
+        radius: 15, // Larger radius for more comprehensive results
+        limit: 20   // More businesses for LFA mode
+      };
+      
+      const response = await chrome.runtime.sendMessage({
+        action: 'semanticSearch',
+        data: searchData
+      });
+      
+      console.log('BusinessMatcher: Received response from service worker:', response);
+      
+      if (response && response.success && response.data && response.data.businesses) {
+        const businesses = response.data.businesses;
+        console.log(`BusinessMatcher: Found ${businesses.length} LFA businesses`);
+        
+        // Add display formatting for businesses
+        return businesses.map(business => ({
+          ...business,
+          // Ensure we have proper display fields
+          name: business.name || business.business_name || 'Local Business',
+          address: business.address || business.formatted_address,
+          category: business.category || business.business_type,
+          description: business.description || business.about,
+          phone: business.phone || business.phone_number,
+          website: business.website || business.website_url,
+          // Keep original data for map pins
+          lat: business.lat || business.latitude,
+          lng: business.lng || business.longitude
+        }));
+      } else {
+        console.log('BusinessMatcher: No LFA businesses found');
+        return [];
+      }
+      
+    } catch (error) {
+      console.error('BusinessMatcher: Error finding LFA businesses:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get matcher status for debugging
    */
   getStatus() {
     return {
-      chainPatterns: this.chainPatterns.length,
-      lastChainUpdate: this.lastChainUpdate,
-      dynamicBusinessSearch: true,
-      apiBasedAlternatives: true,
+      mode: 'binary_lfa_google_toggle',
+      lfaBusinessSearch: true,
+      locationExtraction: true,
+      queryExtraction: true,
     };
   }
 }

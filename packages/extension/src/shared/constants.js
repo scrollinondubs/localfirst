@@ -28,12 +28,11 @@ export const CONFIG = {
     MAX_RETRIES: 3,
   },
   
-  // Business Filtering Configuration
-  FILTERING: {
-    DEFAULT_RADIUS: 50, // miles
-    MAX_RADIUS: 50, // maximum search radius
-    MAX_RESULTS: 100, // maximum businesses to return
-    CONFIDENCE_THRESHOLD: 80, // minimum confidence for chain matching
+  // LFA Business Search Configuration
+  SEARCH: {
+    DEFAULT_RADIUS: 15, // miles for LFA business search
+    MAX_RADIUS: 25, // maximum search radius
+    MAX_RESULTS: 20, // maximum businesses to return in LFA mode
   },
   
   // Storage Keys
@@ -45,35 +44,10 @@ export const CONFIG = {
     CACHED_BUSINESSES: 'lfa_cached_businesses',
   },
   
-  // Default Settings
+  // Default Settings - Simplified for binary LFA/Google toggle
   DEFAULT_SETTINGS: {
-    enabled: true,
-    filterLevel: 'strict', // strict, moderate, light - default to aggressive filtering
-    showBadges: true,
-    showAlternatives: true,
+    enabled: true, // LFA mode enabled by default
     anonymousAnalytics: true,
-  },
-  
-  // Filter Levels
-  FILTER_LEVELS: {
-    strict: {
-      hideChains: true,
-      dimChains: false,
-      showAlternatives: true,
-      confidenceThreshold: 70,
-    },
-    moderate: {
-      hideChains: false,
-      dimChains: true,
-      showAlternatives: true,
-      confidenceThreshold: 80,
-    },
-    light: {
-      hideChains: false,
-      dimChains: true,
-      showAlternatives: false,
-      confidenceThreshold: 90,
-    },
   },
   
   // Event Types for Analytics
@@ -81,7 +55,7 @@ export const CONFIG = {
     INSTALL: 'install',
     VIEW: 'view',
     CLICK: 'click',
-    FILTER_TOGGLE: 'filter_toggle',
+    MODE_TOGGLE: 'mode_toggle', // LFA/Google mode toggle
     SETTINGS_CHANGE: 'settings_change',
     ERROR: 'error',
   },
