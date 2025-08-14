@@ -953,36 +953,59 @@ export class UIInjector {
    */
   createChainReplacementPlaceholder(element, chainInfo) {
     try {
+      // Check if placeholder already exists for this element to prevent duplicates
+      const existingInjected = this.injectedElements.get(element);
+      if (existingInjected && existingInjected.placeholder) {
+        console.log(`UIInjector: Placeholder already exists for ${chainInfo.name}, skipping`);
+        return;
+      }
+
+      // Find the appropriate parent container for proper placement
+      const parentContainer = this.findPlaceholderParent(element);
+      if (!parentContainer) {
+        console.log(`UIInjector: Could not find suitable parent for placeholder for ${chainInfo.name}`);
+        return;
+      }
+
       // Create a placeholder that will replace the hidden chain
       const placeholder = document.createElement('div');
       placeholder.className = 'lfa-chain-placeholder';
+      placeholder.setAttribute('data-chain-name', chainInfo.name);
       placeholder.style.cssText = `
         background: #f8f9fa !important;
         border: 1px solid #e8eaed !important;
         border-radius: 8px !important;
-        padding: 16px !important;
-        margin: 8px 0 !important;
+        padding: 12px !important;
+        margin: 4px 0 !important;
         display: block !important;
-        position: relative !important;
-        z-index: 1000 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
         color: #333 !important;
         font-family: Google Sans, Roboto, Arial, sans-serif !important;
-        font-size: 14px !important;
-        line-height: 20px !important;
-        min-height: 60px !important;
+        font-size: 13px !important;
+        line-height: 18px !important;
+        min-height: 50px !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        clear: both !important;
       `;
       
-      // Add default content to prevent black appearance
+      // Add content but make it more compact to avoid layout issues
       placeholder.innerHTML = `
-        <div style="color: #666; font-size: 14px; text-align: center; padding: 20px;">
-          <div style="font-weight: 500; margin-bottom: 8px;">🏪 Chain store hidden</div>
-          <div style="font-size: 12px;">Looking for local alternatives...</div>
+        <div style="color: #666; font-size: 13px; text-align: center; padding: 8px;">
+          <div style="font-weight: 500; margin-bottom: 4px;">🏪 Chain store hidden</div>
+          <div style="font-size: 11px;">Loading local alternatives...</div>
         </div>
       `;
       
-      // Insert the placeholder after the hidden element
-      element.parentNode.insertBefore(placeholder, element.nextSibling);
+      // Insert the placeholder in a safer location - after the original element but within proper container
+      try {
+        parentContainer.appendChild(placeholder);
+        console.log(`UIInjector: Created placeholder for hidden ${chainInfo.name} in proper container`);
+      } catch (insertError) {
+        // Fallback to original insertion method
+        console.warn(`UIInjector: Container insertion failed, using fallback for ${chainInfo.name}:`, insertError);
+        element.parentNode.insertBefore(placeholder, element.nextSibling);
+      }
       
       // Store reference to placeholder
       if (this.injectedElements.has(element)) {
@@ -991,10 +1014,31 @@ export class UIInjector {
         this.injectedElements.set(element, { placeholder: placeholder, type: 'chain-placeholder' });
       }
       
-      console.log(`UIInjector: Created placeholder for hidden ${chainInfo.name}`);
     } catch (error) {
       console.error('UIInjector: Failed to create chain placeholder:', error);
     }
+  }
+
+  /**
+   * Find appropriate parent container for placeholder placement
+   */
+  findPlaceholderParent(element) {
+    let current = element.parentElement;
+    
+    // Look for a suitable container that won't cause layout issues
+    while (current && current !== document.body) {
+      // Check if this looks like a results container
+      if (current.classList.contains('section-result') ||
+          current.classList.contains('section-result-content') ||
+          current.querySelector('[role="article"]') ||
+          current.style.display === 'flex' && current.children.length > 1) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    
+    // Fallback to element's direct parent
+    return element.parentElement;
   }
 
   /**
@@ -1812,6 +1856,37 @@ export class UIInjector {
   }
 
   /**
+   * Clean up orphaned placeholder elements that may be causing stacking issues
+   */
+  cleanupOrphanedPlaceholders() {
+    try {
+      const placeholders = document.querySelectorAll('.lfa-chain-placeholder');
+      console.log(`UIInjector: Found ${placeholders.length} placeholder elements for cleanup check`);
+      
+      placeholders.forEach((placeholder, index) => {
+        // Remove placeholders that appear to be duplicates or misplaced
+        const chainName = placeholder.getAttribute('data-chain-name');
+        const parentRect = placeholder.parentElement?.getBoundingClientRect();
+        
+        // Check if placeholder is positioned outside the main content area (stacking to the right)
+        if (parentRect && parentRect.left > window.innerWidth * 0.6) {
+          console.log(`UIInjector: Removing misplaced placeholder for ${chainName} (positioned at x: ${parentRect.left})`);
+          placeholder.remove();
+        }
+        
+        // Remove excessive placeholders (more than 5 suggests a problem)
+        if (index > 4) {
+          console.log(`UIInjector: Removing excess placeholder #${index} for ${chainName}`);
+          placeholder.remove();
+        }
+      });
+      
+    } catch (error) {
+      console.error('UIInjector: Error cleaning up orphaned placeholders:', error);
+    }
+  }
+
+  /**
    * Clear all injected elements (for page navigation)
    */
   clearAllInjectedElements() {
@@ -1849,8 +1924,11 @@ export class UIInjector {
       element.classList.remove('lfa-chain-business', 'lfa-chain-hidden');
     });
     
-    // Remove all injected elements
-    document.querySelectorAll('.lfa-badge, .lfa-alternatives').forEach(element => {
+    // Clean up orphaned placeholders first
+    this.cleanupOrphanedPlaceholders();
+    
+    // Remove all injected elements including placeholders
+    document.querySelectorAll('.lfa-badge, .lfa-alternatives, .lfa-chain-placeholder').forEach(element => {
       element.remove();
     });
     

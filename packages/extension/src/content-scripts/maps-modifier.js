@@ -397,6 +397,11 @@ class MapsModifier {
 
       console.log(`MapsModifier: Processing complete. Chains filtered: ${chainsFiltered}, Local highlighted: ${localHighlighted}`);
 
+      // Clean up any orphaned placeholders that might be stacking up
+      setTimeout(() => {
+        uiInjector.cleanupOrphanedPlaceholders();
+      }, 2000);
+
     } catch (error) {
       console.error('MapsModifier: Error processing page:', error);
       this.trackEvent('error', {
