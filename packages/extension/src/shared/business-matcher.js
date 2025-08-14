@@ -117,7 +117,7 @@ export class BusinessMatcher {
   /**
    * Find local alternatives in the same category
    */
-  findLocalAlternatives(chainBusiness, location, maxResults = 8) {
+  findLocalAlternatives(chainBusiness, location) {
     console.log('BusinessMatcher: findLocalAlternatives called with:', chainBusiness, location, 'localBusinesses:', this.localBusinesses.length);
     if (!chainBusiness || !location || this.localBusinesses.length === 0) {
       console.log('BusinessMatcher: Early return - missing data');
@@ -131,17 +131,11 @@ export class BusinessMatcher {
     );
     console.log('BusinessMatcher: Found', categoryBusinesses.length, 'businesses in category:', categoryBusinesses);
 
-    // Filter by map bounds first, then calculate distances
+    // Calculate distances for all businesses (don't filter by bounds to show all alternatives)
     const businessesInView = categoryBusinesses
       .filter(business => {
-        if (!business.latitude || !business.longitude) {
-          return false;
-        }
-        
-        // Check if business is within map bounds
-        const withinBounds = this.isWithinBounds(business.latitude, business.longitude, location.bounds);
-        console.log(`BusinessMatcher: ${business.name} within bounds:`, withinBounds, location.bounds);
-        return withinBounds;
+        // Only filter out businesses without coordinates
+        return business.latitude && business.longitude;
       })
       .map(business => {
         const distance = this.calculateDistance(
@@ -154,10 +148,9 @@ export class BusinessMatcher {
           distance: distance,
         };
       })
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, maxResults);
+      .sort((a, b) => a.distance - b.distance);
 
-    console.log('BusinessMatcher: After bounds filtering, found', businessesInView.length, 'businesses');
+    console.log('BusinessMatcher: Found', businessesInView.length, 'local alternatives sorted by distance');
     return businessesInView;
   }
 
