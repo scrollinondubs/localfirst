@@ -12,8 +12,10 @@
 
 ### Simplicity Means
 
+- **Binary toggles over complex filtering**: LFA mode vs Google mode is simpler than chain detection
 - Single responsibility per function/module
-- Avoid premature abstractions (especially for business logic)
+- **Mimic existing UI patterns**: Copy Google's HTML structure exactly rather than custom elements
+- **Unified data sources**: Shared caching prevents timing issues (use `window.LFA_cachedBusinesses`)
 - No clever DOM manipulation tricks - choose robust, testable solutions
 - If Google Maps breaks the extension, it should fail gracefully
 
@@ -60,16 +62,26 @@ Break complex work into 3-5 stages focused on user-facing value. Document in `IM
    - Check Cloudflare Workers/Hono.js patterns
 
 3. **Question fundamentals**:
+   - **Can this be simplified?** (Complex filtering → binary toggle)
+   - **Should we mimic instead of invent?** (Custom UI → Google's HTML structure)
    - Is this the right level of DOM manipulation?
    - Can this be split into smaller, testable pieces?
    - Is there a more performance-friendly approach?
    - Should this be handled client-side or server-side?
 
 4. **Try different angle**:
+   - **Unified data approach?** (Shared caching vs separate API calls)
+   - **Strategic observer management?** (Disable when conflicting)
    - Different DOM observation strategy?
    - Different business matching algorithm?
    - Simplified user interface approach?
    - Alternative data caching strategy?
+
+**Key Debugging Questions from MVP:**
+- Are business IDs consistent between pins and sidebar?
+- Is mutation observer conflicting with our modifications?
+- Are elements being recreated/redrawn by Google Maps?
+- Is timing causing cache misses between components?
 
 ## Technical Standards
 
@@ -252,12 +264,25 @@ describe('Business API', () => {
 - Use `eval()` or `innerHTML` with untrusted content (CSP violations)
 - Store API keys or secrets in extension code
 - Block or significantly delay Google Maps functionality
+- **Assume custom UI elements will integrate well** - mimic Google's structure instead
+- **Create separate data flows** - use unified caching to prevent timing issues
 
 **ALWAYS**:
+- **Target `role="feed"` containers** for business listing injection
+- **Use Google's exact CSS classes** (e.g., `Nv2PK THOPZb CpccDe`) for native appearance
+- **Implement `data-*` attributes** for reliable cross-component communication
+- **Disable mutation observers when replacing content** to prevent conflicts
+- **Use WeakMap for element tracking** to enable clean restoration
 - Use Shadow DOM for isolated styling when possible
 - Clean up DOM observers and event listeners
 - Handle extension disable/uninstall gracefully
 - Test with network throttling and offline scenarios
+
+**Critical Debugging Patterns:**
+- **Log business IDs** from both pins and sidebar when hover effects fail
+- **Check element dimensions** when content appears to inject but isn't visible
+- **Verify event listener attachment timing** - ensure elements exist when listeners added
+- **Monitor for DOM redraws** that destroy/recreate elements and break references
 
 ### API Development
 

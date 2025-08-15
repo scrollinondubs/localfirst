@@ -26,10 +26,11 @@ You are an expert Chrome extension and web application developer proficient in T
 - **Permission Management**: Request minimal permissions (activeTab, storage, host_permissions for maps.google.com)
 
 ### Business Logic Implementation
-- **Chain Detection**: Pattern matching with confidence scoring
-- **Local Business Highlighting**: Visual badges for LFA members with member info
-- **Alternative Suggestions**: Show local alternatives when chains are filtered
-- **Geolocation**: Efficient radius-based business matching
+- **Binary Toggle System**: Simple LFA/Google mode switching instead of complex chain filtering
+- **Semantic Search Integration**: Real-time LFA member discovery with relevance scoring
+- **Unified Data Caching**: Use `window.LFA_cachedBusinesses` to share data between map pins and sidebar
+- **Bidirectional UI Interactions**: Hover effects linking sidebar listings to map pins and vice versa
+- **Geolocation**: Efficient radius-based business matching with SQLite spatial queries
 - **Analytics Tracking**: Anonymous usage events for optimization
 
 ### Database Architecture (Turso/SQLite)
@@ -92,91 +93,99 @@ You are an expert Chrome extension and web application developer proficient in T
 
 ### Key Implementation Patterns
 
-**Business Detection:**
+**Binary Toggle Implementation:**
 ```typescript
-// Efficient business identification with pattern matching
-async function detectBusinessType(businessName: string, location: Coordinates): Promise<BusinessType> {
-  // Check local cache first
-  const cached = await getCachedBusinessType(businessName);
-  if (cached && !isCacheExpired(cached)) {
-    return cached.type;
+// Simplified binary toggle system - LFA mode vs Google mode
+class MapsModifier {
+  toggleLFAMode() {
+    const wasEnabled = this.isEnabled;
+    const nowEnabled = !wasEnabled;
+    
+    this.isEnabled = nowEnabled;
+    this.updateStatusBar(); // Dynamic styling based on mode
+    
+    if (nowEnabled) {
+      // LFA mode: Replace Google results with LFA businesses
+      this.enableLFAMode();
+    } else {
+      // Google mode: Restore original Google content
+      this.enableGoogleMode();
+    }
   }
   
-  // Pattern match against chain database
-  const chainMatch = await chainMatcher.findMatch(businessName);
-  if (chainMatch && chainMatch.confidence > 0.8) {
-    await cacheBusinessType(businessName, 'chain', chainMatch.confidence);
-    return 'chain';
+  async enableLFAMode() {
+    // Hide Google content and show LFA alternatives
+    await uiInjector.replaceSidebarWithLFA();
+    await this.processCurrentPageLFAMode();
+    uiInjector.showFilterStatus('lfa', 0, 0);
   }
   
-  // Check LFA member database
-  const lfaMember = await api.findLFAMember({
-    name: businessName,
-    lat: location.lat,
-    lng: location.lng,
-    radius: 0.1 // 0.1 mile radius for exact matching
-  });
-  
-  if (lfaMember) {
-    await cacheBusinessType(businessName, 'lfa_member', 1.0);
-    return 'lfa_member';
+  enableGoogleMode() {
+    // Clear all LFA modifications and restore Google content
+    uiInjector.clearAllInjectedElements();
+    uiInjector.restoreGoogleSidebar();
+    uiInjector.hideFilterStatus();
+    if (mapPinManager) mapPinManager.clearAllPins();
   }
-  
-  return 'unknown';
 }
 ```
 
-**DOM Modification:**
+**Google Maps UI Replacement:**
 ```javascript
-// Robust Google Maps DOM modification with cleanup
-class MapsModifier {
-  constructor() {
-    this.observer = null;
-    this.processedElements = new WeakSet();
-    this.isActive = true;
-  }
-  
-  startObserving() {
-    this.observer = new MutationObserver((mutations) => {
-      if (!this.isActive) return;
-      
-      const newBusinessElements = mutations
-        .flatMap(m => Array.from(m.addedNodes))
-        .filter(node => node.nodeType === Node.ELEMENT_NODE)
-        .filter(element => this.isBusinessElement(element))
-        .filter(element => !this.processedElements.has(element));
-      
-      if (newBusinessElements.length > 0) {
-        this.processBatch(newBusinessElements);
-      }
-    });
+// Complete sidebar replacement mimicking Google's exact structure
+class UIInjector {
+  async replaceSidebarWithLFA() {
+    // Find Google's feed container - key injection point
+    const feedContainer = this.findGoogleFeedContainer();
+    if (!feedContainer) return;
     
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-  
-  async processBatch(elements) {
-    const processingPromises = elements.map(async (element) => {
-      try {
-        await this.processBusinessElement(element);
-        this.processedElements.add(element);
-      } catch (error) {
-        console.error('Failed to process business element:', error);
-      }
-    });
-    
-    await Promise.allSettled(processingPromises);
-  }
-  
-  cleanup() {
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
+    // Use cached LFA businesses to prevent timing issues
+    let lfaBusinesses = window.LFA_cachedBusinesses;
+    if (!lfaBusinesses) {
+      lfaBusinesses = await businessMatcher.findLFABusinesses(userQuery, currentLocation);
+      window.LFA_cachedBusinesses = lfaBusinesses; // Unified caching
     }
-    this.processedElements = new WeakSet();
-    this.isActive = false;
+    
+    this.injectLFABusinessListings(feedContainer, lfaBusinesses, userQuery);
+  }
+  
+  createGoogleStyleBusinessListing(business, index) {
+    const businessItem = document.createElement('div');
+    // Use Google's exact CSS classes for seamless integration
+    businessItem.className = 'Nv2PK THOPZb CpccDe lfa-business-item';
+    businessItem.setAttribute('data-lfa-business', business.id); // Cross-component ID
+    
+    // Mimic Google's exact HTML structure
+    businessItem.innerHTML = `
+      <div class="bfdHYd Ppzolf OFBs3e">
+        <div class="lI9IFe">
+          <div class="y7PRA">
+            <div class="Lui3Od T7Wufd">
+              <div class="qBF1Pd fontHeadlineSmall">${business.name}</div>
+              <div class="W4Efsd">${business.category} · ${business.address}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Bidirectional hover effects
+    businessItem.addEventListener('mouseenter', () => {
+      this.highlightMapPinForBusiness(business, true);
+      businessItem.style.backgroundColor = '#f8f9fa';
+    });
+    
+    return businessItem;
+  }
+  
+  // Strategic observer management - disable when LFA mode active
+  handleMutations(mutations) {
+    const existingLFASidebar = document.querySelector('[data-lfa-sidebar="true"]');
+    if (existingLFASidebar) {
+      console.log('LFA sidebar active, ignoring DOM mutations');
+      return; // Prevent Google/LFA conflicts
+    }
+    // Process mutations only when in Google mode
   }
 }
 ```
@@ -277,5 +286,22 @@ npm run deploy:dashboard    # Deploy to Cloudflare Pages
 - **Reliability**: Extension must work even when API is unavailable
 - **Privacy**: Minimal data collection, anonymous analytics only
 - **Scalability**: Design for thousands of concurrent users on free Cloudflare tier
+
+### Key Architectural Lessons from MVP Development
+
+**Architecture Evolution**: Successfully pivoted from complex chain-detection filtering to simple binary toggle system (LFA/Google modes) - this approach is far more reliable and maintainable.
+
+**Critical Success Patterns**:
+1. **Mimic Don't Invent**: Copy Google's exact HTML structure and CSS classes rather than creating custom UI
+2. **Unified Data Sources**: Use `window.LFA_cachedBusinesses` to share data between components and prevent timing issues
+3. **Strategic Observer Management**: Disable mutation observers when LFA mode is active to prevent conflicts
+4. **Bidirectional Interactions**: Link sidebar listings to map pins with consistent `data-*` attributes for business IDs
+5. **Complete Replacement**: Full sidebar content replacement works better than selective filtering
+
+**Essential Debugging Approaches**:
+- Log business IDs from both pins and sidebar when interactions fail
+- Check element dimensions when content appears to inject but isn't visible  
+- Monitor for DOM redraws that destroy/recreate elements and break references
+- Verify event listener attachment timing - ensure elements exist when listeners added
 
 Remember: Focus on seamless local business discovery. The technical architecture should make it effortless for users to find and support Local First Arizona member businesses during their natural search behavior.
