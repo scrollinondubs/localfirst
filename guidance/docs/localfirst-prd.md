@@ -48,40 +48,43 @@ Intercept Google Maps searches to surface local alternatives, making it effortle
 
 ## Core Features (MVP)
 
-### 1. Chain Business Filtering
+### 1. Binary Toggle System
 **Functionality:**
-- Hide or de-emphasize listings for major chain stores (Walmart, Target, McDonald's, Starbucks, etc.)
-- Maintain configurable blocklist of chain businesses
-- Allow users to toggle filtering on/off
+- Simple LFA Mode vs Google Mode toggle
+- **LFA Mode (Enabled):** Show only Local First Arizona member businesses with complete Google Maps UI replacement
+- **Google Mode (Disabled):** Show original unmodified Google Maps results
+- Clear visual status indication with dynamic status bar
 
 **Technical Implementation:**
-- Pattern matching on business names
-- Maintain local database of chain identifiers
-- DOM manipulation to hide/modify listings
+- Complete sidebar content replacement using Google's exact HTML structure
+- Unified data caching system for consistency between map pins and listings
+- Strategic mutation observer management to prevent conflicts
 
-### 2. Local Business Highlighting
+### 2. LFA Business Discovery
 **Functionality:**
-- Add visual indicators (badges, borders, icons) to LFA member businesses
-- Display "Local First AZ Member" badges
-- Show additional context (local ownership, community impact)
+- Semantic search integration with LFA member database (~800 businesses)
+- Real-time business listings with distance, contact info, and verification status
+- Custom map pins with LFA branding and hover effects
+- Business details with website links and local business context
 
-**Data Source Priority:**
-1. Local First Arizona member directory
-2. Verified local business databases
-3. Community-submitted additions
+**Data Source:**
+- Local First Arizona verified member directory
+- SQLite database with semantic search capabilities
+- Relevance scoring based on search query matching
 
-### 3. Alternative Business Suggestions
+### 3. Advanced UI Integration
 **Functionality:**
-- When chain businesses are filtered, suggest nearby local alternatives
-- Show mini-cards with local business info
-- Direct links to business websites/phone numbers
+- Bidirectional hover effects between sidebar listings and map pins
+- Google Maps-native appearance with seamless integration
+- Dynamic status bar with mode-aware styling and button visibility
+- Info windows with business details and external linking
 
 ### 4. User Controls
 **Functionality:**
-- Easy on/off toggle for extension
-- Customizable filtering intensity (strict/moderate/light)
-- Whitelist for preferred chains (if any)
-- Settings panel accessible from extension icon
+- Single-click toggle between LFA and Google modes
+- Persistent user preferences across browser sessions
+- Clean restoration of original Google content when disabled
+- Visual feedback for all user interactions
 
 ## Technical Architecture
 
@@ -167,21 +170,21 @@ local-first-extension/
 
 ### Installation & Setup
 1. User installs extension from Chrome Web Store
-2. Welcome popup explains purpose and shows toggle
-3. Extension activated by default with moderate filtering
+2. Extension activated by default in LFA mode
+3. Green status bar appears at top of Google Maps indicating LFA business discovery mode
 
 ### Daily Usage
 1. User searches Google Maps for "restaurants near me"
-2. Extension identifies chain restaurants in results
-3. Chain listings get dimmed/hidden based on user setting
-4. Local alternatives appear with LFA badges
-5. User clicks on local business → tracked engagement
+2. Extension automatically shows only LFA member businesses with native Google Maps appearance
+3. Hover over sidebar listings highlights corresponding map pins and vice versa
+4. User clicks on local business → tracked engagement, opens business website
+5. User can toggle to Google mode to see original results, then back to LFA mode
 
-### Settings Management
-1. Click extension icon in toolbar
-2. Toggle on/off, adjust filtering level
-3. View recent local businesses discovered
-4. Link to full LFA directory
+### Mode Switching
+1. Click "Disable"/"Enable" button in status bar for instant toggle
+2. LFA Mode: Complete replacement with local businesses only
+3. Google Mode: Original Google Maps experience restored
+4. Status bar changes color (green/white) for clear mode indication
 
 ## Development Phases
 
@@ -222,24 +225,27 @@ local-first-extension/
 
 ### Challenge 1: Google Maps DOM Complexity
 **Risk:** Maps interface changes frequently, breaking extension  
-**Solution:** 
-- Robust selector strategies with fallbacks
-- Mutation observer patterns for dynamic content
-- Comprehensive testing across Maps updates
+**Solution Implemented:** 
+- Mimic Google's exact HTML structure instead of custom UI elements
+- Use `role="feed"` containers as key injection points
+- Strategic mutation observer management (disable when LFA mode active)
+- Robust `data-*` attribute system for cross-component communication
 
-### Challenge 2: Performance Impact
-**Risk:** Extension slows down Maps loading  
-**Solution:**
-- Lazy loading of business data
-- Efficient DOM queries
-- Minimal background processing
+### Challenge 2: UI Integration & Performance
+**Risk:** Extension creates visual conflicts or performance issues  
+**Solution Implemented:**
+- Binary toggle approach eliminates complex filtering logic
+- Complete content replacement vs. overlay/filtering reduces conflicts
+- Unified data caching (`window.LFA_cachedBusinesses`) prevents timing issues
+- WeakMap element tracking enables clean restoration
 
-### Challenge 3: Data Accuracy
-**Risk:** Incorrect business classification  
-**Solution:**
-- Human-verified business databases
-- Community reporting system
-- Regular data audits
+### Challenge 3: Data Synchronization & Reliability
+**Risk:** Inconsistent data between map pins and sidebar listings  
+**Solution Implemented:**
+- Single source of truth with shared caching system
+- Semantic search API with relevance scoring
+- SQLite database with ~800 verified LFA businesses
+- Graceful fallback when API unavailable
 
 ## Privacy & Security
 

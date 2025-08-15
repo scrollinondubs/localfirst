@@ -437,6 +437,27 @@ export const CONFIG = {
 
 ## Chrome Extension Implementation Details
 
+### Key Architectural Learnings from MVP Development
+
+**Critical Design Principles:**
+1. **Binary Toggle Over Complex Filtering**: Simple LFA/Google mode switching is far more reliable than chain detection and selective filtering
+2. **Mimic Don't Invent**: Copy Google's exact HTML structure (`Nv2PK THOPZb CpccDe` classes) rather than creating custom UI elements
+3. **Unified Data Sources**: Use `window.LFA_cachedBusinesses` to share data between map pins and sidebar - prevents timing issues
+4. **Strategic Observer Management**: Disable mutation observers when LFA mode is active to prevent Google/LFA conflicts
+5. **Robust ID System**: Use `data-*` attributes for reliable cross-component communication (pins ↔ sidebar)
+
+**DOM Manipulation Best Practices:**
+- Target `role="feed"` containers for business listing injection
+- Use WeakMap for element tracking to enable clean restoration
+- Implement z-index hierarchy: 101+ pins, 200+ hover states, 300+ info windows
+- Always handle Google Maps continuous DOM redraws with event listener re-attachment
+
+**Performance Optimization Lessons:**
+- Complete content replacement is more performant than selective filtering
+- Coordinate conversion caching essential for map pin positioning
+- Batch DOM operations and use `requestAnimationFrame` for smooth interactions
+- Bidirectional hover effects require robust event delegation
+
 ### Manifest V3 Configuration
 
 ```json
@@ -813,21 +834,56 @@ npm run package:extension
 
 ### Monitoring & Debugging
 
-#### Extension Debugging
+#### Critical Debugging Patterns from MVP Development
+
+**Essential Console Logging Strategy:**
 ```javascript
-// Development logging utility
+// Comprehensive debugging for complex DOM interactions
 const logger = {
+  domOperation: (operation, element, data) => {
+    console.log(`[LFA DOM] ${operation}:`, {
+      element: element?.tagName || 'null',
+      className: element?.className,
+      dataAttrs: element ? Object.fromEntries(
+        [...element.attributes].filter(attr => attr.name.startsWith('data-'))
+        .map(attr => [attr.name, attr.value])
+      ) : {},
+      data
+    });
+  },
+  
+  timing: (operation, startTime) => {
+    console.log(`[LFA Timing] ${operation}: ${Date.now() - startTime}ms`);
+  },
+  
+  businessMatch: (operation, businessId, available) => {
+    console.log(`[LFA Business] ${operation} for ID ${businessId}`);
+    if (!document.querySelector(`[data-lfa-business="${businessId}"]`)) {
+      console.log('[LFA Business] Available business IDs:', 
+        Array.from(document.querySelectorAll('[data-lfa-business]'))
+        .map(el => el.getAttribute('data-lfa-business')));
+    }
+  },
+  
   debug: (message, data) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[LFA Debug] ${message}`, data);
     }
   },
+  
   error: (message, error) => {
     console.error(`[LFA Error] ${message}`, error);
     // Send to error tracking service
   }
 };
 ```
+
+**Common Debugging Scenarios:**
+1. **Zero-dimension containers**: Check CSS positioning (absolute vs relative)
+2. **Event listeners not firing**: Verify element exists when listener attached
+3. **Business ID mismatches**: Log available vs. expected IDs in both components
+4. **Timing issues**: Use unified caching and log cache hit/miss ratios
+5. **DOM restoration failures**: Verify WeakMap element tracking
 
 #### API Monitoring
 - **Cloudflare Analytics**: Built-in request metrics
