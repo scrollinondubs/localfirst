@@ -144,7 +144,7 @@ const server = createServer(async (req, res) => {
           };
         })
         .filter(business => business.relevanceScore > 10) // Only include somewhat relevant results
-        .sort((a, b) => b.combinedScore - a.combinedScore) // Sort by combined score descending
+        .sort((a, b) => b.relevanceScore - a.relevanceScore) // Sort by semantic relevance only
         .slice(0, limit);
 
       console.log(`TEMP SERVER: Found ${nearbyBusinesses.length} nearby businesses, ${scoredBusinesses.length} relevant matches`);

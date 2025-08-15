@@ -31,6 +31,24 @@ The database has been successfully set up with:
 - **32 major chain businesses** in the blocklist
 - **Full geographic indexing** for Arizona locations
 
+### Starting the API Server
+
+To test the Chrome extension locally, start the Node.js API server:
+
+```bash
+# From the project root
+cd packages/api
+node temp-server.js
+
+# Or using the full path
+WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node /Users/sean/NodeJSprojs/localfirst/packages/api/temp-server.js
+```
+
+The API server will run on **http://localhost:8787** and provide:
+- `/api/businesses/nearby` - Search for nearby LFA businesses
+- `/api/chains` - Get chain business patterns for filtering
+- `/api/analytics/events` - Track extension usage events
+
 ### Available Commands
 
 ```bash
@@ -65,13 +83,6 @@ npm run build        # Build all packages
 
 - **Analytics Tables**: Ready for extension usage tracking
 
-## 🗺️ Geographic Coverage
-
-The database covers businesses across Arizona with coordinates for:
-- **Phoenix Metro**: 3,569 businesses
-- **Tucson**: 800+ businesses  
-- **Flagstaff**: 200+ businesses
-- **Other AZ Cities**: 500+ businesses
 
 ## 📁 Key Files Created
 
@@ -95,23 +106,7 @@ The database covers businesses across Arizona with coordinates for:
 - **Extension**: Vanilla JavaScript (Manifest V3)
 - **Dashboard**: Next.js 14 + Tailwind CSS
 
-## 📈 Data Import Results
 
-```
-📊 Total processed: 5,274 businesses from CSV
-✅ Successfully imported: 5,146 businesses  
-⚠️ Skipped: 128 businesses (incomplete data)
-✅ Chain businesses: 32 patterns added
-```
-
-## 🚀 Next Steps
-
-The database foundation is complete. Ready for:
-
-1. **API Development**: Build business search and analytics endpoints
-2. **Extension Development**: Create Google Maps content scripts
-3. **Dashboard Development**: Build admin interface
-4. **Integration**: Connect all components
 
 ## 📝 Notes
 
@@ -122,5 +117,3 @@ The database foundation is complete. Ready for:
 - Full verification shows all systems operational
 
 ---
-
-**Status**: ✅ Database setup complete - Ready for development!
