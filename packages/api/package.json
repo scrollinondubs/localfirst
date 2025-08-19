@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "wrangler dev src/index.js",
+    "dev": "node dev-server.js",
+    "dev:wrangler": "wrangler dev src/index.js",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "db:setup": "node scripts/setup-db.js",
@@ -29,6 +30,6 @@
     "@types/node": "^20.0.0",
     "drizzle-kit": "^0.20.18",
     "vitest": "^1.0.0",
-    "wrangler": "^3.114.13"
+    "wrangler": "^4.31.0"
   }
 }

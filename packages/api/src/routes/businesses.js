@@ -99,30 +99,6 @@ router.get('/nearby', async (c) => {
 });
 
 /**
- * GET /api/businesses/:id
- * Get a single business by ID (for admin/debugging)
- */
-router.get('/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    
-    const business = await db.select()
-      .from(businesses)
-      .where(eq(businesses.id, id))
-      .limit(1);
-
-    if (business.length === 0) {
-      return c.json({ error: 'Business not found' }, 404);
-    }
-
-    return c.json(business[0]);
-  } catch (error) {
-    console.error('Error fetching business:', error);
-    return c.json({ error: 'Failed to fetch business' }, 500);
-  }
-});
-
-/**
  * GET /api/businesses/semantic-search
  * Find LFA businesses that semantically match a search query within map bounds
  * Query params: query, lat, lng, radius (optional), bounds (optional)
@@ -285,5 +261,29 @@ function calculateRelevanceScore(businessName, businessCategory, searchTerms, fu
   // Ensure score doesn't exceed 100
   return Math.min(score, 100);
 }
+
+/**
+ * GET /api/businesses/:id
+ * Get a single business by ID (for admin/debugging)
+ */
+router.get('/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    
+    const business = await db.select()
+      .from(businesses)
+      .where(eq(businesses.id, id))
+      .limit(1);
+
+    if (business.length === 0) {
+      return c.json({ error: 'Business not found' }, 404);
+    }
+
+    return c.json(business[0]);
+  } catch (error) {
+    console.error('Error fetching business:', error);
+    return c.json({ error: 'Failed to fetch business' }, 500);
+  }
+});
 
 export default router;
