@@ -3,9 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext({});
 
-// Try main API first, fallback to mobile-specific port
-const API_BASE_URL = 'http://localhost:8787/api';
-const FALLBACK_API_URL = 'http://localhost:3001/api';
+// API configuration - will be replaced with Cloudflare Workers URL in production
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-api.workers.dev/api' 
+  : 'http://localhost:8787/api';
 
 export const useAuth = () => {
   return useContext(AuthContext);
@@ -16,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null);
 
-  // Make API request with fallback
+  // Make API request
   const makeApiRequest = async (endpoint, options = {}) => {
     const { method = 'GET', body, headers = {} } = options;
     
@@ -32,18 +33,8 @@ export const AuthProvider = ({ children }) => {
       requestOptions.body = JSON.stringify(body);
     }
 
-    try {
-      // Try main API first
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, requestOptions);
-      if (response.ok || response.status < 500) {
-        return response;
-      }
-      throw new Error(`API request failed with status ${response.status}`);
-    } catch (error) {
-      console.log(`Main API failed, trying fallback...`);
-      // Try fallback API
-      return await fetch(`${FALLBACK_API_URL}${endpoint}`, requestOptions);
-    }
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, requestOptions);
+    return response;
   };
 
   // Verify token and refresh user data

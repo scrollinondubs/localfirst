@@ -14,11 +14,9 @@ app.use(
   '*',
   cors({
     origin: [
-      'http://localhost:3000',
-      'http://localhost:3001', 
-      'http://localhost:8080',
-      'http://localhost:8787',
-      'chrome-extension://*'
+      'http://localhost:3000',  // Mobile app dev server
+      'chrome-extension://*',   // Chrome extension
+      /^https:\/\/.*\.pages\.dev$/, // Cloudflare Pages (production mobile app)
     ],
     credentials: true,
   })
