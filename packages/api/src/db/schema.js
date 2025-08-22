@@ -70,8 +70,23 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   name: text('name'),
+  resetToken: text('reset_token'),
+  resetTokenExpiry: text('reset_token_expiry'),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
   lastLogin: text('last_login'),
   isActive: integer('is_active', { mode: 'boolean' }).default(true)
+});
+
+// Consumer profiles table (for user preferences and saved data)
+export const consumerProfiles = sqliteTable('consumer_profiles', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  preferences: text('preferences'), // JSON for category preferences
+  savedSearches: text('saved_searches'), // JSON array of search queries
+  favoriteBusinesses: text('favorite_businesses'), // JSON array of business IDs
+  locationPreferences: text('location_preferences'), // JSON for preferred areas/regions
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });

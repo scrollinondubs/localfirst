@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import businessesRoutes from './routes/businesses.js';
 import chainsRoutes from './routes/chains.js';
 import analyticsRoutes from './routes/analytics.js';
+import authRoutes from './routes/auth.js';
 
 const app = new Hono();
 
@@ -12,7 +13,13 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:*', 'https://*.google.com', 'chrome-extension://*'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001', 
+      'http://localhost:8080',
+      'http://localhost:8787',
+      'chrome-extension://*'
+    ],
     credentials: true,
   })
 );
@@ -28,6 +35,7 @@ app.get('/', (c) => {
 });
 
 // API Routes
+app.route('/api/auth', authRoutes);
 app.route('/api/businesses', businessesRoutes);
 app.route('/api/chains', chainsRoutes);
 app.route('/api/analytics', analyticsRoutes);

@@ -14,19 +14,20 @@ import {
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+export default function ResetPasswordScreen({ route, navigation }) {
+  const { email } = route.params || {};
+  const [resetToken, setResetToken] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const { login } = useAuth();
+  const { resetPassword } = useAuth();
 
-  // Email validation
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+  // Token validation
+  const validateToken = (token) => {
+    if (!token) return 'Reset token is required';
+    if (token.length < 8) return 'Invalid reset token format';
     return '';
   };
 
@@ -37,74 +38,91 @@ export default function LoginScreen({ navigation }) {
     return '';
   };
 
-  // Update email with validation
-  const handleEmailChange = (value) => {
-    setEmail(value);
-    // Show validation immediately after user starts typing
-    if (value.length > 0) {
-      setTouched(prev => ({ ...prev, email: true }));
-      setErrors(prev => ({ ...prev, email: validateEmail(value) }));
-    } else {
-      setErrors(prev => ({ ...prev, email: '' }));
+  // Confirm password validation
+  const validateConfirmPassword = (confirmPassword, password) => {
+    if (!confirmPassword) return 'Please confirm your password';
+    if (confirmPassword !== password) return 'Passwords do not match';
+    return '';
+  };
+
+  // Update token with validation
+  const handleTokenChange = (value) => {
+    setResetToken(value);
+    if (touched.resetToken) {
+      setErrors(prev => ({ ...prev, resetToken: validateToken(value) }));
     }
   };
 
   // Update password with validation
   const handlePasswordChange = (value) => {
     setPassword(value);
-    // Show validation immediately after user starts typing
-    if (value.length > 0) {
-      setTouched(prev => ({ ...prev, password: true }));
+    if (touched.password) {
       setErrors(prev => ({ ...prev, password: validatePassword(value) }));
-    } else {
-      setErrors(prev => ({ ...prev, password: '' }));
+    }
+    if (touched.confirmPassword && confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(confirmPassword, value) }));
+    }
+  };
+
+  // Update confirm password with validation
+  const handleConfirmPasswordChange = (value) => {
+    setConfirmPassword(value);
+    if (touched.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(value, password) }));
     }
   };
 
   // Handle field blur to show validation
   const handleBlur = (field) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    if (field === 'email') {
-      setErrors(prev => ({ ...prev, email: validateEmail(email) }));
+    if (field === 'resetToken') {
+      setErrors(prev => ({ ...prev, resetToken: validateToken(resetToken) }));
     } else if (field === 'password') {
       setErrors(prev => ({ ...prev, password: validatePassword(password) }));
+    } else if (field === 'confirmPassword') {
+      setErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(confirmPassword, password) }));
     }
   };
 
-  const handleLogin = async () => {
+  const handleResetPassword = async () => {
     // Validate all fields
-    const emailError = validateEmail(email);
+    const tokenError = validateToken(resetToken);
     const passwordError = validatePassword(password);
+    const confirmPasswordError = validateConfirmPassword(confirmPassword, password);
     
     setErrors({
-      email: emailError,
-      password: passwordError
+      resetToken: tokenError,
+      password: passwordError,
+      confirmPassword: confirmPasswordError
     });
     
-    setTouched({ email: true, password: true });
+    setTouched({ 
+      resetToken: true, 
+      password: true, 
+      confirmPassword: true 
+    });
 
-    if (emailError || passwordError) {
+    if (tokenError || passwordError || confirmPasswordError) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const result = await login(email.toLowerCase().trim(), password);
-      if (!result.success) {
-        // Show specific validation errors if available
-        if (result.details && Array.isArray(result.details)) {
-          const fieldErrors = {};
-          result.details.forEach(detail => {
-            fieldErrors[detail.field] = detail.message;
-          });
-          setErrors(prev => ({ ...prev, ...fieldErrors }));
-        } else {
-          Alert.alert('Login Failed', result.error);
-        }
+      const result = await resetPassword(resetToken.trim(), password);
+      if (result.success) {
+        Alert.alert(
+          'Password Reset Successful',
+          'Your password has been reset successfully. You can now sign in with your new password.',
+          [
+            {
+              text: 'Sign In',
+              onPress: () => navigation.navigate('Login')
+            }
+          ]
+        );
       } else {
-        // Navigate back to profile screen on successful login
-        navigation.navigate('ProfileMain');
+        Alert.alert('Error', result.error);
       }
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -112,6 +130,25 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(false);
   };
+
+  // Password strength indicator
+  const getPasswordStrength = (password) => {
+    if (!password) return null;
+    
+    const checks = {
+      minLength: password.length >= 6,
+      hasLetter: /[a-zA-Z]/.test(password),
+      hasNumber: /\d/.test(password),
+    };
+    
+    const strength = Object.values(checks).filter(Boolean).length;
+    
+    if (strength >= 3) return { text: 'Strong', color: '#38a169' };
+    if (strength >= 2) return { text: 'Medium', color: '#d69e2e' };
+    return { text: 'Weak', color: '#e53e3e' };
+  };
+
+  const passwordStrength = getPasswordStrength(password);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,8 +163,11 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Local First Arizona</Text>
-            <Text style={styles.subtitle}>Welcome Back</Text>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>
+              Enter your reset token and choose a new password
+              {email && ` for ${email}`}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -135,20 +175,19 @@ export default function LoginScreen({ navigation }) {
               <TextInput
                 style={[
                   styles.input,
-                  errors.email ? styles.inputError : null,
-                  touched.email && !errors.email ? styles.inputSuccess : null
+                  errors.resetToken ? styles.inputError : null,
+                  touched.resetToken && !errors.resetToken ? styles.inputSuccess : null
                 ]}
-                placeholder="Email Address"
-                value={email}
-                onChangeText={handleEmailChange}
-                onBlur={() => handleBlur('email')}
-                keyboardType="email-address"
+                placeholder="Reset Token"
+                value={resetToken}
+                onChangeText={handleTokenChange}
+                onBlur={() => handleBlur('resetToken')}
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!loading}
               />
-              {errors.email && touched.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
+              {errors.resetToken && touched.resetToken && (
+                <Text style={styles.errorText}>{errors.resetToken}</Text>
               )}
             </View>
 
@@ -159,7 +198,7 @@ export default function LoginScreen({ navigation }) {
                   errors.password ? styles.inputError : null,
                   touched.password && !errors.password ? styles.inputSuccess : null
                 ]}
-                placeholder="Password"
+                placeholder="New Password"
                 value={password}
                 onChangeText={handlePasswordChange}
                 onBlur={() => handleBlur('password')}
@@ -170,20 +209,45 @@ export default function LoginScreen({ navigation }) {
               {errors.password && touched.password && (
                 <Text style={styles.errorText}>{errors.password}</Text>
               )}
+              {passwordStrength && password.length > 0 && (
+                <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                  Password strength: {passwordStrength.text}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.confirmPassword ? styles.inputError : null,
+                  touched.confirmPassword && !errors.confirmPassword ? styles.inputSuccess : null
+                ]}
+                placeholder="Confirm New Password"
+                value={confirmPassword}
+                onChangeText={handleConfirmPasswordChange}
+                onBlur={() => handleBlur('confirmPassword')}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!loading}
+              />
+              {errors.confirmPassword && touched.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
             </View>
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleLogin}
+              onPress={handleResetPassword}
               disabled={loading}
             >
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={[styles.buttonText, styles.loadingText]}>Signing In...</Text>
+                  <Text style={[styles.buttonText, styles.loadingText]}>Resetting...</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>Reset Password</Text>
               )}
             </TouchableOpacity>
 
@@ -193,17 +257,17 @@ export default function LoginScreen({ navigation }) {
               disabled={loading}
             >
               <Text style={[styles.linkText, loading && styles.linkTextDisabled]}>
-                Forgot Password?
+                Need a new reset token?
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.linkButton}
-              onPress={() => navigation.navigate('Register')}
+              onPress={() => navigation.navigate('Login')}
               disabled={loading}
             >
               <Text style={[styles.linkText, loading && styles.linkTextDisabled]}>
-                Don't have an account? Sign Up
+                Back to Sign In
               </Text>
             </TouchableOpacity>
           </View>
@@ -241,8 +305,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#718096',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   form: {
     width: '100%',
@@ -272,6 +338,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     marginLeft: 4,
+  },
+  strengthText: {
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   button: {
     backgroundColor: '#3182ce',
