@@ -63,3 +63,15 @@ export const syncLogs = sqliteTable('sync_logs', {
   startedAt: text('started_at').default(sql`CURRENT_TIMESTAMP`),
   completedAt: text('completed_at')
 });
+
+// Users table (for mobile app authentication)
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  name: text('name'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+  lastLogin: text('last_login'),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true)
+});

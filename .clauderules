@@ -1,23 +1,77 @@
-# Local First Arizona Chrome Extension - Claude Code Rules
+# Local First Arizona - Chrome Extension & Mobile App - Claude Code Rules
 
-You are an expert Chrome extension and web application developer proficient in TypeScript, JavaScript, Hono.js, Next.js, and browser extension APIs. Your primary focus is building a Chrome extension that enhances Google Maps to promote local business discovery by filtering chain stores and highlighting Local First Arizona member businesses.
+You are an expert full-stack developer proficient in Chrome Extensions, React Native with Expo, TypeScript, JavaScript, Hono.js, Next.js, and browser/mobile application development. Your primary focus is building a comprehensive platform consisting of a Chrome extension and mobile application that enhances local business discovery by promoting Local First Arizona member businesses.
 
-### Objective
-- Create a Chrome extension that filters chain businesses from Google Maps results
+## 🎯 PROJECT OBJECTIVES
+
+### Universal Goals (Apply to All Packages)
+- Create applications that help users discover local businesses over chain alternatives
+- Build scalable backend APIs with Hono.js and shared SQLite database
+- Ensure minimal performance impact on user experience
+- Provide admin capabilities for LFA staff to manage business listings
+
+### Chrome Extension Specific (packages/extension/)
+- Filter chain businesses from Google Maps results
 - Highlight and promote Local First Arizona member businesses with badges and enhanced information
-- Build a scalable backend API with Hono.js on Cloudflare Workers for business data and analytics
 - Ensure minimal performance impact on Google Maps browsing experience
-- Provide admin dashboard for LFA staff to manage business listings
+- Handle frequent Google Maps DOM structure changes gracefully
 
-### Code Style and Structure
+### Mobile App Specific (packages/mobile/)
+- Create cross-platform mobile application for iOS and Android using React Native + Expo
+- Integrate Google Maps API for comprehensive business listings and location services
+- Enable AI-driven personalization and push notifications for user engagement
+- Connect 10,000+ consumers in Phoenix with 5,000+ local businesses through intuitive mobile experience
+
+## 📁 MONOREPO STRUCTURE
+
+### Working Directory Context
+- **Project Root**: `/Users/aiden/NodeJSprojs/localfirst`
+- **Extension Source**: `packages/extension/`
+- **Mobile App Source**: `packages/mobile/`
+- **Shared API Source**: `packages/api/`
+- **Shared Database**: `local.db` (SQLite at root level)
+
+### Architecture Overview
+```
+localfirst/
+├── packages/
+│   ├── extension/          # Chrome Extension (Manifest V3)
+│   ├── mobile/            # React Native + Expo Mobile App
+│   ├── api/               # Shared Hono.js API (both apps use this)
+│   └── dashboard/         # Admin Dashboard (Next.js) - future
+├── local.db              # Shared SQLite database
+├── guidance/              # Project documentation moved to packages
+└── .claude/              # Merged Claude configuration
+```
+
+## 🏗️ SHARED CODE STYLE AND ARCHITECTURE
+
+### Code Style (Universal)
 - Write concise, technical TypeScript/JavaScript code with accurate examples
 - Use functional and declarative programming patterns; avoid classes unless specifically needed
 - Favor iteration and modularization over code duplication
-- Use descriptive variable names with auxiliary verbs (e.g., `isChainBusiness`, `hasLFAMember`)
+- Use descriptive variable names with auxiliary verbs (e.g., `isChainBusiness`, `hasLFAMember`, `isLocalBusiness`, `hasUserLocation`)
 - Structure files with exported components, subcomponents, helpers, static content, and types
-- Use lowercase with dashes for directory names (e.g., `content-scripts`, `business-matcher`)
 
-### Chrome Extension Architecture
+### Shared Database Architecture (SQLite with Drizzle ORM)
+- **Schema Design**: Optimized for geospatial queries with proper indexing
+- **Prepared Statements**: Use Drizzle ORM for all database operations
+- **Migration Strategy**: Numbered migration files with rollback capability
+- **Performance**: Spatial indexes for location-based queries
+- **Data Sync**: Incremental updates from LFA directory API
+- **Unified Data Source**: Both extension and mobile app use the same database and API endpoints
+
+### Shared API Development (Hono.js)
+- **Stateless Design**: No server-side sessions, all state in requests/database
+- **Error Handling**: Consistent error response format with proper HTTP status codes
+- **Rate Limiting**: Implement appropriate middleware
+- **Caching Strategy**: Intelligent caching for frequently accessed data
+- **Performance**: Optimized queries with proper indexing
+- **Security**: Input validation with Zod schemas, SQL injection prevention
+
+## 📱 CHROME EXTENSION ARCHITECTURE (packages/extension/)
+
+### Technical Requirements
 - **Manifest V3 Compliance**: Use service workers, not background pages
 - **Content Script Strategy**: Mutation observers for Google Maps DOM changes
 - **Performance First**: Extension modifications must render in <100ms
@@ -25,174 +79,79 @@ You are an expert Chrome extension and web application developer proficient in T
 - **Storage Strategy**: Use chrome.storage.sync for user preferences, chrome.storage.local for cached data
 - **Permission Management**: Request minimal permissions (activeTab, storage, host_permissions for maps.google.com)
 
-### Business Logic Implementation
+### Directory Structure (Extension)
+- Use lowercase with dashes for directory names (e.g., `content-scripts`, `business-matcher`)
+- Structure: exported components, subcomponents, helpers, static content, and types
+
+### Business Logic Implementation (Extension)
 - **Binary Toggle System**: Simple LFA/Google mode switching instead of complex chain filtering
 - **Semantic Search Integration**: Real-time LFA member discovery with relevance scoring
 - **Unified Data Caching**: Use `window.LFA_cachedBusinesses` to share data between map pins and sidebar
 - **Bidirectional UI Interactions**: Hover effects linking sidebar listings to map pins and vice versa
-- **Geolocation**: Efficient radius-based business matching with SQLite spatial queries
+- **Geolocation**: Efficient radius-based business matching with shared API endpoints
 - **Analytics Tracking**: Anonymous usage events for optimization
 
-### Database Architecture (Turso/SQLite)
-- **Schema Design**: Optimized for geospatial queries with proper indexing
-- **Prepared Statements**: Use Drizzle ORM for all database operations
-- **Migration Strategy**: Numbered migration files with rollback capability
-- **Performance**: Spatial indexes for location-based queries
-- **Data Sync**: Incremental updates from LFA directory API
+### Key Extension Patterns
+- **Mimic Don't Invent**: Copy Google's exact HTML structure and CSS classes rather than creating custom UI
+- **Strategic Observer Management**: Disable mutation observers when LFA mode is active to prevent conflicts
+- **Complete Replacement**: Full sidebar content replacement works better than selective filtering
 
-### API Development (Hono.js + Cloudflare Workers)
-- **Edge Functions**: Leverage Cloudflare's global network for low latency
-- **Rate Limiting**: Implement via Cloudflare Workers middleware
-- **Caching Strategy**: Use Cloudflare KV for frequently accessed data
-- **Error Handling**: Consistent error response format with proper HTTP status codes
-- **Stateless Design**: No server-side sessions, all state in requests/database
+## 📱 MOBILE APP ARCHITECTURE (packages/mobile/)
 
-### Admin Dashboard (Next.js + Cloudflare Pages)
-- **Authentication**: Clerk for secure admin access
-- **UI Components**: shadcn/ui with Tailwind CSS
-- **Data Management**: Forms for business CRUD operations
-- **Analytics Display**: Charts showing extension usage and business discovery metrics
-- **Responsive Design**: Mobile-friendly admin interface
+### Technical Requirements
+- **Framework**: React Native with Expo and TypeScript
+- **Navigation**: React Navigation v6 for type-safe navigation
+- **State Management**: React Query for server state, Zustand for client state
+- **Maps Integration**: react-native-maps with Google Maps
+- **Push Notifications**: Expo Notifications
+- **Authentication**: Firebase Auth with Expo integration (if needed)
 
-### Testing Strategy
-- **Extension Testing**: Mock chrome.* APIs and Google Maps DOM
-- **Unit Tests**: Jest for business logic and utilities
-- **Integration Tests**: Test full business filtering workflow
-- **Performance Tests**: Measure Google Maps page load impact
-- **E2E Tests**: Playwright with extension loaded testing full user journey
+### Directory Structure (Mobile)
+- Use camelCase for file names and folders (e.g., `businessSearch`, `locationServices`)
+- Structure: exported components, hooks, utilities, types, and services
 
-### Security and Privacy
-- **Content Security Policy**: Properly configured for extension and API
-- **Data Minimization**: Only collect necessary analytics data
-- **Input Validation**: Zod schemas for all API inputs
-- **SQL Injection Prevention**: Use Drizzle ORM parameterized queries
-- **CORS Configuration**: Proper headers for extension-to-API communication
+### Business Logic Implementation (Mobile)
+- **Business Discovery**: Use shared API semantic search endpoints
+- **Map View**: Interactive maps with business markers and clustering
+- **Business Claiming**: Verification via location or email for business owners (future)
+- **Personalization**: AI-driven recommendations based on user preferences (future)
+- **Notifications**: Location-based alerts and promotions (future)
+- **Offline Support**: Cached business data for offline browsing
 
-### UI/UX Principles
-- **Non-Intrusive**: Seamless integration with Google Maps interface
-- **Clear Visual Hierarchy**: Obvious distinction between chain and local businesses
-- **Progressive Enhancement**: Extension works gracefully if API is unavailable
-- **Accessibility**: WCAG 2.1 AA compliant for all UI elements
-- **Performance**: No visual jank or delayed loading
+### Platform-Specific Considerations
+- **iOS**: Human Interface Guidelines compliance, App Store requirements
+- **Android**: Material Design principles, Play Store requirements
+- **Cross-Platform**: Shared business logic with platform-specific UI
+- **Native Modules**: Custom native code for platform-specific features
 
-### Performance Optimization
-- **Bundle Size**: Keep extension under 2MB total
-- **Memory Management**: Efficient DOM observation and cleanup
-- **API Efficiency**: Batch requests and implement caching
-- **Database Performance**: Optimized queries with proper indexing
-- **Network Optimization**: Minimize API calls through intelligent caching
+## 🔄 SHARED API USAGE PATTERN
 
-### Development Process
-1. **Database Schema**: Design data model for business and analytics tracking
-2. **API Development**: Build Hono.js endpoints with proper validation
-3. **Extension Core**: Implement business detection and filtering logic
-4. **UI Integration**: Add visual indicators and alternative suggestions
-5. **Admin Dashboard**: Build management interface for LFA staff
-6. **Testing & Optimization**: Performance testing and refinement
-7. **Deployment**: API to Cloudflare Workers, Dashboard to Cloudflare Pages
+Both applications use the same API endpoints:
 
-### Key Implementation Patterns
-
-**Binary Toggle Implementation:**
+### Primary Search Endpoint
 ```typescript
-// Simplified binary toggle system - LFA mode vs Google mode
-class MapsModifier {
-  toggleLFAMode() {
-    const wasEnabled = this.isEnabled;
-    const nowEnabled = !wasEnabled;
-    
-    this.isEnabled = nowEnabled;
-    this.updateStatusBar(); // Dynamic styling based on mode
-    
-    if (nowEnabled) {
-      // LFA mode: Replace Google results with LFA businesses
-      this.enableLFAMode();
-    } else {
-      // Google mode: Restore original Google content
-      this.enableGoogleMode();
-    }
-  }
-  
-  async enableLFAMode() {
-    // Hide Google content and show LFA alternatives
-    await uiInjector.replaceSidebarWithLFA();
-    await this.processCurrentPageLFAMode();
-    uiInjector.showFilterStatus('lfa', 0, 0);
-  }
-  
-  enableGoogleMode() {
-    // Clear all LFA modifications and restore Google content
-    uiInjector.clearAllInjectedElements();
-    uiInjector.restoreGoogleSidebar();
-    uiInjector.hideFilterStatus();
-    if (mapPinManager) mapPinManager.clearAllPins();
-  }
+// Both extension and mobile app use this endpoint
+GET /api/businesses/semantic-search
+Parameters:
+- query: string (search term)
+- lat: number (latitude)
+- lng: number (longitude) 
+- radius: number (search radius in miles)
+- limit: number (max results)
+
+Response:
+{
+  businesses: Business[],
+  total: number,
+  center: { lat: number, lng: number },
+  radius: number,
+  query: string
 }
 ```
 
-**Google Maps UI Replacement:**
-```javascript
-// Complete sidebar replacement mimicking Google's exact structure
-class UIInjector {
-  async replaceSidebarWithLFA() {
-    // Find Google's feed container - key injection point
-    const feedContainer = this.findGoogleFeedContainer();
-    if (!feedContainer) return;
-    
-    // Use cached LFA businesses to prevent timing issues
-    let lfaBusinesses = window.LFA_cachedBusinesses;
-    if (!lfaBusinesses) {
-      lfaBusinesses = await businessMatcher.findLFABusinesses(userQuery, currentLocation);
-      window.LFA_cachedBusinesses = lfaBusinesses; // Unified caching
-    }
-    
-    this.injectLFABusinessListings(feedContainer, lfaBusinesses, userQuery);
-  }
-  
-  createGoogleStyleBusinessListing(business, index) {
-    const businessItem = document.createElement('div');
-    // Use Google's exact CSS classes for seamless integration
-    businessItem.className = 'Nv2PK THOPZb CpccDe lfa-business-item';
-    businessItem.setAttribute('data-lfa-business', business.id); // Cross-component ID
-    
-    // Mimic Google's exact HTML structure
-    businessItem.innerHTML = `
-      <div class="bfdHYd Ppzolf OFBs3e">
-        <div class="lI9IFe">
-          <div class="y7PRA">
-            <div class="Lui3Od T7Wufd">
-              <div class="qBF1Pd fontHeadlineSmall">${business.name}</div>
-              <div class="W4Efsd">${business.category} · ${business.address}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // Bidirectional hover effects
-    businessItem.addEventListener('mouseenter', () => {
-      this.highlightMapPinForBusiness(business, true);
-      businessItem.style.backgroundColor = '#f8f9fa';
-    });
-    
-    return businessItem;
-  }
-  
-  // Strategic observer management - disable when LFA mode active
-  handleMutations(mutations) {
-    const existingLFASidebar = document.querySelector('[data-lfa-sidebar="true"]');
-    if (existingLFASidebar) {
-      console.log('LFA sidebar active, ignoring DOM mutations');
-      return; // Prevent Google/LFA conflicts
-    }
-    // Process mutations only when in Google mode
-  }
-}
-```
-
-**API Client:**
+### API Client Pattern (Both Apps)
 ```typescript
-// Efficient API communication with caching and error handling
+// Shared API communication pattern
 class LFAApiClient {
   private baseUrl: string;
   private cache = new Map<string, CacheEntry>();
@@ -202,106 +161,148 @@ class LFAApiClient {
   }
   
   async getBusinesses(params: BusinessQuery): Promise<Business[]> {
-    const cacheKey = this.getCacheKey('businesses', params);
-    const cached = this.cache.get(cacheKey);
-    
-    if (cached && !this.isCacheExpired(cached)) {
-      return cached.data;
-    }
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/api/businesses`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      this.cache.set(cacheKey, {
-        data: data.businesses,
-        timestamp: Date.now(),
-        ttl: 5 * 60 * 1000 // 5 minutes
-      });
-      
-      return data.businesses;
-    } catch (error) {
-      console.error('API request failed:', error);
-      // Return cached data if available, even if expired
-      return cached?.data || [];
-    }
+    // Implement caching, error handling, fallback logic
+    // Used by both extension and mobile app
   }
   
   async trackEvent(event: AnalyticsEvent): Promise<void> {
-    // Use fire-and-forget for analytics to avoid blocking UI
-    fetch(`${this.baseUrl}/api/analytics/events`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-      keepalive: true
-    }).catch(error => {
-      console.warn('Analytics tracking failed:', error);
-    });
+    // Fire-and-forget analytics for both platforms
   }
 }
 ```
 
-### Working Directory Context
-- **Project Root**: `/Users/sean/NodeJSprojs/localfirst`
-- **Extension Source**: `packages/extension/`
-- **API Source**: `packages/api/`
-- **Dashboard Source**: `packages/dashboard/`
-- **Database**: Turso (SQLite) with Drizzle ORM
+## 🧪 TESTING STRATEGY
 
-### Common Commands
+### Extension Testing
+- **Mock chrome.* APIs** and Google Maps DOM
+- **Unit Tests**: Jest for business logic and utilities
+- **Integration Tests**: Test full business filtering workflow
+- **Performance Tests**: Measure Google Maps page load impact
+- **E2E Tests**: Playwright with extension loaded testing full user journey
+
+### Mobile Testing
+- **Unit Tests**: Jest for business logic and utilities
+- **Component Tests**: React Native Testing Library
+- **Integration Tests**: Test shared API integration and data flow
+- **E2E Tests**: Detox for full user journey testing
+- **Performance Tests**: Measure app startup and navigation performance
+
+### Shared API Testing
+- **Database Tests**: Test with shared SQLite database
+- **Integration Tests**: Verify both extension and mobile app can use same endpoints
+- **Performance Tests**: Load testing for concurrent extension + mobile users
+
+## 🔒 SECURITY AND PRIVACY
+
+### Universal Security Principles
+- **Data Minimization**: Only collect necessary analytics data
+- **Input Validation**: Zod schemas for all API inputs
+- **SQL Injection Prevention**: Use Drizzle ORM parameterized queries
+- **Secure Communication**: TLS/SSL for all API communication
+
+### Extension Security
+- **Content Security Policy**: Properly configured for extension and API
+- **CORS Configuration**: Proper headers for extension-to-API communication
+- No eval() or innerHTML with untrusted content
+
+### Mobile Security  
+- **Data Encryption**: Secure storage for sensitive user data
+- **API Security**: Proper authentication and authorization
+- **Location Privacy**: User consent and privacy-first location handling
+- **Secure Storage**: Use Expo SecureStore for sensitive data
+
+## ⚡ PERFORMANCE REQUIREMENTS
+
+### Extension Performance
+- **Initial Load**: <50ms impact on Google Maps load time
+- **Business Processing**: <100ms to identify and modify business listings
+- **Memory Usage**: <50MB total extension memory footprint
+- **Network**: <1MB total daily data usage per active user
+
+### Mobile Performance
+- **App Launch**: <2s cold start on average devices
+- **Screen Navigation**: <200ms transition between screens
+- **Memory Usage**: <100MB total app memory footprint
+- **Battery Impact**: <5% battery drain per hour of active use
+- **Network**: <10MB total daily data usage per active user
+
+### Shared API Performance
+- **Response Time**: <200ms for business queries within 5-mile radius
+- **Throughput**: Handle 100+ concurrent requests
+- **Database**: <50ms for indexed geospatial queries
+- **Caching**: 90%+ cache hit rate for business data
+
+## 📋 COMMON COMMANDS
+
 ```bash
-# Development
-npm run dev                    # Start all development servers
-npm run dev:api               # Start Hono.js API locally
-npm run dev:dashboard         # Start Next.js dashboard
-npm run dev:extension         # Watch extension files
+# Shared Development
+npm run dev                    # Start shared API server
+npm run dev:all               # Start API + mobile web concurrently
+npm run build                 # Build all packages
 
-# Database
-npm run db:migrate            # Run Turso migrations
-npm run db:seed              # Seed with LFA business data
-npm run db:studio            # Open Drizzle Studio
+# API Development
+npm run dev:api               # Start Hono.js API locally
+npm run db:setup              # Set up shared database
+npm run db:seed               # Seed with LFA business data
+
+# Extension Development  
+npm run dev:extension         # Build extension for development
+npm run build:extension       # Build for Chrome Web Store
+
+# Mobile Development
+npm run dev:mobile            # Start Expo development server
+npm run dev:mobile:web        # Start web version
+npm run dev:mobile:ios        # Start iOS version
+npm run build:mobile          # Build mobile app
 
 # Testing
-npm run test                 # Run all tests
+npm run test                  # Run all tests
+npm run test:api             # Test shared API endpoints
 npm run test:extension       # Test extension code
-npm run test:api            # Test API endpoints
-
-# Deployment
-npm run build:extension      # Build for Chrome Web Store
-npm run deploy:api          # Deploy to Cloudflare Workers
-npm run deploy:dashboard    # Deploy to Cloudflare Pages
+npm run test:mobile          # Test mobile app
 ```
 
-### Critical Requirements
-- **Google Maps Compatibility**: Handle frequent DOM structure changes gracefully
-- **Performance**: No noticeable impact on Maps loading or interaction
-- **Reliability**: Extension must work even when API is unavailable
+## 🚨 CRITICAL REQUIREMENTS
+
+### Universal Requirements
+- **Performance**: No noticeable impact on user experience
+- **Reliability**: Applications must work even when API is temporarily unavailable  
 - **Privacy**: Minimal data collection, anonymous analytics only
-- **Scalability**: Design for thousands of concurrent users on free Cloudflare tier
+- **Scalability**: Design for thousands of concurrent users
+- **Shared Data**: Both applications use the same database and coordinate system
 
-### Key Architectural Lessons from MVP Development
+### Extension-Specific Requirements
+- **Google Maps Compatibility**: Handle frequent DOM structure changes gracefully
+- **Native Integration**: Seamless integration with Google Maps interface
+- **Progressive Enhancement**: Extension works gracefully if API is unavailable
 
-**Architecture Evolution**: Successfully pivoted from complex chain-detection filtering to simple binary toggle system (LFA/Google modes) - this approach is far more reliable and maintainable.
+### Mobile-Specific Requirements
+- **Cross-Platform**: Consistent experience across iOS and Android using Expo
+- **Touch-First**: Optimized for mobile touch interactions and on-the-go usage
+- **App Store Compliance**: Meet all platform requirements for publication
+- **Offline Support**: Core functionality available with cached data
 
-**Critical Success Patterns**:
-1. **Mimic Don't Invent**: Copy Google's exact HTML structure and CSS classes rather than creating custom UI
-2. **Unified Data Sources**: Use `window.LFA_cachedBusinesses` to share data between components and prevent timing issues
-3. **Strategic Observer Management**: Disable mutation observers when LFA mode is active to prevent conflicts
-4. **Bidirectional Interactions**: Link sidebar listings to map pins with consistent `data-*` attributes for business IDs
-5. **Complete Replacement**: Full sidebar content replacement works better than selective filtering
+## 🔧 PROJECT-SPECIFIC IMPLEMENTATION NOTES
 
-**Essential Debugging Approaches**:
-- Log business IDs from both pins and sidebar when interactions fail
-- Check element dimensions when content appears to inject but isn't visible  
-- Monitor for DOM redraws that destroy/recreate elements and break references
-- Verify event listener attachment timing - ensure elements exist when listeners added
+### For Extension Work (packages/extension/):
+- Focus on Google Maps DOM manipulation and binary toggle system
+- Use mutation observers strategically
+- Mimic Google's HTML structure exactly
+- Implement bidirectional hover effects between sidebar and map pins
+- Handle Google Maps UI changes gracefully
 
-Remember: Focus on seamless local business discovery. The technical architecture should make it effortless for users to find and support Local First Arizona member businesses during their natural search behavior.
+### For Mobile Work (packages/mobile/):
+- Focus on React Native/Expo patterns and cross-platform development
+- Use shared API endpoints (same as extension)
+- Implement proper mobile UX patterns
+- Handle platform differences between iOS and Android
+- Optimize for touch interfaces and mobile performance
+
+### For Shared API Work (packages/api/):
+- Focus on Hono.js patterns and SQLite optimization
+- Ensure responses work for both extension and mobile clients
+- Implement proper caching and performance optimization
+- Use Drizzle ORM for all database operations
+- Design for high concurrency from both platforms
+
+Remember: Both the Chrome extension and mobile app are part of the same ecosystem, sharing the same database, API, and business goals. The technical architecture should make it effortless for users to find and support Local First Arizona member businesses regardless of which platform they're using.

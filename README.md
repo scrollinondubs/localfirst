@@ -1,24 +1,27 @@
-# Local First Arizona Chrome Extension
+# Local First Arizona - Chrome Extension & Mobile App
 
-A Chrome extension and backend API system to promote locally-owned businesses over chain stores in Google Maps searches.
+A comprehensive platform consisting of a Chrome extension and mobile app to promote locally-owned businesses over chain stores in Google Maps searches.
 
 ## 📋 Project Overview
 
-This project consists of three main components:
+This monorepo contains both applications that share a unified backend:
 - **Chrome Extension**: Client-side extension for Google Maps manipulation
-- **Backend API**: Stateless web service for business data and analytics
-- **Admin Dashboard**: Management interface for LFA staff
+- **Mobile App**: React Native/Expo app for iOS and Android
+- **Shared Backend API**: Stateless web service for business data and analytics
+- **Admin Dashboard**: Management interface for LFA staff (coming soon)
 
 ## 🏗️ Architecture
 
 ```
-local-first-extension/
+localfirst/
 ├── packages/
 │   ├── extension/          # Chrome Extension
-│   ├── api/               # Backend API (Hono.js + SQLite)
-│   └── dashboard/         # Admin Dashboard (Next.js)
+│   ├── mobile/            # Mobile App (React Native/Expo) 
+│   ├── api/               # Shared Backend API (Hono.js + SQLite)
+│   └── dashboard/         # Admin Dashboard (Next.js) - coming soon
 ├── docs/                  # Documentation
-├── scripts/               # Build and deployment scripts
+├── guidance/              # Development guidelines and docs
+├── local.db              # Shared SQLite database
 └── temp/                  # Temporary data files
 ```
 
@@ -31,23 +34,48 @@ The database has been successfully set up with:
 - **32 major chain businesses** in the blocklist
 - **Full geographic indexing** for Arizona locations
 
-### Starting the API Server
+### Starting the Shared API Server
 
-To test the Chrome extension locally, start the Node.js API server:
+Both the Chrome extension and mobile app use the same API server:
 
 ```bash
 # From the project root
 cd packages/api
-node temp-server.js
+npm run dev
 
-# Or using the full path
-WORKING_DIR=/Users/sean/NodeJSprojs/localfirst/packages/api node /Users/sean/NodeJSprojs/localfirst/packages/api/temp-server.js
+# Or run the dev server directly
+node dev-server.js
 ```
 
 The API server will run on **http://localhost:8787** and provide:
+- `/api/businesses/semantic-search` - Intelligent business search with location filtering
 - `/api/businesses/nearby` - Search for nearby LFA businesses
 - `/api/chains` - Get chain business patterns for filtering
-- `/api/analytics/events` - Track extension usage events
+- `/api/analytics/events` - Track usage events
+
+### Chrome Extension Development
+
+```bash
+# Build the extension
+cd packages/extension
+npm run build
+
+# Load the extension in Chrome from packages/extension/dist/
+```
+
+### Mobile App Development
+
+```bash
+# Start the mobile app
+cd packages/mobile
+npm start
+
+# Start web version
+npm run web
+
+# Start iOS (requires Xcode)
+npm run ios
+```
 
 ### Available Commands
 
