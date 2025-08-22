@@ -1,0 +1,53 @@
+name = "localfirst-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Production workers.dev subdomain
+[env.production]
+workers_dev = true
+
+# Environment-specific configuration
+[env.development.vars]
+NODE_ENV = "development"
+CORS_ORIGIN = "http://localhost:3000"
+
+[env.production.vars]
+NODE_ENV = "production"
+
+# D1 Database configuration (will be populated with actual database ID)
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "localfirst-prod"
+database_id = "D1_DATABASE_ID_PLACEHOLDER_PRODUCTION"
+migrations_dir = "migrations"
+
+[[env.development.d1_databases]]
+binding = "DB"  
+database_name = "localfirst-dev"
+database_id = "D1_DATABASE_ID_PLACEHOLDER_DEVELOPMENT"
+migrations_dir = "migrations"
+
+# Custom domain routing
+[[env.production.routes]]
+pattern = "api.localfirst.site/*"
+zone_name = "localfirst.site"
+
+# Workers AI (if needed for future features)
+# [ai]
+# binding = "AI"
+
+# KV storage (if needed for caching)
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "PLACEHOLDER_KV_ID"
+# preview_id = "PLACEHOLDER_KV_PREVIEW_ID"
+
+# Rate limiting and security
+# [limits]
+# cpu_ms = 10000  # Requires paid plan
+
+# Build configuration
+[build]
+command = ""
+watch_dir = "src"

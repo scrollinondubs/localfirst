@@ -1,0 +1,57 @@
+# Cloudflare Pages configuration for LocalFirst Arizona Mobile App
+# https://developers.cloudflare.com/pages/platform/build-configuration/
+
+[build]
+command = "npm run build:web"
+destination = "web-build"
+
+[build.environment]
+NODE_ENV = "production"
+REACT_APP_API_URL = "https://localfirst-api.PLACEHOLDER-ACCOUNT.workers.dev"
+REACT_APP_API_BASE_URL = "https://localfirst-api.PLACEHOLDER-ACCOUNT.workers.dev/api"
+REACT_APP_ENV = "production"
+REACT_APP_NAME = "LocalFirst Arizona"
+REACT_APP_VERSION = "1.0.0"
+REACT_APP_ENABLE_ANALYTICS = "true"
+REACT_APP_ENABLE_LOGGING = "false"
+
+[preview]
+command = "npm run build:web"
+destination = "web-build"
+
+[preview.environment]
+NODE_ENV = "production"
+REACT_APP_API_URL = "https://localfirst-api.PLACEHOLDER-ACCOUNT.workers.dev"
+REACT_APP_API_BASE_URL = "https://localfirst-api.PLACEHOLDER-ACCOUNT.workers.dev/api"
+REACT_APP_ENV = "preview"
+REACT_APP_NAME = "LocalFirst Arizona (Preview)"
+REACT_APP_VERSION = "1.0.0-preview"
+REACT_APP_ENABLE_ANALYTICS = "false"
+REACT_APP_ENABLE_LOGGING = "true"
+
+# Custom headers for security and performance
+[[headers]]
+for = "/*"
+[headers.values]
+X-Frame-Options = "DENY"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Permissions-Policy = "camera=(), microphone=(self), geolocation=(self)"
+
+# Cache static assets for 1 year
+[[headers]]
+for = "/static/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache service worker for 1 hour
+[[headers]]
+for = "/sw.js"
+[headers.values]
+Cache-Control = "public, max-age=3600"
+
+# Redirects (if needed for custom domain)
+# [[redirects]]
+# from = "https://localfirstaz.com/*"
+# to = "https://app.localfirstaz.com/:splat"
+# status = 301

@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import {
@@ -28,6 +27,7 @@ auth.use('/reset-password-request', rateLimitAuth(3, 60 * 60 * 1000)); // 3 atte
 // User Registration
 auth.post('/register', async (c) => {
   try {
+    const db = c.get('db');
     const body = await c.req.json();
     
     // Validate input
@@ -96,6 +96,7 @@ auth.post('/register', async (c) => {
 // User Login
 auth.post('/login', async (c) => {
   try {
+    const db = c.get('db');
     const body = await c.req.json();
     
     // Validate input
@@ -209,6 +210,7 @@ auth.get('/profile', requireAuth, async (c) => {
 // Request Password Reset
 auth.post('/reset-password-request', async (c) => {
   try {
+    const db = c.get('db');
     const body = await c.req.json();
     
     // Validate input
@@ -271,6 +273,7 @@ auth.post('/reset-password-request', async (c) => {
 // Reset Password
 auth.post('/reset-password', async (c) => {
   try {
+    const db = c.get('db');
     const body = await c.req.json();
     
     // Validate input
@@ -325,6 +328,7 @@ auth.post('/reset-password', async (c) => {
 // Update Profile (authenticated)
 auth.put('/profile', requireAuth, async (c) => {
   try {
+    const db = c.get('db');
     const userId = c.get('userId');
     const body = await c.req.json();
     

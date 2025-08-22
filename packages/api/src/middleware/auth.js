@@ -1,11 +1,11 @@
 import { verifyToken, extractTokenFromHeader, checkRateLimit } from '../utils/auth.js';
-import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 // Auth middleware to verify JWT token
 export const requireAuth = async (c, next) => {
   try {
+    const db = c.get('db');
     const authHeader = c.req.header('Authorization');
     const token = extractTokenFromHeader(authHeader);
     
@@ -39,6 +39,7 @@ export const requireAuth = async (c, next) => {
 // Optional auth middleware (doesn't fail if no token)
 export const optionalAuth = async (c, next) => {
   try {
+    const db = c.get('db');
     const authHeader = c.req.header('Authorization');
     const token = extractTokenFromHeader(authHeader);
     
