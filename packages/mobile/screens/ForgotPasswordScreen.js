@@ -14,13 +14,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
 
-export default function LoginScreen({ navigation }) {
+export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const { login } = useAuth();
+  const [resetSent, setResetSent] = useState(false);
+  const { requestPasswordReset } = useAuth();
 
   // Email validation
   const validateEmail = (email) => {
@@ -30,34 +30,11 @@ export default function LoginScreen({ navigation }) {
     return '';
   };
 
-  // Password validation
-  const validatePassword = (password) => {
-    if (!password) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
-    return '';
-  };
-
   // Update email with validation
   const handleEmailChange = (value) => {
     setEmail(value);
-    // Show validation immediately after user starts typing
-    if (value.length > 0) {
-      setTouched(prev => ({ ...prev, email: true }));
+    if (touched.email) {
       setErrors(prev => ({ ...prev, email: validateEmail(value) }));
-    } else {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
-
-  // Update password with validation
-  const handlePasswordChange = (value) => {
-    setPassword(value);
-    // Show validation immediately after user starts typing
-    if (value.length > 0) {
-      setTouched(prev => ({ ...prev, password: true }));
-      setErrors(prev => ({ ...prev, password: validatePassword(value) }));
-    } else {
-      setErrors(prev => ({ ...prev, password: '' }));
     }
   };
 
@@ -66,45 +43,39 @@ export default function LoginScreen({ navigation }) {
     setTouched(prev => ({ ...prev, [field]: true }));
     if (field === 'email') {
       setErrors(prev => ({ ...prev, email: validateEmail(email) }));
-    } else if (field === 'password') {
-      setErrors(prev => ({ ...prev, password: validatePassword(password) }));
     }
   };
 
-  const handleLogin = async () => {
-    // Validate all fields
+  const handleSendReset = async () => {
+    // Validate email
     const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
     
-    setErrors({
-      email: emailError,
-      password: passwordError
-    });
-    
-    setTouched({ email: true, password: true });
+    setErrors({ email: emailError });
+    setTouched({ email: true });
 
-    if (emailError || passwordError) {
+    if (emailError) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const result = await login(email.toLowerCase().trim(), password);
-      if (!result.success) {
-        // Show specific validation errors if available
-        if (result.details && Array.isArray(result.details)) {
-          const fieldErrors = {};
-          result.details.forEach(detail => {
-            fieldErrors[detail.field] = detail.message;
-          });
-          setErrors(prev => ({ ...prev, ...fieldErrors }));
-        } else {
-          Alert.alert('Login Failed', result.error);
+      const result = await requestPasswordReset(email.toLowerCase().trim());
+      if (result.success) {
+        setResetSent(true);
+        // In development, show the reset token
+        if (result.resetToken) {
+          Alert.alert(
+            'Reset Token (Dev Mode)', 
+            `Your reset token is: ${result.resetToken}`,
+            [
+              { text: 'Copy Token', onPress: () => console.log('Reset token:', result.resetToken) },
+              { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { email }) }
+            ]
+          );
         }
       } else {
-        // Navigate back to profile screen on successful login
-        navigation.navigate('ProfileMain');
+        Alert.alert('Error', result.error);
       }
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -112,6 +83,57 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(false);
   };
+
+  if (resetSent) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Check Your Email</Text>
+            <Text style={styles.subtitle}>
+              We've sent password reset instructions to {email}
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <Text style={styles.instructions}>
+              Follow the instructions in the email to reset your password. 
+              If you don't see the email, check your spam folder.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate('ResetPassword', { email })}
+            >
+              <Text style={styles.buttonText}>Enter Reset Code</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => {
+                setResetSent(false);
+                setEmail('');
+                setErrors({});
+                setTouched({});
+              }}
+            >
+              <Text style={styles.linkText}>Try Different Email</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.linkText}>Back to Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,8 +148,10 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Local First Arizona</Text>
-            <Text style={styles.subtitle}>Welcome Back</Text>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>
+              Enter your email address and we'll send you a link to reset your password
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -152,48 +176,28 @@ export default function LoginScreen({ navigation }) {
               )}
             </View>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.password ? styles.inputError : null,
-                  touched.password && !errors.password ? styles.inputSuccess : null
-                ]}
-                placeholder="Password"
-                value={password}
-                onChangeText={handlePasswordChange}
-                onBlur={() => handleBlur('password')}
-                secureTextEntry
-                autoCapitalize="none"
-                editable={!loading}
-              />
-              {errors.password && touched.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
-            </View>
-
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleLogin}
+              onPress={handleSendReset}
               disabled={loading}
             >
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={[styles.buttonText, styles.loadingText]}>Signing In...</Text>
+                  <Text style={[styles.buttonText, styles.loadingText]}>Sending...</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>Send Reset Instructions</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.linkButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
+              onPress={() => navigation.navigate('Login')}
               disabled={loading}
             >
               <Text style={[styles.linkText, loading && styles.linkTextDisabled]}>
-                Forgot Password?
+                Back to Sign In
               </Text>
             </TouchableOpacity>
 
@@ -241,8 +245,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#718096',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   form: {
     width: '100%',
@@ -272,6 +278,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     marginLeft: 4,
+  },
+  instructions: {
+    fontSize: 16,
+    color: '#4a5568',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
   },
   button: {
     backgroundColor: '#3182ce',
