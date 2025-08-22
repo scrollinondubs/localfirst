@@ -1,0 +1,455 @@
+{
+  "config": {
+    "configFile": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/playwright.config.js",
+    "rootDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "line",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 5,
+    "webServer": {
+      "command": "npm run web:dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "debug-dashboard.spec.js",
+      "file": "debug-dashboard.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Real-time Debugging Dashboard",
+          "file": "debug-dashboard.spec.js",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Continuous app monitoring and debugging",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30768,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests/debug-dashboard.spec.js",
+                            "column": 18,
+                            "line": 152
+                          },
+                          "message": "Error: page.waitForTimeout: Test timeout of 30000ms exceeded.\n\n\u001b[0m \u001b[90m 150 |\u001b[39m\n \u001b[90m 151 |\u001b[39m       \u001b[90m// Wait for next check\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 152 |\u001b[39m       \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForTimeout(checkInterval)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 153 |\u001b[39m     }\n \u001b[90m 154 |\u001b[39m\n \u001b[90m 155 |\u001b[39m     \u001b[90m// Final summary\u001b[39m\u001b[0m\n\u001b[2m    at /Users/aiden/NodeJSprojs/localfirst-app/mobile-app/tests/debug-dashboard.spec.js:152:18\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🚀 Starting Real-time Debugging Dashboard...\n"
+                        },
+                        {
+                          "text": "📍 App URL: http://localhost:3000\n"
+                        },
+                        {
+                          "text": "⏰ Starting continuous monitoring...\n\n"
+                        },
+                        {
+                          "text": "🔄 Loading application...\n"
+                        },
+                        {
+                          "text": "✅ [9:00:25 PM] Success: 200 http://localhost:3000/\n"
+                        },
+                        {
+                          "text": "✅ [9:00:27 PM] Success: 200 http://localhost:3000/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\n"
+                        },
+                        {
+                          "text": "ℹ️  [9:00:27 PM] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold\n"
+                        },
+                        {
+                          "text": "📝 [9:00:27 PM] Voice service: Web platform detected, using mock implementation\n"
+                        },
+                        {
+                          "text": "📝 [9:00:27 PM] Running application \"main\" with appParams:\n {rootTag: #root, hydrate: undefined} \nDevelopment-level warnings: ON.\nPerformance optimizations: OFF.\n"
+                        },
+                        {
+                          "text": "✅ DOM loaded\n"
+                        },
+                        {
+                          "text": "✅ Network idle\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:28 PM] Monitoring Check 1/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:33 PM] Monitoring Check 2/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:38 PM] Monitoring Check 3/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:43 PM] Monitoring Check 4/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:48 PM] Monitoring Check 5/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        },
+                        {
+                          "text": "\n📊 [9:00:53 PM] Monitoring Check 6/12\n"
+                        },
+                        {
+                          "text": "   📝 Total Logs: 6\n"
+                        },
+                        {
+                          "text": "   🚨 Errors: 0\n"
+                        },
+                        {
+                          "text": "   ⚠️  Warnings: 0\n"
+                        },
+                        {
+                          "text": "   🌐 Network Issues: 0\n"
+                        },
+                        {
+                          "text": "   🏠 App Title Visible: ✅\n"
+                        },
+                        {
+                          "text": "   🔍 Search Input Visible: ❌\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-20T20:00:24.461Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--6247b-pp-monitoring-and-debugging-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--6247b-pp-monitoring-and-debugging-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--6247b-pp-monitoring-and-debugging-chromium/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "e0f92aeb4e17c3eb3b19-328e31215c2ecebda205",
+              "file": "debug-dashboard.spec.js",
+              "line": 4,
+              "column": 7
+            },
+            {
+              "title": "Feature-specific debugging",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "timedOut",
+                      "duration": 30810,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🎯 Starting Feature-specific Debugging...\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Testing Feature: Voice Search\n"
+                        },
+                        {
+                          "text": "================================\n"
+                        },
+                        {
+                          "text": "   ❌ Feature test failed: locator.isEnabled: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has([name=\"mic\"])').first()\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "\n🔍 Testing Feature: Text Search\n"
+                        },
+                        {
+                          "text": "================================\n"
+                        },
+                        {
+                          "text": "   ❌ Feature test failed: locator.isVisible: Target page, context or browser has been closed\n"
+                        },
+                        {
+                          "text": "\n🔍 Testing Feature: Location Services\n"
+                        },
+                        {
+                          "text": "================================\n"
+                        },
+                        {
+                          "text": "   ❌ Feature test failed: locator.isVisible: Target page, context or browser has been closed\n"
+                        },
+                        {
+                          "text": "\n🔍 Testing Feature: Navigation\n"
+                        },
+                        {
+                          "text": "================================\n"
+                        },
+                        {
+                          "text": "   ❌ Feature test failed: locator.isVisible: Target page, context or browser has been closed\n"
+                        },
+                        {
+                          "text": "\n✅ Feature-specific debugging complete\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-20T20:00:24.458Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--5388b--Feature-specific-debugging-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--5388b--Feature-specific-debugging-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/aiden/NodeJSprojs/localfirst-app/mobile-app/test-results/debug-dashboard-Real-time--5388b--Feature-specific-debugging-chromium/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "e0f92aeb4e17c3eb3b19-8e7280b73958bbf83195",
+              "file": "debug-dashboard.spec.js",
+              "line": 201,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-08-20T20:00:20.221Z",
+    "duration": 36106.163,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}
