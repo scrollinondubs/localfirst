@@ -1,11 +1,20 @@
-import bcrypt from 'bcrypt';
+import { scrypt } from '@noble/hashes/scrypt';
+import { randomBytes } from '@noble/hashes/utils';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
 // JWT Secret - In production, this should be in environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'local-first-arizona-dev-secret-key';
 const JWT_EXPIRES_IN = '24h';
-const SALT_ROUNDS = 10;
+
+// Scrypt parameters (equivalent security to bcrypt with 10 rounds)
+const SCRYPT_PARAMS = {
+  N: 16384, // CPU/memory cost parameter (2^14)
+  r: 8,     // Block size parameter  
+  p: 1,     // Parallelization parameter
+  dkLen: 64 // Derived key length (bytes)
+};
+const SALT_LENGTH = 32; // Salt length in bytes
 
 // Validation schemas
 export const registerSchema = z.object({
@@ -28,20 +37,55 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters')
 });
 
-// Password utilities
+// Helper functions for encoding/decoding
+const bytesToHex = (bytes) => Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+const hexToBytes = (hex) => new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+const textToBytes = (text) => new TextEncoder().encode(text);
+
+// Password utilities using Scrypt
 export const hashPassword = async (password) => {
   try {
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    return hashedPassword;
+    // Generate a random salt
+    const salt = randomBytes(SALT_LENGTH);
+    
+    // Hash password with scrypt
+    const hashedBytes = scrypt(textToBytes(password), salt, SCRYPT_PARAMS);
+    
+    // Combine salt and hash for storage (salt:hash format)
+    const saltHex = bytesToHex(salt);
+    const hashHex = bytesToHex(hashedBytes);
+    
+    return `${saltHex}:${hashHex}`;
   } catch (error) {
     throw new Error('Password hashing failed');
   }
 };
 
-export const verifyPassword = async (password, hashedPassword) => {
+export const verifyPassword = async (password, storedHash) => {
   try {
-    const isValid = await bcrypt.compare(password, hashedPassword);
-    return isValid;
+    // Parse stored hash to extract salt and hash
+    const [saltHex, hashHex] = storedHash.split(':');
+    if (!saltHex || !hashHex) {
+      throw new Error('Invalid hash format');
+    }
+    
+    const salt = hexToBytes(saltHex);
+    const expectedHash = hexToBytes(hashHex);
+    
+    // Hash the provided password with the same salt
+    const providedHashBytes = scrypt(textToBytes(password), salt, SCRYPT_PARAMS);
+    
+    // Constant-time comparison to prevent timing attacks
+    if (providedHashBytes.length !== expectedHash.length) {
+      return false;
+    }
+    
+    let result = 0;
+    for (let i = 0; i < providedHashBytes.length; i++) {
+      result |= providedHashBytes[i] ^ expectedHash[i];
+    }
+    
+    return result === 0;
   } catch (error) {
     throw new Error('Password verification failed');
   }

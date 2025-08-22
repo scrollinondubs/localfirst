@@ -3,10 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext({});
 
-// API configuration - will be replaced with Cloudflare Workers URL in production
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-api.workers.dev/api' 
-  : 'http://localhost:8787/api';
+// API configuration from environment variables
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://localfirst-api-production.localfirst.workers.dev/api'
+    : 'http://localhost:8787/api');
 
 export const useAuth = () => {
   return useContext(AuthContext);

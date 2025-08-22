@@ -1,12 +1,19 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { createDatabase } from './db/index.js';
 import businessesRoutes from './routes/businesses.js';
 import chainsRoutes from './routes/chains.js';
 import analyticsRoutes from './routes/analytics.js';
 import authRoutes from './routes/auth.js';
 
 const app = new Hono();
+
+// Database middleware - attach db instance to context
+app.use('*', async (c, next) => {
+  c.set('db', createDatabase(c.env));
+  await next();
+});
 
 // Middleware
 app.use('*', logger());
@@ -17,6 +24,8 @@ app.use(
       'http://localhost:3000',  // Mobile app dev server
       'chrome-extension://*',   // Chrome extension
       /^https:\/\/.*\.pages\.dev$/, // Cloudflare Pages (production mobile app)
+      'https://mobile.localfirst.site', // Production mobile app custom domain
+      'https://d353d22c.localfirst-mobile.pages.dev', // Current Pages deployment
     ],
     credentials: true,
   })

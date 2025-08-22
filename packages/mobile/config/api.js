@@ -1,12 +1,10 @@
 // API configuration for mobile app
 export const API_CONFIG = {
-  // Use the shared API server (extension's Hono API)
-  BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://your-production-api.com' 
-    : 'http://localhost:8787', // Default Hono dev server port
-  
-  // Fallback to mobile dev server if shared API not available
-  FALLBACK_URL: 'http://localhost:3001',
+  // Use environment variable or fallback based on NODE_ENV
+  BASE_URL: process.env.REACT_APP_API_URL || 
+    (process.env.NODE_ENV === 'production' 
+      ? 'https://localfirst-api-production.localfirst.workers.dev'
+      : 'http://localhost:8787'),
   
   ENDPOINTS: {
     BUSINESSES_SEARCH: '/api/businesses/semantic-search',
@@ -21,38 +19,19 @@ export const buildApiUrl = (endpoint, baseUrl = API_CONFIG.BASE_URL) => {
   return `${baseUrl}${endpoint}`;
 };
 
-// Helper function to make API requests with fallback
+// Helper function to make API requests
 export const apiRequest = async (endpoint, options = {}) => {
   const { method = 'GET', ...fetchOptions } = options;
   
-  // Try main API first
   try {
     const response = await fetch(buildApiUrl(endpoint), {
       method,
       ...fetchOptions,
     });
     
-    if (response.ok) {
-      return response;
-    }
-    
-    // If response not ok, try fallback
-    throw new Error(`API request failed with status ${response.status}`);
-    
+    return response;
   } catch (error) {
-    console.log(`Main API failed (${API_CONFIG.BASE_URL}), trying fallback...`);
-    
-    // Try fallback API
-    try {
-      const response = await fetch(buildApiUrl(endpoint, API_CONFIG.FALLBACK_URL), {
-        method,
-        ...fetchOptions,
-      });
-      
-      return response;
-    } catch (fallbackError) {
-      console.error('Both APIs failed:', { main: error.message, fallback: fallbackError.message });
-      throw new Error('API unavailable');
-    }
+    console.error('API request failed:', error);
+    throw new Error('API unavailable - please check your internet connection');
   }
 };
