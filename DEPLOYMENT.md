@@ -9,9 +9,19 @@ This guide covers deploying the LocalFirst Arizona application stack to Cloudfla
    ```bash
    npm install -g wrangler@latest
    ```
-3. **Authentication**: Login to Cloudflare
+3. **Authentication**: Set up Cloudflare credentials
    ```bash
+   # Option 1: Interactive login (browser-based)
    wrangler login
+   
+   # Option 2: API Token (recommended for CI/non-interactive)
+   # Create API token at: https://dash.cloudflare.com/profile/api-tokens
+   # Store in .env.local:
+   # CLOUDFLARE_API_TOKEN="your_api_token"
+   # CLOUDFLARE_ACCOUNT_ID="your_account_id"
+   
+   # Load credentials from .env.local
+   source .env.local && export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
    ```
 
 ## 🏗️ Architecture Overview

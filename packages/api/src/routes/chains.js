@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.js';
 import { chainBusinesses } from '../db/schema.js';
 import { gte } from 'drizzle-orm';
 
@@ -12,6 +11,8 @@ const router = new Hono();
  */
 router.get('/', async (c) => {
   try {
+    const db = c.get('db');
+    
     // Get all chain patterns with high confidence scores
     const chains = await db.select({
       id: chainBusinesses.id,

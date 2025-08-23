@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.js';
 import { businesses } from '../db/schema.js';
 import { and, gte, lte, eq, sql } from 'drizzle-orm';
 
@@ -31,6 +30,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
  */
 router.get('/nearby', async (c) => {
   try {
+    const db = c.get('db');
     const lat = parseFloat(c.req.query('lat'));
     const lng = parseFloat(c.req.query('lng'));
     const radius = parseFloat(c.req.query('radius') || '5');
@@ -105,6 +105,7 @@ router.get('/nearby', async (c) => {
  */
 router.get('/semantic-search', async (c) => {
   try {
+    const db = c.get('db');
     const query = c.req.query('query');
     const lat = parseFloat(c.req.query('lat'));
     const lng = parseFloat(c.req.query('lng'));
@@ -128,13 +129,29 @@ router.get('/semantic-search', async (c) => {
       return c.json({ error: 'Radius must be between 0 and 50 miles' }, 400);
     }
 
-    console.log(`Semantic search: "${query}" near ${lat},${lng} within ${radius} miles`);
+    console.log(`[SEARCH] Semantic search: "${query}" near ${lat},${lng} within ${radius} miles`);
+    console.log(`[SEARCH] Database connection type:`, typeof db);
 
     // Calculate bounding box for geographic filtering
     const latDelta = radius / 69; // ~69 miles per degree latitude
     const lngDelta = radius / (69 * Math.cos(lat * Math.PI / 180));
+    
+    console.log(`[SEARCH] Search bounds: lat [${lat - latDelta}, ${lat + latDelta}], lng [${lng - lngDelta}, ${lng + lngDelta}]`);
 
     // Get all LFA businesses within geographic bounds
+    console.log(`[SEARCH] Starting database query...`);
+    
+    // First, let's check if we have any businesses at all
+    const totalBusinessesCount = await db.select({
+      count: businesses.id
+    }).from(businesses);
+    console.log(`[SEARCH] Total businesses in database:`, totalBusinessesCount.length);
+    
+    const lfaBusinessesCount = await db.select({
+      count: businesses.id
+    }).from(businesses).where(eq(businesses.lfaMember, true));
+    console.log(`[SEARCH] Total LFA businesses in database:`, lfaBusinessesCount.length);
+    
     const nearbyBusinesses = await db.select({
       id: businesses.id,
       name: businesses.name,
@@ -146,6 +163,7 @@ router.get('/semantic-search', async (c) => {
       category: businesses.category,
       lfaMember: businesses.lfaMember,
       verified: businesses.verified,
+      status: businesses.status,
     })
     .from(businesses)
     .where(
@@ -159,8 +177,13 @@ router.get('/semantic-search', async (c) => {
       )
     );
 
+    console.log(`[SEARCH] Raw query results: ${nearbyBusinesses.length} businesses found`);
+    console.log(`[SEARCH] Sample businesses:`, nearbyBusinesses.slice(0, 3).map(b => ({ name: b.name, category: b.category, lat: b.latitude, lng: b.longitude })));
+
     // Apply semantic relevance scoring
     const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
+    console.log(`[SEARCH] Search terms extracted:`, searchTerms);
+    
     const scoredBusinesses = nearbyBusinesses
       .map(business => {
         const relevanceScore = calculateRelevanceScore(business.name, business.category, searchTerms, query);
@@ -178,7 +201,14 @@ router.get('/semantic-search', async (c) => {
       .sort((a, b) => b.combinedScore - a.combinedScore) // Sort by combined score descending
       .slice(0, limit);
 
-    console.log(`Found ${nearbyBusinesses.length} nearby businesses, ${scoredBusinesses.length} relevant matches`);
+    console.log(`[SEARCH] Scoring complete: ${nearbyBusinesses.length} nearby businesses, ${scoredBusinesses.length} relevant matches`);
+    console.log(`[SEARCH] Top 3 scored results:`, scoredBusinesses.slice(0, 3).map(b => ({ 
+      name: b.name, 
+      category: b.category, 
+      relevanceScore: b.relevanceScore, 
+      distance: b.distance,
+      combinedScore: b.combinedScore 
+    })));
 
     return c.json({
       businesses: scoredBusinesses,
@@ -268,6 +298,7 @@ function calculateRelevanceScore(businessName, businessCategory, searchTerms, fu
  */
 router.get('/:id', async (c) => {
   try {
+    const db = c.get('db');
     const id = c.req.param('id');
     
     const business = await db.select()
