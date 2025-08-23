@@ -851,7 +851,7 @@ export default function SearchScreen() {
 
       {/* Voice Search Button - Fixed at Bottom */}
       {voiceButtonMinimized ? (
-        // Minimized Voice Button (Small corner button)
+        // Minimized Voice Button (Just the button, no container background)
         <TouchableOpacity
           style={[
             styles.voiceButtonMinimized,
@@ -868,7 +868,7 @@ export default function SearchScreen() {
           />
         </TouchableOpacity>
       ) : (
-        // Full Voice Button Section
+        // Full Voice Button Section (opaque container)
         <View style={styles.voiceSection}>
           <TouchableOpacity
             style={[
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     marginBottom: 120, // Space for fixed voice button
   },
   resultsContainerMinimized: {
-    marginBottom: 80, // Less space when voice button is minimized
+    marginBottom: 0, // No space reserved when voice button is minimized
   },
   loadingContainer: {
     flex: 1,
@@ -1063,7 +1063,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff', // Opaque white background
     alignItems: 'center',
     paddingTop: 16,
     paddingBottom: 32,
@@ -1074,6 +1074,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  voiceSectionMinimized: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent', // Transparent background so search results show through
+    alignItems: 'flex-end',
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingRight: 0,
+    borderTopWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   voiceButton: {
     backgroundColor: '#3182ce',
@@ -1215,7 +1229,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#3182ce',
+    backgroundColor: '#3182ce', // Fully opaque blue button
     borderRadius: 25,
     width: 50,
     height: 50,
@@ -1229,11 +1243,11 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   voiceButtonMinimizedActive: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#dc2626', // Fully opaque red button
     transform: [{ scale: 1.1 }],
   },
   voiceButtonMinimizedDisabled: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#e2e8f0', // Fully opaque gray button
     elevation: 0,
     shadowOpacity: 0,
   },
