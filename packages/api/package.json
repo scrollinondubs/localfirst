@@ -28,6 +28,7 @@
     "db:import": "node scripts/import-businesses.js",
     "db:chains": "node scripts/seed-chains.js",
     "db:verify": "node scripts/verify-database.js",
+    "db:fix-coordinates": "node scripts/fix-coordinates.js",
     "db:reset": "rm -f local.db && npm run db:setup && npm run db:seed",
     "test": "vitest"
   },

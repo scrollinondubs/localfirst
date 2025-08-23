@@ -259,9 +259,27 @@ const WebMapView = ({
               onMarkerPress(markerData.businessData);
             }
             
-            if (markerData.description) {
+            if (markerData.description || markerData.businessData) {
+              const businessData = markerData.businessData;
+              const address = businessData?.address || markerData.title;
+              const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+              
               const infoWindow = new window.google.maps.InfoWindow({
-                content: `<div><strong>${markerData.title}</strong><br/>${markerData.description}</div>`,
+                content: `
+                  <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <strong style="font-size: 14px; color: #1a1a1a;">${markerData.title}</strong>
+                    <br/>
+                    <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${markerData.description || ''}</span>
+                    ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
+                    <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+                       style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                              background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                              font-size: 12px; font-weight: 500; transition: background 0.2s;">
+                      <span style="margin-right: 4px;">🗺️</span>
+                      Open in Google Maps
+                    </a>
+                  </div>
+                `,
               });
               infoWindow.open(googleMapRef.current, marker);
             }
@@ -358,14 +376,14 @@ const WebMapView = ({
     // Add click handlers
     zoomInButton.addEventListener('click', () => {
       const currentZoom = googleMapRef.current.getZoom();
-      googleMapRef.current.setZoom(currentZoom - 1);
-      console.log('Zoom in clicked, new zoom:', currentZoom - 1);
+      googleMapRef.current.setZoom(currentZoom + 1);
+      console.log('Zoom in clicked, new zoom:', currentZoom + 1);
     });
 
     zoomOutButton.addEventListener('click', () => {
       const currentZoom = googleMapRef.current.getZoom();
-      googleMapRef.current.setZoom(currentZoom + 1);
-      console.log('Zoom out clicked, new zoom:', currentZoom + 1);
+      googleMapRef.current.setZoom(currentZoom - 1);
+      console.log('Zoom out clicked, new zoom:', currentZoom - 1);
     });
 
     // Add hover effects
