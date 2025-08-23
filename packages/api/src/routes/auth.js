@@ -21,7 +21,8 @@ const auth = new Hono();
 // Apply middleware to all auth routes
 auth.use('*', authLogger);
 auth.use('/login', rateLimitAuth(5, 15 * 60 * 1000)); // 5 attempts per 15 minutes
-auth.use('/register', rateLimitAuth(3, 60 * 60 * 1000)); // 3 attempts per hour
+// Temporarily disable rate limiting for register during development
+// auth.use('/register', rateLimitAuth(3, 60 * 60 * 1000)); // 3 attempts per hour
 auth.use('/reset-password-request', rateLimitAuth(3, 60 * 60 * 1000)); // 3 attempts per hour
 
 // User Registration
