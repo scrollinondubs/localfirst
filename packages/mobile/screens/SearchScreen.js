@@ -105,6 +105,7 @@ export default function SearchScreen() {
   const [voiceError, setVoiceError] = useState(null);
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
   
   // Location-related state
   const [userLocation, setUserLocation] = useState(null);
@@ -158,6 +159,13 @@ export default function SearchScreen() {
       };
     }, [])
   );
+
+  // Auto-minimize voice button when search results are shown
+  useEffect(() => {
+    if (searchResults.length > 0 && !isRecording) {
+      setVoiceButtonMinimized(true);
+    }
+  }, [searchResults.length, isRecording]);
 
   const initializeLocation = async () => {
     try {
@@ -620,6 +628,10 @@ export default function SearchScreen() {
     }
   };
 
+  const toggleVoiceButtonMinimized = () => {
+    setVoiceButtonMinimized(!voiceButtonMinimized);
+  };
+
   const handleBusinessSelect = (business) => {
     setSelectedBusiness(business);
     // Center map on selected business
@@ -817,7 +829,10 @@ export default function SearchScreen() {
       )}
 
       {/* Search Results */}
-      <View style={styles.resultsContainer}>
+      <View style={[
+        styles.resultsContainer,
+        voiceButtonMinimized && styles.resultsContainerMinimized
+      ]}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#3182ce" />
@@ -835,32 +850,52 @@ export default function SearchScreen() {
       </View>
 
       {/* Voice Search Button - Fixed at Bottom */}
-      <View style={styles.voiceSection}>
+      {voiceButtonMinimized ? (
+        // Minimized Voice Button (Small corner button)
         <TouchableOpacity
           style={[
-            styles.voiceButton,
-            isRecording && styles.voiceButtonActive,
-            !isVoiceAvailable && styles.voiceButtonDisabled
+            styles.voiceButtonMinimized,
+            isRecording && styles.voiceButtonMinimizedActive,
+            !isVoiceAvailable && styles.voiceButtonMinimizedDisabled
           ]}
-          onPress={isRecording ? stopVoiceSearch : startVoiceSearch}
+          onPress={isRecording ? stopVoiceSearch : toggleVoiceButtonMinimized}
           disabled={!isVoiceAvailable}
         >
           <Ionicons 
             name={isRecording ? "stop" : "mic"} 
-            size={32} 
+            size={20} 
             color={!isVoiceAvailable ? "#a0aec0" : "#ffffff"} 
           />
         </TouchableOpacity>
-        
-        <Text style={[
-          styles.voiceButtonText,
-          !isVoiceAvailable && styles.voiceButtonTextDisabled
-        ]}>
-          {!isVoiceAvailable ? 'Voice search unavailable' :
-           isRecording ? 'Tap to stop recording' : 
-           'Push to record'}
-        </Text>
-      </View>
+      ) : (
+        // Full Voice Button Section
+        <View style={styles.voiceSection}>
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              isRecording && styles.voiceButtonActive,
+              !isVoiceAvailable && styles.voiceButtonDisabled
+            ]}
+            onPress={isRecording ? stopVoiceSearch : startVoiceSearch}
+            disabled={!isVoiceAvailable}
+          >
+            <Ionicons 
+              name={isRecording ? "stop" : "mic"} 
+              size={32} 
+              color={!isVoiceAvailable ? "#a0aec0" : "#ffffff"} 
+            />
+          </TouchableOpacity>
+          
+          <Text style={[
+            styles.voiceButtonText,
+            !isVoiceAvailable && styles.voiceButtonTextDisabled
+          ]}>
+            {!isVoiceAvailable ? 'Voice search unavailable' :
+             isRecording ? 'Tap to stop recording' : 
+             'Push to record'}
+          </Text>
+        </View>
+      )}
 
       {/* Location Permission Modal */}
       <LocationPermissionModal
@@ -1006,6 +1041,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     marginBottom: 120, // Space for fixed voice button
+  },
+  resultsContainerMinimized: {
+    marginBottom: 80, // Less space when voice button is minimized
   },
   loadingContainer: {
     flex: 1,
@@ -1172,5 +1210,31 @@ const styles = StyleSheet.create({
     color: '#4a5568',
     marginLeft: 8,
     flex: 1,
+  },
+  voiceButtonMinimized: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#3182ce',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 1000,
+  },
+  voiceButtonMinimizedActive: {
+    backgroundColor: '#dc2626',
+    transform: [{ scale: 1.1 }],
+  },
+  voiceButtonMinimizedDisabled: {
+    backgroundColor: '#e2e8f0',
+    elevation: 0,
+    shadowOpacity: 0,
   },
 });
