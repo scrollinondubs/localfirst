@@ -46,6 +46,17 @@ const ARIZONA_CITIES = {
   'oro valley': { lat: 32.3909, lng: -110.9665, city: 'Oro Valley' }
 };
 
+// Format distance from kilometers to miles with 1 decimal place
+function formatDistance(distanceKm) {
+  if (!distanceKm) return 'Distance unknown';
+  
+  // Convert km to miles (1 km = 0.621371 miles)
+  const distanceMiles = distanceKm * 0.621371;
+  
+  // Round to 1 decimal place
+  return `${distanceMiles.toFixed(1)} mi`;
+}
+
 // Parse location from search query (e.g., "pizza in tempe", "coffee in scottsdale")
 function parseLocationFromQuery(query) {
   const lowerQuery = query.toLowerCase();
@@ -643,7 +654,7 @@ export default function SearchScreen() {
           <Text style={[styles.category, item.lfa_member && styles.lfaMember]}>
             {item.lfa_member ? 'LFA Member • ' : ''}{item.category}
           </Text>
-          <Text style={styles.distance}>{item.distance}</Text>
+          <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
         </View>
         
         {/* Expanded details when selected */}
@@ -691,7 +702,7 @@ export default function SearchScreen() {
           showsScale={true}
           onMarkerPress={handleMapMarkerPress}
           selectedBusiness={selectedBusiness}
-          autoFitMarkers={!selectedBusiness}
+          autoFitMarkers={false}
           markers={[
             // User location marker (temporarily disabled for debugging)
             // Business markers
@@ -701,7 +712,7 @@ export default function SearchScreen() {
                 longitude: business.longitude,
               },
               title: business.name,
-              description: `${business.category} • ${business.distance || 'Distance unknown'}`,
+              description: `${business.category} • ${formatDistance(business.distance)}`,
               pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
               businessData: business
             }))
@@ -860,8 +871,6 @@ export default function SearchScreen() {
         currentLocation={userLocation}
       />
 
-      {/* Debug Information Panel */}
-      <DebugInfo />
     </SafeAreaView>
   );
 }
