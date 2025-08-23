@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.js';
 import { analyticsEvents, userSessions } from '../db/schema.js';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
@@ -13,6 +12,7 @@ const router = new Hono();
  */
 router.post('/events', async (c) => {
   try {
+    const db = c.get('db');
     const body = await c.req.json();
     const { extension_id, events } = body;
 
@@ -42,7 +42,7 @@ router.post('/events', async (c) => {
     }
 
     // Update or create user session
-    await updateUserSession(extension_id, events);
+    await updateUserSession(extension_id, events, db);
 
     return c.json({
       success: true,
@@ -58,7 +58,7 @@ router.post('/events', async (c) => {
 /**
  * Update user session data based on events
  */
-async function updateUserSession(extensionId, events) {
+async function updateUserSession(extensionId, events, db) {
   try {
     // Check if session exists
     const existingSessions = await db.select()
@@ -104,6 +104,7 @@ async function updateUserSession(extensionId, events) {
  */
 router.get('/summary', async (c) => {
   try {
+    const db = c.get('db');
     // Get total events count
     const totalEvents = await db.select({
       count: db.count()

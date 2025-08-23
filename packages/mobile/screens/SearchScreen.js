@@ -19,7 +19,68 @@ import locationService from '../services/LocationService';
 import voiceService from '../services/VoiceService';
 import LocationPermissionModal from '../components/LocationPermissionModal';
 import ManualLocationInput from '../components/ManualLocationInput';
+import DebugInfo from '../components/DebugInfo';
 import { apiRequest, API_CONFIG } from '../config/api';
+
+// Arizona cities and their coordinates for intelligent search parsing
+const ARIZONA_CITIES = {
+  'phoenix': { lat: 33.4484, lng: -112.0740, city: 'Phoenix' },
+  'tucson': { lat: 32.2226, lng: -110.9747, city: 'Tucson' },
+  'mesa': { lat: 33.4152, lng: -111.8315, city: 'Mesa' },
+  'chandler': { lat: 33.3062, lng: -111.8413, city: 'Chandler' },
+  'glendale': { lat: 33.5387, lng: -112.1860, city: 'Glendale' },
+  'scottsdale': { lat: 33.4942, lng: -111.9261, city: 'Scottsdale' },
+  'gilbert': { lat: 33.3528, lng: -111.7890, city: 'Gilbert' },
+  'tempe': { lat: 33.4255, lng: -111.9400, city: 'Tempe' },
+  'peoria': { lat: 33.5806, lng: -112.2374, city: 'Peoria' },
+  'surprise': { lat: 33.6292, lng: -112.3679, city: 'Surprise' },
+  'yuma': { lat: 32.6927, lng: -114.6277, city: 'Yuma' },
+  'avondale': { lat: 33.4356, lng: -112.3496, city: 'Avondale' },
+  'flagstaff': { lat: 35.1983, lng: -111.6513, city: 'Flagstaff' },
+  'goodyear': { lat: 33.4355, lng: -112.3576, city: 'Goodyear' },
+  'buckeye': { lat: 33.3703, lng: -112.5838, city: 'Buckeye' },
+  'lake havasu city': { lat: 34.4839, lng: -114.3227, city: 'Lake Havasu City' },
+  'casa grande': { lat: 32.8795, lng: -111.7574, city: 'Casa Grande' },
+  'sierra vista': { lat: 31.5455, lng: -110.3037, city: 'Sierra Vista' },
+  'maricopa': { lat: 33.0581, lng: -112.0476, city: 'Maricopa' },
+  'oro valley': { lat: 32.3909, lng: -110.9665, city: 'Oro Valley' }
+};
+
+// Parse location from search query (e.g., "pizza in tempe", "coffee in scottsdale")
+function parseLocationFromQuery(query) {
+  const lowerQuery = query.toLowerCase();
+  
+  // Look for "in [city]" patterns
+  const inPattern = /\bin\s+([a-z\s]+?)(?:\s|$)/i;
+  const inMatch = lowerQuery.match(inPattern);
+  
+  if (inMatch) {
+    const cityName = inMatch[1].trim();
+    if (ARIZONA_CITIES[cityName]) {
+      return ARIZONA_CITIES[cityName];
+    }
+    
+    // Try multi-word cities
+    const words = cityName.split(' ');
+    if (words.length > 1) {
+      const multiWordCity = words.join(' ');
+      if (ARIZONA_CITIES[multiWordCity]) {
+        return ARIZONA_CITIES[multiWordCity];
+      }
+    }
+  }
+  
+  // Look for direct city mentions at the end
+  const words = lowerQuery.split(' ');
+  for (let i = words.length - 1; i >= 0; i--) {
+    const cityCandidate = words.slice(i).join(' ');
+    if (ARIZONA_CITIES[cityCandidate]) {
+      return ARIZONA_CITIES[cityCandidate];
+    }
+  }
+  
+  return null;
+}
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +92,7 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   const [voiceError, setVoiceError] = useState(null);
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   
   // Location-related state
   const [userLocation, setUserLocation] = useState(null);
@@ -105,13 +167,14 @@ export default function SearchScreen() {
         setLocationStatus('denied');
         await loadCachedLocation();
       } else {
-        // Permission not determined, show modal if first time
+        // Permission not determined, show modal if first time (but skip for web)
         setLocationStatus('unavailable');
-        if (!hasAskedBefore) {
+        if (!hasAskedBefore && Platform.OS !== 'web') {
           setTimeout(() => {
             setShowPermissionModal(true);
           }, 1000); // Show after a short delay
         } else {
+          // For web or if asked before, skip modal and load cached location
           await loadCachedLocation();
         }
       }
@@ -346,12 +409,16 @@ export default function SearchScreen() {
   };
 
   const performSearch = async (query) => {
+    console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
+    
     if (!query.trim()) {
+      console.log(`[MOBILE-SEARCH] Empty query, clearing results`);
       setSearchResults([]);
       return;
     }
 
     setLoading(true);
+    setSearchError(null); // Clear any previous errors
     
     try {
       // Build query parameters for semantic search API
@@ -361,34 +428,126 @@ export default function SearchScreen() {
         radius: 25 // Limit to 25 miles from user location
       });
 
-      // Add location parameters if available
-      if (userLocation && userLocation.coords) {
-        params.append('lat', userLocation.coords.latitude);
-        params.append('lng', userLocation.coords.longitude); // Note: 'lng' not 'lon' for semantic search API
+      // Intelligent location detection from search query
+      let searchLat = 33.4484; // Phoenix, AZ latitude (default)
+      let searchLng = -112.0740; // Phoenix, AZ longitude (default)
+      let locationSource = 'fallback (Phoenix, AZ)';
+      
+      // Parse query for city names or location indicators
+      const cityCoords = parseLocationFromQuery(query);
+      if (cityCoords) {
+        searchLat = cityCoords.lat;
+        searchLng = cityCoords.lng;
+        locationSource = `parsed city (${cityCoords.city})`;
+        console.log(`[MOBILE-SEARCH] Using parsed city coordinates: ${searchLat}, ${searchLng} for ${cityCoords.city}`);
+      } else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
+        // User wants results near their current location
+        if (userLocation && userLocation.coords) {
+          const lat = userLocation.coords.latitude;
+          const lng = userLocation.coords.longitude;
+          
+          // Arizona rough bounds: lat 31-37, lng -115 to -109
+          if (lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+            searchLat = lat;
+            searchLng = lng;
+            locationSource = `user location (near me)`;
+            console.log(`[MOBILE-SEARCH] Using user location for "near me": ${lat}, ${lng}`);
+          } else {
+            console.log(`[MOBILE-SEARCH] User location outside Arizona bounds (${lat}, ${lng}), using Phoenix fallback`);
+          }
+        } else {
+          console.log(`[MOBILE-SEARCH] "Near me" requested but no user location available, using Phoenix fallback`);
+        }
+      } else {
+        console.log(`[MOBILE-SEARCH] No city detected in query "${query}", using Phoenix fallback`);
       }
+      
+      console.log(`[MOBILE-SEARCH] Search coordinates: ${searchLat}, ${searchLng} (${locationSource})`);
+      params.append('lat', searchLat);
+      params.append('lng', searchLng);
 
-      // Use the shared semantic search API endpoint
-      const response = await apiRequest(`${API_CONFIG.ENDPOINTS.BUSINESSES_SEARCH}?${params}`);
-      const data = await response.json();
+      const searchEndpoint = `${API_CONFIG.ENDPOINTS.BUSINESSES_SEARCH}?${params}`;
+      console.log(`[MOBILE-SEARCH] API Endpoint: ${searchEndpoint}`);
+      console.log(`[MOBILE-SEARCH] Full URL will be: ${API_CONFIG.BASE_URL}${searchEndpoint}`);
+      console.log(`[MOBILE-SEARCH] API Config:`, API_CONFIG);
+
+      // Use the shared semantic search API endpoint - pass only the endpoint path, not full URL
+      console.log(`[MOBILE-SEARCH] About to make API request to endpoint: ${searchEndpoint}`);
+      
+      const response = await apiRequest(searchEndpoint);
+      console.log(`[MOBILE-SEARCH] API Response received:`, {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        type: response.type,
+        url: response.url,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
       if (!response.ok) {
-        throw new Error(data.error || 'Search failed');
+        console.error(`[MOBILE-SEARCH] Response not OK:`, {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
+        let errorData;
+        try {
+          errorData = await response.text(); // Use text() first in case JSON parsing fails
+          console.error(`[MOBILE-SEARCH] Error response body:`, errorData);
+          
+          // Try to parse as JSON
+          try {
+            errorData = JSON.parse(errorData);
+          } catch (jsonError) {
+            console.warn(`[MOBILE-SEARCH] Response body is not JSON:`, jsonError.message);
+          }
+        } catch (readError) {
+          console.error(`[MOBILE-SEARCH] Failed to read error response:`, readError);
+        }
+        
+        throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log(`[MOBILE-SEARCH] About to parse response as JSON`);
+      let data;
+      try {
+        data = await response.json();
+        console.log(`[MOBILE-SEARCH] Successfully parsed JSON response:`, {
+          dataType: typeof data,
+          isArray: Array.isArray(data),
+          keys: typeof data === 'object' ? Object.keys(data) : 'N/A',
+          sampleData: data
+        });
+      } catch (jsonError) {
+        console.error(`[MOBILE-SEARCH] Failed to parse JSON response:`, jsonError);
+        const responseText = await response.text();
+        console.error(`[MOBILE-SEARCH] Raw response text:`, responseText);
+        throw new Error('Invalid JSON response from server');
       }
 
       // Handle response format from semantic search API
       if (data && data.businesses && Array.isArray(data.businesses)) {
+        console.log(`[MOBILE-SEARCH] Found ${data.businesses.length} businesses in data.businesses`);
+        console.log(`[MOBILE-SEARCH] Setting searchResults with businesses:`, data.businesses.slice(0, 3));
         setSearchResults(data.businesses);
       } else if (data && Array.isArray(data)) {
+        console.log(`[MOBILE-SEARCH] Found ${data.length} businesses in data array`);
+        console.log(`[MOBILE-SEARCH] Setting searchResults with direct array:`, data.slice(0, 3));
         setSearchResults(data);
       } else if (data.results && Array.isArray(data.results)) {
+        console.log(`[MOBILE-SEARCH] Found ${data.results.length} businesses in data.results`);
+        console.log(`[MOBILE-SEARCH] Setting searchResults with results:`, data.results.slice(0, 3));
         setSearchResults(data.results);
       } else {
+        console.error(`[MOBILE-SEARCH] No businesses found in response, data structure:`, Object.keys(data));
+        console.error(`[MOBILE-SEARCH] Full response data:`, data);
         setSearchResults([]);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('[MOBILE-SEARCH] Search error:', error);
       setSearchResults([]);
-      // You could show an error message to the user here if needed
+      setSearchError(error.message || 'Failed to search businesses');
     } finally {
       setLoading(false);
     }
@@ -512,6 +671,12 @@ export default function SearchScreen() {
     );
   };
 
+  // Debug logging for render
+  console.log(`[MOBILE-SEARCH] Rendering with searchResults.length: ${searchResults.length}`);
+  if (searchResults.length > 0) {
+    console.log(`[MOBILE-SEARCH] First search result:`, searchResults[0]);
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Map Container */}
@@ -607,6 +772,14 @@ export default function SearchScreen() {
         </View>
       )}
 
+      {/* Search Error Display */}
+      {searchError && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning-outline" size={16} color="#ef4444" />
+          <Text style={styles.errorText}>{searchError}</Text>
+        </View>
+      )}
+
       {/* Voice Error Display */}
       {voiceError && (
         <View style={styles.voiceErrorContainer}>
@@ -686,6 +859,9 @@ export default function SearchScreen() {
         onClose={() => setShowManualLocationInput(false)}
         currentLocation={userLocation}
       />
+
+      {/* Debug Information Panel */}
+      <DebugInfo />
     </SafeAreaView>
   );
 }

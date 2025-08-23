@@ -25,7 +25,9 @@ app.use(
       'chrome-extension://*',   // Chrome extension
       /^https:\/\/.*\.pages\.dev$/, // Cloudflare Pages (production mobile app)
       'https://mobile.localfirst.site', // Production mobile app custom domain
-      'https://d353d22c.localfirst-mobile.pages.dev', // Current Pages deployment
+      'https://d353d22c.localfirst-mobile.pages.dev', // Old Pages deployment
+      'https://3643cea4.localfirst-mobile.pages.dev', // Previous Pages deployment
+      'https://44c80b94.localfirst-mobile.pages.dev', // Current Pages deployment
     ],
     credentials: true,
   })
