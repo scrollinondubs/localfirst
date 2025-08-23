@@ -12,6 +12,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import SearchScreen from '../screens/SearchScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createStackNavigator();
@@ -30,6 +31,9 @@ function ProfileStack() {
 }
 
 function MainTabs() {
+  const { isAuthenticated } = useAuth();
+  const showFavoritesTab = isAuthenticated();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -76,11 +80,13 @@ function MainTabs() {
         component={SearchScreen}
         options={{ title: 'LFA' }}
       />
-      <Tab.Screen 
-        name="Favorites" 
-        component={SearchScreen} // Placeholder for now
-        options={{ title: 'Favorites' }}
-      />
+      {showFavoritesTab && (
+        <Tab.Screen 
+          name="Favorites" 
+          component={FavoritesScreen}
+          options={{ title: 'Favorites' }}
+        />
+      )}
       <Tab.Screen 
         name="Profile" 
         component={ProfileStack}

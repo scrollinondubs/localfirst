@@ -31,7 +31,11 @@ export const API_CONFIG = {
     BUSINESSES_SEARCH: '/api/businesses/semantic-search',
     BUSINESSES_NEARBY: '/api/businesses/nearby',
     AUTH_LOGIN: '/api/auth/login',
-    AUTH_REGISTER: '/api/auth/register'
+    AUTH_REGISTER: '/api/auth/register',
+    FAVORITES_LIST: '/api/favorites',
+    FAVORITES_ADD: '/api/favorites',
+    FAVORITES_REMOVE: '/api/favorites',
+    FAVORITES_STATUS: '/api/favorites/status'
   }
 };
 

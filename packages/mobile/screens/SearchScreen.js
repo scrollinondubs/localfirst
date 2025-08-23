@@ -20,6 +20,7 @@ import voiceService from '../services/VoiceService';
 import LocationPermissionModal from '../components/LocationPermissionModal';
 import ManualLocationInput from '../components/ManualLocationInput';
 import DebugInfo from '../components/DebugInfo';
+import FavoriteButton from '../components/FavoriteButton';
 import { apiRequest, API_CONFIG } from '../config/api';
 
 // Arizona cities and their coordinates for intelligent search parsing
@@ -642,13 +643,19 @@ export default function SearchScreen() {
         style={[styles.resultCard, isSelected && styles.selectedResultCard]}
         onPress={() => handleBusinessSelect(item)}
       >
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultName}>{item.name}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#fbbf24" />
-            <Text style={styles.rating}>{item.rating}</Text>
+        <View style={styles.cardContentContainer}>
+          {/* Favorite Button positioned in upper-right corner */}
+          <View style={styles.favoriteButtonContainer}>
+            <FavoriteButton
+              businessId={item.id}
+              size={20}
+              testID={`favorite-button-${item.id}`}
+            />
           </View>
-        </View>
+          
+          <View style={styles.resultHeader}>
+            <Text style={styles.resultName}>{item.name}</Text>
+          </View>
         <Text style={styles.resultAddress}>{item.address}</Text>
         <View style={styles.resultFooter}>
           <Text style={[styles.category, item.lfa_member && styles.lfaMember]}>
@@ -678,6 +685,7 @@ export default function SearchScreen() {
             </View>
           </View>
         )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -1073,6 +1081,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  cardContentContainer: {
+    position: 'relative',
+  },
+  favoriteButtonContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 1,
+    elevation: 3,
   },
   resultHeader: {
     flexDirection: 'row',

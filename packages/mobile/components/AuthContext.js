@@ -1,13 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBaseUrl } from '../config/api';
 
 const AuthContext = createContext({});
-
-// API configuration from environment variables
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://localfirst-api-production.localfirst.workers.dev/api'
-    : 'http://localhost:8787/api');
 
 export const useAuth = () => {
   return useContext(AuthContext);
@@ -34,7 +29,8 @@ export const AuthProvider = ({ children }) => {
       requestOptions.body = JSON.stringify(body);
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, requestOptions);
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api${endpoint}`, requestOptions);
     return response;
   };
 

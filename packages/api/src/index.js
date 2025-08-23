@@ -6,6 +6,7 @@ import businessesRoutes from './routes/businesses.js';
 import chainsRoutes from './routes/chains.js';
 import analyticsRoutes from './routes/analytics.js';
 import authRoutes from './routes/auth.js';
+import favoritesRoutes from './routes/favorites.js';
 
 const app = new Hono();
 
@@ -21,7 +22,8 @@ app.use(
   '*',
   cors({
     origin: [
-      'http://localhost:3000',  // Mobile app dev server
+      'http://localhost:3000',  // React dev server
+      'http://localhost:8081',  // Expo web dev server
       'chrome-extension://*',   // Chrome extension
       /^https:\/\/.*\.pages\.dev$/, // Cloudflare Pages (production mobile app)
       'https://mobile.localfirst.site', // Production mobile app custom domain
@@ -49,6 +51,7 @@ app.route('/api/auth', authRoutes);
 app.route('/api/businesses', businessesRoutes);
 app.route('/api/chains', chainsRoutes);
 app.route('/api/analytics', analyticsRoutes);
+app.route('/api/favorites', favoritesRoutes);
 
 // 404 handler
 app.notFound((c) => {

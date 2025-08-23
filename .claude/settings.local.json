@@ -135,7 +135,17 @@
       "Bash(DATABASE_URL=\"file:../../local.db\" node temp-server.js)",
       "Bash(DATABASE_URL=\"file:../../local.db\" node dev-server.js)",
       "Bash(NODE_ENV=production npm run build:production)",
-      "Bash(export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID)"
+      "Bash(export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID)",
+      "Bash(export:*)",
+      "Bash(time curl:*)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" node dev-server.js)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile npm run dev)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile npm start)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api ls -la)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile npm run)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst npm run dev:api)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst npm run dev:mobile:web)",
+      "mcp__playwright__browser_install"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, unique } from 'drizzle-orm/sqlite-core';
 
 // Businesses table
 export const businesses = sqliteTable('businesses', {
@@ -85,8 +85,20 @@ export const consumerProfiles = sqliteTable('consumer_profiles', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   preferences: text('preferences'), // JSON for category preferences
   savedSearches: text('saved_searches'), // JSON array of search queries
-  favoriteBusinesses: text('favorite_businesses'), // JSON array of business IDs
+  favoriteBusinesses: text('favorite_businesses'), // JSON array of business IDs - DEPRECATED: Use userFavorites table
   locationPreferences: text('location_preferences'), // JSON for preferred areas/regions
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
+
+// User favorites table (replaces JSON approach in consumer_profiles for better performance)
+export const userFavorites = sqliteTable('user_favorites', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+}, (table) => ({
+  // Unique constraint to prevent duplicate favorites
+  uniqueUserBusiness: unique().on(table.userId, table.businessId)
+}));
