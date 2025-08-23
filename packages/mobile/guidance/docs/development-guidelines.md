@@ -19,11 +19,12 @@ Cross-platform mobile application for Local First Arizona using React Native + E
 
 ### Backend (API)
 - **Platform:** Cloudflare Workers
-- **Language:** TypeScript
+- **Framework:** Hono (lightweight web framework)
+- **Language:** JavaScript
 - **Runtime:** Cloudflare Workers Runtime
-- **Database:** Firebase Firestore
-- **Authentication:** Firebase Admin SDK
-- **External APIs:** Google Maps API, Google Places API
+- **Database:** Cloudflare D1 (SQLite at the edge)
+- **Authentication:** JWT with bcrypt for password hashing
+- **External APIs:** Semantic search with location-based queries
 
 ### Development Tools
 - **Version Control:** GitHub (with MCP integration)
@@ -85,68 +86,54 @@ Cross-platform mobile application for Local First Arizona using React Native + E
 
 ## Database Design
 
-### Firebase Firestore Collections
+### Cloudflare D1 (SQLite) Schema
 
-#### Users Collection
-```typescript
-interface User {
-  id: string;                    // Firebase Auth UID
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  preferences: {
-    categories: string[];        // Preferred business categories
-    radius: number;             // Search radius in miles
-    notifications: boolean;
-  };
-  location?: {
-    latitude: number;
-    longitude: number;
-    city: string;
-    state: string;
-  };
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
+#### Users Table
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  display_name TEXT,
+  profile_image_url TEXT,
+  preferences_json TEXT, -- JSON object with user preferences
+  location_latitude REAL,
+  location_longitude REAL,
+  location_city TEXT,
+  location_state TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### Businesses Collection
-```typescript
-interface Business {
-  id: string;                    // Auto-generated
-  googlePlaceId?: string;        // Google Places API ID
-  name: string;
-  description?: string;
-  category: string;
-  subcategories: string[];
-  contact: {
-    phone?: string;
-    email?: string;
-    website?: string;
-  };
-  location: {
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    latitude: number;
-    longitude: number;
-  };
-  hours?: {
-    [day: string]: {           // monday, tuesday, etc.
-      open: string;            // "09:00"
-      close: string;           // "17:00"
-      closed: boolean;
-    };
-  };
-  images?: string[];           // URLs to business images
-  claimed: boolean;
-  claimedBy?: string;          // User ID who claimed it
-  verificationStatus: 'pending' | 'verified' | 'rejected';
-  localFirstMember: boolean;   // LFA member status
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
+#### Businesses Table
+```sql
+CREATE TABLE businesses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  google_place_id TEXT,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL,
+  address TEXT NOT NULL,
+  city TEXT NOT NULL,
+  state TEXT NOT NULL,
+  zip_code TEXT,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  phone TEXT,
+  website TEXT,
+  hours_json TEXT,           -- JSON object with operating hours
+  rating REAL DEFAULT 0,
+  review_count INTEGER DEFAULT 0,
+  price_level INTEGER,       -- 1-4 scale
+  lfa_member BOOLEAN DEFAULT FALSE,
+  claimed BOOLEAN DEFAULT FALSE,
+  claimed_by INTEGER,        -- Foreign key to users.id
+  verification_status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (claimed_by) REFERENCES users (id)
+);
 ```
 
 #### Business Claims Collection
@@ -189,60 +176,58 @@ interface City {
 ## API Design
 
 ### Base URL
-- **Development:** `https://lfa-api-dev.workers.dev`
-- **Production:** `https://lfa-api.workers.dev`
+- **Development:** `http://localhost:8787` (local dev server)
+- **Production:** `https://localfirst-api-production.localfirst.workers.dev`
 
 ### Authentication
-All protected endpoints require Firebase ID token in Authorization header:
+All protected endpoints require JWT token in Authorization header:
 ```
-Authorization: Bearer <firebase-id-token>
+Authorization: Bearer <jwt-token>
 ```
+
+JWT tokens are obtained through login/register endpoints and contain user ID and permissions.
 
 ### API Routes
 
 #### Authentication Routes
-```typescript
-POST /auth/verify          // Verify Firebase token
-GET  /auth/profile         // Get current user profile
-PUT  /auth/profile         // Update user profile
+```javascript
+POST /api/auth/login       // Login with email/password
+POST /api/auth/register    // Register new user account
+GET  /api/auth/profile     // Get current user profile
+PUT  /api/auth/profile     // Update user profile
 ```
 
 #### Business Routes
-```typescript
-GET    /businesses               // Search businesses (with query params)
-GET    /businesses/:id           // Get specific business
-POST   /businesses               // Create new business (admin only)
-PUT    /businesses/:id           // Update business (owner/admin only)
-POST   /businesses/:id/claim     // Claim a business
-GET    /businesses/claims        // Get user's claims
-PUT    /businesses/claims/:id    // Update claim status (admin only)
+```javascript
+GET  /api/businesses/semantic-search  // Semantic search with location (primary endpoint)
+GET  /api/businesses/nearby           // Location-based business discovery
+GET  /api/businesses/:id              // Get specific business details
+POST /api/businesses                  // Create new business (admin only)
+PUT  /api/businesses/:id              // Update business (owner/admin only)
 ```
 
-#### Location Routes
-```typescript
-GET  /locations/search      // Search Google Places
-GET  /locations/nearby      // Get nearby businesses
+#### Chain Routes
+```javascript
+GET  /api/chains           // Get business chain information
+POST /api/chains           // Create new chain (admin only)
 ```
 
-#### Admin Routes
-```typescript
-GET  /admin/claims          // Get all pending claims
-GET  /admin/businesses      // Get all businesses (admin view)
-GET  /admin/users           // Get users (admin only)
+#### Analytics Routes
+```javascript
+GET  /api/analytics        // Get usage analytics (admin only)
+POST /api/analytics/event  // Track user events
 ```
 
 ### Query Parameters for Business Search
 ```typescript
 interface BusinessSearchParams {
-  latitude: number;
-  longitude: number;
-  radius?: number;           // Default: 10 miles
-  category?: string;
-  subcategory?: string;
-  query?: string;           // Text search
-  localFirstOnly?: boolean; // Filter to LFA members only
-  limit?: number;           // Default: 50
-  offset?: number;          // For pagination
+  query: string;            // Semantic search query (required)
+  lat: number;              // Latitude (required)  
+  lng: number;              // Longitude (required)
+  radius?: number;          // Search radius in miles (default: 25)
+  limit?: number;           // Number of results (default: 50)
+  category?: string;        // Filter by business category
+  lfa_member?: boolean;     // Filter to LFA members only
 }
 ```
 
@@ -475,20 +460,27 @@ EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo install [packages]
 
 ### Database Access Protocol
 
-**Important:** We no longer use SQLite MCP for database operations. All database access is performed via direct Bash scripts using sqlite3 command line tools.
+**Important:** We use Cloudflare D1 for production and local SQLite for development. Database operations are performed via:
+- **Local Development:** Direct sqlite3 command line tools
+- **Production:** Cloudflare D1 via wrangler CLI
+- **API Layer:** Hono with D1 bindings
 
-**Database Location:** `/Users/aiden/NodeJSprojs/localfirst-app/local.db`
+**Database Locations:**
+- **Local:** `/Users/aiden/NodeJSprojs/localfirst/local.db`  
+- **Production:** Cloudflare D1 instance (managed via wrangler)
 
 **Common Database Commands:**
 ```bash
-# Direct SQLite access
-sqlite3 /Users/aiden/NodeJSprojs/localfirst-app/local.db
+# Local development
+cd packages/api
+DATABASE_URL="file:../../local.db" node dev-server.js
 
-# Query data
-sqlite3 /Users/aiden/NodeJSprojs/localfirst-app/local.db "SELECT * FROM businesses;"
+# Query local data
+sqlite3 /Users/aiden/NodeJSprojs/localfirst/local.db "SELECT * FROM businesses;"
 
-# Import data
-sqlite3 /Users/aiden/NodeJSprojs/localfirst-app/local.db < data.sql
+# Production D1 operations
+wrangler d1 execute localfirst-prod --command "SELECT * FROM businesses LIMIT 10"
+wrangler d1 migrations apply localfirst-prod
 ```
 
 ### Communication Protocol
