@@ -182,7 +182,11 @@
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv *-businesses-export.sql *-businesses.sql exports/)",
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv test-dataset-expected-outcomes.csv test-data/)",
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv enrichment-progress-500.json test-data/)",
-      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api find . -maxdepth 1 -name \"*.json\" -o -name \"*.sql\" -o -name \"*.csv\")"
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api find . -maxdepth 1 -name \"*.json\" -o -name \"*.sql\" -o -name \"*.csv\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"\n-- Add interview fields to consumer_profiles table\nALTER TABLE consumer_profiles ADD COLUMN interview_transcript TEXT;\nALTER TABLE consumer_profiles ADD COLUMN interview_summary TEXT;\nALTER TABLE consumer_profiles ADD COLUMN interview_insights TEXT;\nALTER TABLE consumer_profiles ADD COLUMN profile_completeness INTEGER DEFAULT 0;\nALTER TABLE consumer_profiles ADD COLUMN last_interview_date TEXT;\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"\n-- Create conversation_sessions table\nCREATE TABLE IF NOT EXISTS conversation_sessions (\n  id TEXT PRIMARY KEY,\n  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,\n  messages TEXT NOT NULL,\n  session_status TEXT DEFAULT ''active'',\n  session_start TEXT DEFAULT CURRENT_TIMESTAMP,\n  session_end TEXT,\n  message_count INTEGER DEFAULT 0,\n  extracted_topics TEXT,\n  last_activity TEXT DEFAULT CURRENT_TIMESTAMP,\n  created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n  updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n);\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema consumer_profiles\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema conversation_sessions\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -102,6 +102,14 @@ export const consumerProfiles = sqliteTable('consumer_profiles', {
   savedSearches: text('saved_searches'), // JSON array of search queries
   favoriteBusinesses: text('favorite_businesses'), // JSON array of business IDs - DEPRECATED: Use userFavorites table
   locationPreferences: text('location_preferences'), // JSON for preferred areas/regions
+  
+  // AI Interview fields
+  interviewTranscript: text('interview_transcript'), // Full conversation history as JSON
+  interviewSummary: text('interview_summary'), // AI-generated summary of interests/preferences
+  interviewInsights: text('interview_insights'), // JSON of extracted key interests and needs
+  profileCompleteness: integer('profile_completeness').default(0), // 0-100 score
+  lastInterviewDate: text('last_interview_date'),
+  
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
@@ -159,6 +167,21 @@ export const failedEnrichments = sqliteTable('failed_enrichments', {
   lastRetryAt: text('last_retry_at'),
   nextRetryAt: text('next_retry_at'),
   maxRetries: integer('max_retries').default(3),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Conversation sessions for AI interviews
+export const conversationSessions = sqliteTable('conversation_sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  messages: text('messages').notNull(), // JSON array of {role: 'user'|'assistant', content: string, timestamp: string}
+  sessionStatus: text('session_status').default('active'), // active, completed, paused
+  sessionStart: text('session_start').default(sql`CURRENT_TIMESTAMP`),
+  sessionEnd: text('session_end'),
+  messageCount: integer('message_count').default(0),
+  extractedTopics: text('extracted_topics'), // JSON array of identified interests/needs
+  lastActivity: text('last_activity').default(sql`CURRENT_TIMESTAMP`),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
