@@ -8,6 +8,7 @@ import analyticsRoutes from './routes/analytics.js';
 import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
 import enhancedSearchRoutes from './routes/enhanced-search.js';
+import { interview as interviewRoutes } from './routes/interview.js';
 
 const app = new Hono();
 
@@ -54,6 +55,7 @@ app.route('/api/chains', chainsRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/favorites', favoritesRoutes);
 app.route('/api/enhanced-search', enhancedSearchRoutes);
+app.route('/api/interview', interviewRoutes);
 
 // 404 handler
 app.notFound((c) => {

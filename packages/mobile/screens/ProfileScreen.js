@@ -37,6 +37,13 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personalization</Text>
+            <TouchableOpacity 
+              style={styles.optionButton}
+              onPress={() => navigation.navigate('ProfileInterview')}
+            >
+              <Text style={styles.optionText}>Complete Profile Interview</Text>
+              <Text style={styles.optionSubtext}>Get personalized business recommendations</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.optionButton}>
               <Text style={styles.optionText}>Business Preferences</Text>
             </TouchableOpacity>
@@ -152,6 +159,11 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#2d3748',
+  },
+  optionSubtext: {
+    fontSize: 14,
+    color: '#718096',
+    marginTop: 4,
   },
   benefits: {
     marginBottom: 32,
