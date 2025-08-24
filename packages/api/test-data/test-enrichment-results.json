@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:47:56.110Z",
+    "config": {
+      "batchSize": 10,
+      "concurrency": 2,
+      "method": "auto",
+      "priority": "all",
+      "retryAttempts": 2,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 1000,
+      "verbose": 2,
+      "dryRun": false,
+      "resumeFile": "./test-enrichment-progress.json",
+      "exportResults": "./test-enrichment-results.json"
+    },
+    "stats": {
+      "total": 10,
+      "processed": 10,
+      "successful": 10,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:47:47.499Z",
+      "costs": {
+        "firecrawl": 0.05
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "9cdc58c4-ba7f-42b6-a627-3922071c7d70",
+      "businessName": "Sedona Red Rock Cafe",
+      "website": "https://sedonacafe.com",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "683d5671-3d2c-4482-ba58-a4fc80426bc4",
+      "businessName": "Phoenix Thai Kitchen",
+      "website": "https://phoenixthaikitchen.com",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "51459bd7-4701-41de-849b-4b0daf8b7122",
+      "businessName": "Tucson Taco Truck",
+      "website": "https://tucsontacotruck.net",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "2c8d3773-38b3-4f5d-8f7c-80aed7be0344",
+      "businessName": "Flagstaff Brewery & Grill",
+      "website": "https://flagstaffbrewery.beer",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "fbe77a2c-ffde-4e41-b105-79f6b7adf959",
+      "businessName": "Scottsdale Fine Dining",
+      "website": "https://scottsdalerestaurant.com",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "251b4984-3150-451f-b4ff-114a6c84ed59",
+      "businessName": "Mesa Family Bakery",
+      "website": "https://mesafamilybakery.com",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "38f602e5-efc4-44b2-a7f9-47b78579a930",
+      "businessName": "Tempe Coffee House",
+      "website": "https://tempecoffee.local",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "05701084-f37e-4be3-b521-e0aa64ffb753",
+      "businessName": "Glendale Pizza Palace",
+      "website": "https://glendalepizzapalace.org",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "2e10693d-fb34-4e93-bd2c-57e835d07d72",
+      "businessName": "Chandler Sushi Bar",
+      "website": "https://chandlersushi.biz",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "26d486a4-6547-4895-be89-d389f30bd251",
+      "businessName": "Peoria BBQ Joint",
+      "website": "https://peoriabbq.info",
+      "success": true,
+      "lfaMember": false
+    }
+  ]
+}

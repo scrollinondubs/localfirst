@@ -18,8 +18,8 @@ Create a seamless, web-accessible experience that strengthens local economies by
 - **Development:** Claude Code with MCP integration
 
 ### Backend
-- **API Server:** Express.js
-- **Database:** SQLite (local development) / Turso.tech (production)
+- **API Server:** Node.js
+- **Database:** SQLite (local development) / Cloudflare D1 (production)
 - **Business Data:** Pre-loaded SQLite database with 5,000+ local businesses
 - **Semantic Search:** Keyword mapping and pattern matching
 - **Authentication:** JWT-based (optional user accounts)
@@ -27,9 +27,9 @@ Create a seamless, web-accessible experience that strengthens local economies by
 
 ### Deployment Strategy
 - **Development:** Local Expo server + Local API server
-- **Production Web:** Expo export:web + Vercel/Netlify hosting
-- **Production API:** Express server on Vercel/Railway/Heroku
-- **Production Database:** Turso.tech (hosted SQLite)
+- **Production Web:** Expo export:web + Cloudflare pages
+- **Production API:** Node.js via Cloudflare workers
+- **Production Database:** Cloudflare D1
 
 ### DevOps & Tooling
 - **Source Control:** GitHub with CI/CD pipeline

@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:48:42.614Z",
+    "config": {
+      "batchSize": 10,
+      "concurrency": 2,
+      "method": "auto",
+      "priority": "all",
+      "retryAttempts": 3,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 2000,
+      "verbose": 1,
+      "dryRun": false,
+      "resumeFile": "./test-auto-progress.json",
+      "exportResults": "./test-auto-results.json"
+    },
+    "stats": {
+      "total": 10,
+      "processed": 10,
+      "successful": 10,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:48:29.027Z",
+      "costs": {
+        "firecrawl": 0.05
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "6c8ba68e-c787-4dd0-8425-a93a5a6aa08b",
+      "businessName": "Sedona Photography",
+      "website": "https://sedonaphotos.art",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "5c534215-1c95-4764-ab49-0cfad3e42ab7",
+      "businessName": "Queen Creek Tax Services",
+      "website": "https://queencreektax.irs",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "ec63d869-1f97-40d9-b25e-fa1dfb4e489d",
+      "businessName": "Sun City Legal Aid",
+      "website": "https://suncitylegal.help",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "39156856-fa0e-41aa-9235-3933f2c1cda7",
+      "businessName": "Paradise Valley Investment",
+      "website": "https://pvinvestment.wealth",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "6e509773-51ae-415f-89ac-70ec7dfc517c",
+      "businessName": "Avondale HR Solutions",
+      "website": "https://avondalehr.people",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "42edf4e8-febb-49c3-8b6d-0192967bfc7d",
+      "businessName": "Carefree Business Coach",
+      "website": "https://carefreecoach.success",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "289fb480-9ff0-434c-8258-219bfedad48f",
+      "businessName": "Fountain Hills PR Agency",
+      "website": "https://fhpr.media",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "e367656f-3ec8-4c55-8286-e7bc1691cf5f",
+      "businessName": "Cave Creek Patent Law",
+      "website": "https://cavecreekpatents.ip",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "c1752f13-b15d-4324-bc64-92c1c25abef4",
+      "businessName": "Ahwatukee Graphic Design",
+      "website": "https://ahwatukeegraphics.visual",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "ebf93795-0f94-4370-b78c-42e674da9052",
+      "businessName": "Surprise IT Support",
+      "website": "https://surpriseit.tech",
+      "success": true,
+      "lfaMember": false
+    }
+  ]
+}

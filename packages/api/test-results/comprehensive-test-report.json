@@ -1,0 +1,489 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:49:26.219Z",
+    "duration": 83509,
+    "config": {
+      "testDataFile": "./test-dataset-expected-outcomes.json",
+      "outputDir": "./test-results",
+      "sampleSize": 50,
+      "batchSizes": [
+        5,
+        10,
+        15
+      ],
+      "concurrencyLevels": [
+        1,
+        2,
+        3
+      ],
+      "testMethods": [
+        "firecrawl",
+        "playwright",
+        "auto"
+      ],
+      "performanceThresholds": {
+        "avgProcessingTime": 30000,
+        "successRate": 0.85,
+        "accuracyRate": 0.8,
+        "costPerBusiness": 0.1
+      },
+      "qualityThresholds": {
+        "minDescriptionLength": 100,
+        "maxDescriptionLength": 1200,
+        "minKeywords": 3,
+        "minProducts": 1,
+        "confidenceThreshold": 0.6
+      }
+    },
+    "environment": {
+      "node": "v23.10.0",
+      "platform": "darwin",
+      "memory": {
+        "rss": 86994944,
+        "heapTotal": 16519168,
+        "heapUsed": 13293328,
+        "external": 3582221,
+        "arrayBuffers": 103890
+      }
+    }
+  },
+  "summary": {
+    "overallSuccess": false,
+    "criticalIssues": 0,
+    "recommendations": []
+  },
+  "testResults": {
+    "startTime": "2025-08-24T08:48:02.710Z",
+    "endTime": "2025-08-24T08:49:26.219Z",
+    "duration": 83509,
+    "summary": {},
+    "methodTests": {
+      "firecrawl": {
+        "success": true,
+        "duration": 13648.971708000001,
+        "stats": {
+          "total": 10,
+          "processed": 10,
+          "successful": 10,
+          "failed": 0,
+          "skipped": 0,
+          "startTime": "2025-08-24T08:48:02.730Z",
+          "costs": {
+            "firecrawl": 0.09999999999999999
+          }
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1364.8971708000001,
+        "errors": 0,
+        "cost": 0.09999999999999999
+      },
+      "playwright": {
+        "success": true,
+        "duration": 12621.063375000002,
+        "stats": {
+          "total": 10,
+          "processed": 10,
+          "successful": 10,
+          "failed": 0,
+          "skipped": 0,
+          "startTime": "2025-08-24T08:48:16.387Z",
+          "costs": {
+            "firecrawl": 0
+          }
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1262.1063375,
+        "errors": 0,
+        "cost": 0
+      },
+      "auto": {
+        "success": true,
+        "duration": 13598.911582999997,
+        "stats": {
+          "total": 10,
+          "processed": 10,
+          "successful": 10,
+          "failed": 0,
+          "skipped": 0,
+          "startTime": "2025-08-24T08:48:29.027Z",
+          "costs": {
+            "firecrawl": 0.05
+          }
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1359.8911582999997,
+        "errors": 0,
+        "cost": 0.05
+      }
+    },
+    "batchTests": {
+      "5": {
+        "success": true,
+        "duration": 8161.006374999997,
+        "throughput": 0.6126695373399952,
+        "memoryUsage": {
+          "rss": 84643840,
+          "heapTotal": 14684160,
+          "heapUsed": 12537472,
+          "external": 3557959,
+          "arrayBuffers": 79668
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1632.2012749999994
+      },
+      "10": {
+        "success": true,
+        "duration": 13579.063125,
+        "throughput": 0.7364278306939529,
+        "memoryUsage": {
+          "rss": 85065728,
+          "heapTotal": 14684160,
+          "heapUsed": 12730632,
+          "external": 3567273,
+          "arrayBuffers": 88942
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1357.9063125
+      },
+      "15": {
+        "success": true,
+        "duration": 21762.343417000004,
+        "throughput": 0.6892640058369132,
+        "memoryUsage": {
+          "rss": 85532672,
+          "heapTotal": 14946304,
+          "heapUsed": 12926400,
+          "external": 3576555,
+          "arrayBuffers": 98224
+        },
+        "successRate": 1,
+        "avgProcessingTime": 1450.8228944666669
+      }
+    },
+    "qualityTests": {
+      "accuracy": {
+        "overallAccuracy": 0.35714285714285715,
+        "correctClassifications": 25,
+        "totalValidated": 70,
+        "mismatches": [
+          {
+            "businessId": "683d5671-3d2c-4482-ba58-a4fc80426bc4",
+            "businessName": "Phoenix Thai Kitchen",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "51459bd7-4701-41de-849b-4b0daf8b7122",
+            "businessName": "Tucson Taco Truck",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "05701084-f37e-4be3-b521-e0aa64ffb753",
+            "businessName": "Glendale Pizza Palace",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "26d486a4-6547-4895-be89-d389f30bd251",
+            "businessName": "Peoria BBQ Joint",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "265bc3f1-282e-4455-8d10-c0ff36de7a20",
+            "businessName": "Ahwatukee Healthy Eats",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "3ce74d70-6093-4650-b971-126327b3212c",
+            "businessName": "Surprise Burger Shack",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "3571435e-4311-4c10-afab-a24f73974f24",
+            "businessName": "Gilbert Gelato",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "14692a19-0af7-4b60-bf27-955c275f3972",
+            "businessName": "Queen Creek Vineyard",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "4486ff0e-5d03-426c-ae44-e8bf9d16f340",
+            "businessName": "Sun City Diner",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "0b689039-4771-4d63-8caa-18500e32a22e",
+            "businessName": "Paradise Valley Bistro",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "2fe10a68-6bea-497f-a1ec-d60465099d64",
+            "businessName": "Avondale Tacos",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "6ada5f5c-4ad2-407e-894e-7c0c1c8d3191",
+            "businessName": "Carefree Organic Kitchen",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "c4bc7283-7ed0-4afa-bb20-dddeff880223",
+            "businessName": "Fountain Hills Food Truck",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "922c6aea-2dc8-46a1-95d6-227ab3fe3f74",
+            "businessName": "Cave Creek Steakhouse",
+            "expected": "food_dining",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "58b3fbb9-b2a0-446b-9af9-ac35358a96ae",
+            "businessName": "Scottsdale CPA Firm",
+            "expected": "professional_services",
+            "actual": "other",
+            "confidence": {}
+          },
+          {
+            "businessId": "5e273f56-306f-4ab4-a910-f550dc4cb5e8",
+            "businessName": "Chandler Architecture Studio",
+            "expected": "professional_services",
+            "actual": "nonprofit_community",
+            "confidence": {}
+          },
+          {
+            "businessId": "47c080d6-a900-48c3-bd28-c82a0e4c6d05",
+            "businessName": "Glendale Real Estate",
+            "expected": "professional_services",
+            "actual": "real_estate",
+            "confidence": {}
+          },
+          {
+            "businessId": "cbd5b49b-7960-4375-8b07-8a410c9a0d36",
+            "businessName": "Peoria Insurance Agency",
+            "expected": "professional_services",
+            "actual": "financial_services",
+            "confidence": {}
+          },
+          {
+            "businessId": "886156d7-23c4-4ca2-839b-d54c2010eac1",
+            "businessName": "Gilbert Financial Planning",
+            "expected": "professional_services",
+            "actual": "financial_services",
+            "confidence": {}
+          },
+          {
+            "businessId": "f964da66-79d6-4894-a9c7-94ac843fa61b",
+            "businessName": "Flagstaff Engineering",
+            "expected": "professional_services",
+            "actual": "other",
+            "confidence": {}
+          }
+        ],
+        "accuracyByCategory": [
+          {
+            "category": "food_dining",
+            "accuracy": 0.3,
+            "correct": 6,
+            "total": 20
+          },
+          {
+            "category": "professional_services",
+            "accuracy": 0.35,
+            "correct": 7,
+            "total": 20
+          },
+          {
+            "category": "health_wellness",
+            "accuracy": 0.25,
+            "correct": 2,
+            "total": 8
+          },
+          {
+            "category": "retail_shopping",
+            "accuracy": 0.5,
+            "correct": 4,
+            "total": 8
+          },
+          {
+            "category": "home_services",
+            "accuracy": 0.5,
+            "correct": 4,
+            "total": 8
+          },
+          {
+            "category": "automotive",
+            "accuracy": 0.2,
+            "correct": 1,
+            "total": 5
+          },
+          {
+            "category": "other",
+            "accuracy": 1,
+            "correct": 1,
+            "total": 1
+          }
+        ],
+        "meetsTreshold": false
+      },
+      "quality": {
+        "descriptionQuality": 0.7125,
+        "productsQuality": 1,
+        "keywordsQuality": 1,
+        "overallQuality": 0.7125,
+        "issuesSummary": {
+          "descriptions": 23,
+          "products": 0,
+          "keywords": 0
+        },
+        "sampleIssues": {
+          "descriptions": [
+            {
+              "id": "bbe44d37-b572-4231-b7c0-a7550f40d093",
+              "name": "Mesa Fitness Center",
+              "issues": [
+                "Too few sentences for good readability"
+              ]
+            },
+            {
+              "id": "301a1b92-5ac5-453f-bc6c-1836315a305d",
+              "name": "Chandler Auto Repair",
+              "issues": [
+                "Too few sentences for good readability"
+              ]
+            },
+            {
+              "id": "1b58166c-8c68-4186-92bf-ab328f43237d",
+              "name": "Peoria Plumbing Services",
+              "issues": [
+                "Too few sentences for good readability"
+              ]
+            },
+            {
+              "id": "683d5671-3d2c-4482-ba58-a4fc80426bc4",
+              "name": "Phoenix Thai Kitchen",
+              "issues": [
+                "Too few sentences for good readability"
+              ]
+            },
+            {
+              "id": "2c8d3773-38b3-4f5d-8f7c-80aed7be0344",
+              "name": "Flagstaff Brewery & Grill",
+              "issues": [
+                "Too few sentences for good readability"
+              ]
+            }
+          ],
+          "products": [],
+          "keywords": []
+        }
+      }
+    },
+    "performanceTests": {
+      "avgProcessingTime": 444.6625,
+      "maxProcessingTime": 507,
+      "minProcessingTime": 301,
+      "successRate": 1,
+      "totalProcessed": 80,
+      "successfulProcessed": 80,
+      "failedProcessed": 0,
+      "meetsTimeThreshold": true,
+      "meetsSuccessThreshold": true
+    },
+    "errors": [],
+    "recommendations": [],
+    "productionReadiness": {
+      "overallScore": 0.6566071428571428,
+      "readyForProduction": false,
+      "criticalIssues": [
+        "Classification accuracy too low: 35.7%"
+      ],
+      "warnings": [],
+      "recommendations": [
+        "Overall readiness below 80% - address critical issues before production deployment",
+        "Resolve all critical issues before proceeding with full dataset processing",
+        "Review cost projection - may exceed budget constraints",
+        "Use batch size of 10 for optimal throughput",
+        "Monitor progress every 100 businesses and save checkpoints",
+        "Perform manual quality review on 5% sample during processing"
+      ],
+      "scalabilityAssessment": {
+        "bestThroughput": 0.7364278306939529,
+        "optimalBatchSize": 10,
+        "estimatedTimeFor4521Businesses": 103,
+        "memoryRequirements": {
+          "currentHeapUsed": 14111480,
+          "currentHeapTotal": 16519168,
+          "estimatedForFullRun": 141114800
+        },
+        "concurrencyRecommendation": {
+          "recommended": 2,
+          "reasoning": "Balance between throughput and resource usage"
+        }
+      },
+      "costProjection": {
+        "firecrawlCost": 135.6,
+        "playwrightCost": 0,
+        "openaiCost": 90.42,
+        "totalEstimatedCost": 226.01999999999998,
+        "costPerBusiness": 0.04999336429993364,
+        "withinBudget": false
+      },
+      "riskAssessment": [
+        {
+          "category": "quality",
+          "level": "high",
+          "description": "Classification accuracy below optimal",
+          "mitigation": "Manual review of misclassified businesses"
+        },
+        {
+          "category": "cost",
+          "level": "medium",
+          "description": "Cost approaching budget limit",
+          "mitigation": "Monitor costs closely during processing"
+        }
+      ]
+    }
+  },
+  "conclusions": {
+    "readyForProduction": false,
+    "confidence": "low",
+    "majorFindings": [
+      "Performance tests passed - pipeline meets speed and reliability requirements",
+      "Classification accuracy below threshold at 35.7%",
+      "Data quality tests passed - enriched data meets standards"
+    ],
+    "nextSteps": [
+      "Address identified issues before production deployment",
+      "Rerun tests after implementing improvements",
+      "Consider phased rollout starting with smaller subset"
+    ]
+  }
+}

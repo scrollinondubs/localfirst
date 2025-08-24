@@ -170,7 +170,19 @@
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --env production --file d1-businesses-export.sql --remote)",
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --env production --command \"SELECT COUNT(*) as total_businesses FROM businesses;\" --remote)",
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --env production --command \"SELECT COUNT(*) as lfa_members FROM businesses WHERE lfa_member = 1;\" --remote)",
-      "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --env production --command \"SELECT COUNT(*) as lfa_members FROM businesses WHERE lfa_member = 1;\" --remote)"
+      "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --env production --command \"SELECT COUNT(*) as lfa_members FROM businesses WHERE lfa_member = 1;\" --remote)",
+      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/test-5-businesses.js)",
+      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/firecrawl-500-enrichment.js)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile NODE_ENV=production expo export:web --clear)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile NODE_ENV=production npx expo export:web --clear)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile npx expo start --web --port 3000)",
+      "Bash(npx expo start:*)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mkdir -p test-data exports)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv test-*.json enrichment-progress-500.json test-data/)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv *-businesses-export.sql *-businesses.sql exports/)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv test-dataset-expected-outcomes.csv test-data/)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api mv enrichment-progress-500.json test-data/)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api find . -maxdepth 1 -name \"*.json\" -o -name \"*.sql\" -o -name \"*.csv\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

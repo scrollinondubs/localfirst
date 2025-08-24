@@ -1,0 +1,136 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:49:26.155Z",
+    "config": {
+      "batchSize": 15,
+      "concurrency": 2,
+      "method": "auto",
+      "priority": "lfa",
+      "retryAttempts": 3,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 2000,
+      "verbose": 1,
+      "dryRun": false,
+      "resumeFile": "./test-batch-15-progress.json",
+      "exportResults": "./test-batch-15-results.json"
+    },
+    "stats": {
+      "total": 15,
+      "processed": 15,
+      "successful": 15,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:49:04.403Z",
+      "costs": {
+        "firecrawl": 0.15
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "da1dea31-da51-4287-8546-e6d093f32543",
+      "businessName": "Avondale Thrift Store",
+      "website": "https://avondalethrift.secondhand",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "1cddf35a-238d-44ee-a403-9ed23ce93ac7",
+      "businessName": "Phoenix Plumbing Pro",
+      "website": "https://phoenixplumbing.fix",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "6bb30042-8de7-4a46-b9a9-7a834a1e20f3",
+      "businessName": "Tempe Electrical Services",
+      "website": "https://tempeelectric.power",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "7e5777b7-7b0e-4d8f-a1fb-86c47d20fc3e",
+      "businessName": "Chandler House Cleaning",
+      "website": "https://chandlercleaning.spotless",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "ad0f53b1-70a8-410a-a5e4-3973b9862397",
+      "businessName": "Peoria Painting",
+      "website": "https://peoriapainting.color",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "e6bb7cfa-b576-459f-b4d6-855411808cca",
+      "businessName": "Tucson Pool Service",
+      "website": "https://tucsonpool.swim",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "befb55c6-b30c-4ad2-bb2d-7df0307b4300",
+      "businessName": "Sedona Window Washing",
+      "website": "https://sedonawindows.clear",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "b89ac0fb-882c-4dc7-948e-8595f0538930",
+      "businessName": "Sun City Security Systems",
+      "website": "https://suncitysecurity.safe",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "dadc1304-09b0-44fb-91b6-08c1e15b247d",
+      "businessName": "Avondale Construction",
+      "website": "https://avondaleconstruction.build",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "f9d9c3cc-2ef4-45e3-b2b4-00f6474acd69",
+      "businessName": "Phoenix Auto Repair",
+      "website": "https://phoenixauto.repair",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "637d3de8-8224-4b14-b9b0-9ed048bf081b",
+      "businessName": "Tempe Quick Lube",
+      "website": "https://tempequicklube.fast",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "fb5bb55a-397f-4939-8680-0801f6367983",
+      "businessName": "Chandler Car Wash",
+      "website": "https://chandlercarwash.clean",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "38da6324-46e3-496b-afb1-8944fff07381",
+      "businessName": "Peoria Transmission",
+      "website": "https://peoriatransmission.shift",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "4712b7c7-f423-42de-8af8-ac3288f0d5ba",
+      "businessName": "Tucson Classic Cars",
+      "website": "https://tucsonclassics.vintage",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "61cc8d27-913f-4d4c-bc7c-3ed5312aeaff",
+      "businessName": "Unique Arizona Business",
+      "website": "https://uniqueaz.weird",
+      "success": true,
+      "lfaMember": true
+    }
+  ]
+}
