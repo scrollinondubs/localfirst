@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "web:dev": "expo start --web --port 3000",
     "build:web": "expo export:web --clear",
-    "build:production": "NODE_ENV=production expo export:web --clear",
+    "build:production": "NODE_ENV=production expo export --platform web --output-dir web-build --clear",
     "build:preview": "NODE_ENV=preview expo export:web --clear",
     "test": "playwright test",
     "test:debug": "playwright test --debug",

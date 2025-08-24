@@ -204,6 +204,132 @@ wrangler d1 migrations create "your_migration_name"
 npm run d1:migrate
 ```
 
+## 🚨 Critical Issues & Lessons Learned
+
+### Production API Endpoints vs Frontend Integration
+
+**Issue**: Mobile app was broken despite API endpoints working perfectly.
+
+**Root Cause**: Frontend components using hardcoded API URLs instead of dynamic environment detection.
+
+**Key Lesson**: Always use centralized API configuration for all frontend components.
+
+#### What Went Wrong
+```javascript
+// ❌ BAD: Hardcoded API URL in ProfileInterviewScreen.js
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787';
+```
+
+The ProfileInterviewScreen was the only component not using the shared `buildApiUrl()` function from `config/api.js`, causing it to default to localhost in production.
+
+#### Prevention Strategy
+- **Mandatory Pattern**: All API calls MUST use `buildApiUrl()` or `apiRequest()` from `config/api.js`
+- **Code Review Checklist**: Search for hardcoded localhost URLs before deployment
+- **Integration Testing**: Always test production builds on actual domains, not just localhost
+
+#### Fixed Implementation
+```javascript
+// ✅ GOOD: Use shared API configuration
+import { buildApiUrl } from '../config/api';
+
+const response = await fetch(buildApiUrl('/api/interview/session'), {
+  headers: { /* ... */ }
+});
+```
+
+### Cloudflare Workers Environment Variables
+
+**Issue**: Environment variables accessed via `process.env` don't work in Cloudflare Workers.
+
+**Root Cause**: Workers use a different context (`c.env`) for environment variables.
+
+**Key Lesson**: Always pass environment from Worker context to utility functions.
+
+#### What Went Wrong
+```javascript
+// ❌ BAD: Direct process.env access
+const jwtSecret = process.env.JWT_SECRET;
+const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+```
+
+#### Fixed Implementation
+```javascript
+// ✅ GOOD: Pass environment through context
+const jwtSecret = getJwtSecret(c.env);
+const openaiClient = createOpenAIClient(c.env);
+```
+
+### Database Schema Synchronization
+
+**Issue**: Production D1 database missing tables/columns that exist in local development.
+
+**Root Cause**: Manual database changes not reflected in migration files.
+
+**Key Lesson**: Always create proper migrations for schema changes, never modify databases manually.
+
+#### Prevention Strategy
+- **Migration-First**: Create migration file before making any schema changes
+- **Sync Check**: Compare local and production schemas before deployment
+- **Rollback Plan**: Test migration rollback before applying to production
+
+### Performance Limits in Cloudflare Workers
+
+**Issue**: CPU timeout errors during user registration due to expensive password hashing.
+
+**Root Cause**: Scrypt parameters optimized for server environments, not edge computing constraints.
+
+**Key Lesson**: Optimize crypto operations for Cloudflare Workers' 10ms CPU limit per request.
+
+#### What Went Wrong
+```javascript
+// ❌ BAD: Too expensive for Workers
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, dkLen: 64 };
+```
+
+#### Fixed Implementation
+```javascript
+// ✅ GOOD: Optimized for Workers
+const SCRYPT_PARAMS = { N: 4096, r: 8, p: 1, dkLen: 64 };
+```
+
+### UUID Generation Compatibility
+
+**Issue**: `uuidv4()` from uuid package not available in Cloudflare Workers runtime.
+
+**Root Cause**: Node.js packages don't always work in Workers environment.
+
+**Key Lesson**: Use Web APIs when available (`crypto.randomUUID()`) instead of Node.js libraries.
+
+#### Fixed Implementation
+```javascript
+// ✅ GOOD: Use Web API
+const sessionId = crypto.randomUUID();
+```
+
+### Testing Strategy for Production Issues
+
+**Issue**: API endpoints tested individually worked, but integration through frontend failed.
+
+**Key Lesson**: End-to-end testing must include actual production domains and user flows.
+
+#### Improved Testing Approach
+1. **API Unit Tests**: Verify individual endpoints work
+2. **Integration Tests**: Test frontend → API → database flow
+3. **Production Testing**: Deploy to staging environment with production-like setup
+4. **Manual Verification**: Test actual user flows on deployed domains
+
+### Deployment Checklist Updates
+
+Always verify before marking deployment complete:
+
+- [ ] All components use centralized API configuration (`buildApiUrl()`)
+- [ ] Environment variables properly configured for Workers context
+- [ ] Database migrations applied to production
+- [ ] Crypto operations optimized for Workers CPU limits
+- [ ] Production domains tested manually with real user flows
+- [ ] Console logs checked for errors on production domain
+- [ ] API endpoints tested via curl for baseline functionality
+
 ## 📞 Support
 
 - **Cloudflare Docs**: [developers.cloudflare.com](https://developers.cloudflare.com)
