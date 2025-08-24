@@ -10,7 +10,22 @@ export const businesses = sqliteTable('businesses', {
   longitude: real('longitude').notNull(),
   phone: text('phone'),
   website: text('website'),
-  category: text('category').notNull(),
+  category: text('category').notNull(), // Legacy category field
+  
+  // Business Enrichment Fields
+  primaryCategory: text('primary_category'),
+  subcategory: text('subcategory'),
+  businessDescription: text('business_description'),
+  productsServices: text('products_services'), // JSON field for structured offerings
+  keywords: text('keywords'), // Search optimization keywords
+  enrichmentStatus: text('enrichment_status').default('pending'), // pending, in_progress, completed, failed
+  enrichmentDate: text('enrichment_date'),
+  enrichmentSource: text('enrichment_source'), // website, manual, api, etc.
+  businessAttributes: text('business_attributes'), // JSON field for woman-owned, veteran-owned, etc.
+  hoursOfOperation: text('hours_of_operation'), // JSON field for business hours
+  socialMediaLinks: text('social_media_links'), // JSON field for social media URLs
+  specialFeatures: text('special_features'), // JSON field for delivery, accessibility, etc.
+  
   lfaMember: integer('lfa_member', { mode: 'boolean' }).default(false),
   memberSince: text('member_since'), // Date as ISO string
   verified: integer('verified', { mode: 'boolean' }).default(false),
@@ -102,3 +117,48 @@ export const userFavorites = sqliteTable('user_favorites', {
   // Unique constraint to prevent duplicate favorites
   uniqueUserBusiness: unique().on(table.userId, table.businessId)
 }));
+
+// Business Categories table for taxonomy management
+export const businessCategories = sqliteTable('business_categories', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  parentCategoryId: text('parent_category_id').references(() => businessCategories.id),
+  displayName: text('display_name').notNull(),
+  description: text('description'),
+  keywords: text('keywords'), // JSON array of keywords for this category
+  iconName: text('icon_name'), // Icon identifier for UI
+  colorCode: text('color_code'), // Hex color for UI theming
+  sortOrder: integer('sort_order').default(0),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Enrichment logs for tracking business data enrichment processes
+export const enrichmentLogs = sqliteTable('enrichment_logs', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  enrichmentType: text('enrichment_type').notNull(), // category, description, full
+  status: text('status').notNull(), // success, error, partial
+  confidenceScore: real('confidence_score'), // 0.0 to 1.0 for AI classification confidence
+  processingTimeMs: integer('processing_time_ms'), // Time taken to process
+  errorMessage: text('error_message'),
+  rawData: text('raw_data'), // JSON of raw scraped/extracted data
+  aiResponse: text('ai_response'), // JSON of AI classification/description response
+  startedAt: text('started_at').default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text('completed_at'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Failed enrichments for retry management
+export const failedEnrichments = sqliteTable('failed_enrichments', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  failureReason: text('failure_reason').notNull(),
+  retryCount: integer('retry_count').default(0),
+  lastRetryAt: text('last_retry_at'),
+  nextRetryAt: text('next_retry_at'),
+  maxRetries: integer('max_retries').default(3),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});

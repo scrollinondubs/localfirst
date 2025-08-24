@@ -28,7 +28,9 @@ export const getBaseUrl = () => {
 // API configuration for mobile app
 export const API_CONFIG = {
   ENDPOINTS: {
-    BUSINESSES_SEARCH: '/api/businesses/semantic-search',
+    BUSINESSES_SEARCH: '/api/enhanced-search',
+    BUSINESSES_CATEGORIES: '/api/enhanced-search/categories',
+    BUSINESSES_SEARCH_LEGACY: '/api/businesses/semantic-search', // Keep legacy for fallback
     BUSINESSES_NEARBY: '/api/businesses/nearby',
     AUTH_LOGIN: '/api/auth/login',
     AUTH_REGISTER: '/api/auth/register',

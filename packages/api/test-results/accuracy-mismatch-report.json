@@ -1,0 +1,366 @@
+{
+  "timestamp": "2025-08-24T08:49:26.185Z",
+  "summary": {
+    "totalMismatches": 45,
+    "accuracyByCategory": {
+      "food_dining": {
+        "correct": 6,
+        "total": 20
+      },
+      "professional_services": {
+        "correct": 7,
+        "total": 20
+      },
+      "health_wellness": {
+        "correct": 2,
+        "total": 8
+      },
+      "retail_shopping": {
+        "correct": 4,
+        "total": 8
+      },
+      "home_services": {
+        "correct": 4,
+        "total": 8
+      },
+      "automotive": {
+        "correct": 1,
+        "total": 5
+      },
+      "other": {
+        "correct": 1,
+        "total": 1
+      }
+    }
+  },
+  "mismatches": [
+    {
+      "businessId": "683d5671-3d2c-4482-ba58-a4fc80426bc4",
+      "businessName": "Phoenix Thai Kitchen",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "51459bd7-4701-41de-849b-4b0daf8b7122",
+      "businessName": "Tucson Taco Truck",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "05701084-f37e-4be3-b521-e0aa64ffb753",
+      "businessName": "Glendale Pizza Palace",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "26d486a4-6547-4895-be89-d389f30bd251",
+      "businessName": "Peoria BBQ Joint",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "265bc3f1-282e-4455-8d10-c0ff36de7a20",
+      "businessName": "Ahwatukee Healthy Eats",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "3ce74d70-6093-4650-b971-126327b3212c",
+      "businessName": "Surprise Burger Shack",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "3571435e-4311-4c10-afab-a24f73974f24",
+      "businessName": "Gilbert Gelato",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "14692a19-0af7-4b60-bf27-955c275f3972",
+      "businessName": "Queen Creek Vineyard",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "4486ff0e-5d03-426c-ae44-e8bf9d16f340",
+      "businessName": "Sun City Diner",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "0b689039-4771-4d63-8caa-18500e32a22e",
+      "businessName": "Paradise Valley Bistro",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "2fe10a68-6bea-497f-a1ec-d60465099d64",
+      "businessName": "Avondale Tacos",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "6ada5f5c-4ad2-407e-894e-7c0c1c8d3191",
+      "businessName": "Carefree Organic Kitchen",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "c4bc7283-7ed0-4afa-bb20-dddeff880223",
+      "businessName": "Fountain Hills Food Truck",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "922c6aea-2dc8-46a1-95d6-227ab3fe3f74",
+      "businessName": "Cave Creek Steakhouse",
+      "expected": "food_dining",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "58b3fbb9-b2a0-446b-9af9-ac35358a96ae",
+      "businessName": "Scottsdale CPA Firm",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "5e273f56-306f-4ab4-a910-f550dc4cb5e8",
+      "businessName": "Chandler Architecture Studio",
+      "expected": "professional_services",
+      "actual": "nonprofit_community",
+      "confidence": {}
+    },
+    {
+      "businessId": "47c080d6-a900-48c3-bd28-c82a0e4c6d05",
+      "businessName": "Glendale Real Estate",
+      "expected": "professional_services",
+      "actual": "real_estate",
+      "confidence": {}
+    },
+    {
+      "businessId": "cbd5b49b-7960-4375-8b07-8a410c9a0d36",
+      "businessName": "Peoria Insurance Agency",
+      "expected": "professional_services",
+      "actual": "financial_services",
+      "confidence": {}
+    },
+    {
+      "businessId": "886156d7-23c4-4ca2-839b-d54c2010eac1",
+      "businessName": "Gilbert Financial Planning",
+      "expected": "professional_services",
+      "actual": "financial_services",
+      "confidence": {}
+    },
+    {
+      "businessId": "f964da66-79d6-4894-a9c7-94ac843fa61b",
+      "businessName": "Flagstaff Engineering",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "6c8ba68e-c787-4dd0-8425-a93a5a6aa08b",
+      "businessName": "Sedona Photography",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "5c534215-1c95-4764-ab49-0cfad3e42ab7",
+      "businessName": "Queen Creek Tax Services",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "39156856-fa0e-41aa-9235-3933f2c1cda7",
+      "businessName": "Paradise Valley Investment",
+      "expected": "professional_services",
+      "actual": "financial_services",
+      "confidence": {}
+    },
+    {
+      "businessId": "6e509773-51ae-415f-89ac-70ec7dfc517c",
+      "businessName": "Avondale HR Solutions",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "42edf4e8-febb-49c3-8b6d-0192967bfc7d",
+      "businessName": "Carefree Business Coach",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "289fb480-9ff0-434c-8258-219bfedad48f",
+      "businessName": "Fountain Hills PR Agency",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "ebf93795-0f94-4370-b78c-42e674da9052",
+      "businessName": "Surprise IT Support",
+      "expected": "professional_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "84956fa6-e03d-4ccf-b00a-bea5f9cd14bf",
+      "businessName": "Chandler Chiropractor",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "1485e563-f599-46bc-87d6-741ccb413ce4",
+      "businessName": "Peoria Mental Health",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "183667ad-0eae-436d-b55e-b0175f963c68",
+      "businessName": "Tucson Yoga Studio",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "7d4146e0-523d-4f63-9293-5b9b8e2d276f",
+      "businessName": "Sedona Holistic Health",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "8d3070a4-e4e6-4136-a81f-8a52015a4b63",
+      "businessName": "Sun City Senior Care",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "7d010ad9-76ed-4e8f-a004-fbbbec333aca",
+      "businessName": "Avondale Vision Center",
+      "expected": "health_wellness",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "c4f4c57e-56b6-4550-94c6-450cb94d5705",
+      "businessName": "Chandler Electronics",
+      "expected": "retail_shopping",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "faa2cbe1-4c55-4173-ba9e-8a6c8395c626",
+      "businessName": "Peoria Pet Supplies",
+      "expected": "retail_shopping",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "d4be3875-366b-4d6a-8c4c-3015383f273b",
+      "businessName": "Tucson Antique Mall",
+      "expected": "retail_shopping",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "0eea2676-e4f0-4598-9f65-bffaa5f0d5be",
+      "businessName": "Sun City Pharmacy",
+      "expected": "retail_shopping",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "ad0f53b1-70a8-410a-a5e4-3973b9862397",
+      "businessName": "Peoria Painting",
+      "expected": "home_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "e6bb7cfa-b576-459f-b4d6-855411808cca",
+      "businessName": "Tucson Pool Service",
+      "expected": "home_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "befb55c6-b30c-4ad2-bb2d-7df0307b4300",
+      "businessName": "Sedona Window Washing",
+      "expected": "home_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "b89ac0fb-882c-4dc7-948e-8595f0538930",
+      "businessName": "Sun City Security Systems",
+      "expected": "home_services",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "637d3de8-8224-4b14-b9b0-9ed048bf081b",
+      "businessName": "Tempe Quick Lube",
+      "expected": "automotive",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "fb5bb55a-397f-4939-8680-0801f6367983",
+      "businessName": "Chandler Car Wash",
+      "expected": "automotive",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "38da6324-46e3-496b-afb1-8944fff07381",
+      "businessName": "Peoria Transmission",
+      "expected": "automotive",
+      "actual": "other",
+      "confidence": {}
+    },
+    {
+      "businessId": "4712b7c7-f423-42de-8af8-ac3288f0d5ba",
+      "businessName": "Tucson Classic Cars",
+      "expected": "automotive",
+      "actual": "other",
+      "confidence": {}
+    }
+  ],
+  "recommendations": [
+    "Improve food_dining classification - only 30.0% accurate",
+    "Improve professional_services classification - only 35.0% accurate",
+    "Improve health_wellness classification - only 25.0% accurate",
+    "Improve retail_shopping classification - only 50.0% accurate",
+    "Improve home_services classification - only 50.0% accurate",
+    "Improve automotive classification - only 20.0% accurate",
+    "Address common misclassification: food_dining → other (14 occurrences)",
+    "Address common misclassification: professional_services → other (8 occurrences)",
+    "Address common misclassification: health_wellness → other (6 occurrences)",
+    "Address common misclassification: retail_shopping → other (4 occurrences)",
+    "Address common misclassification: home_services → other (4 occurrences)"
+  ]
+}

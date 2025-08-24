@@ -21,6 +21,8 @@ import LocationPermissionModal from '../components/LocationPermissionModal';
 import ManualLocationInput from '../components/ManualLocationInput';
 import DebugInfo from '../components/DebugInfo';
 import FavoriteButton from '../components/FavoriteButton';
+import EnhancedBusinessCard from '../components/EnhancedBusinessCard';
+import CategoryFilter from '../components/CategoryFilter';
 import { apiRequest, API_CONFIG } from '../config/api';
 
 // Arizona cities and their coordinates for intelligent search parsing
@@ -105,6 +107,8 @@ export default function SearchScreen() {
   const [voiceError, setVoiceError] = useState(null);
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
   
   // Location-related state
@@ -441,12 +445,17 @@ export default function SearchScreen() {
     setSearchError(null); // Clear any previous errors
     
     try {
-      // Build query parameters for semantic search API
+      // Build query parameters for enhanced search API
       const params = new URLSearchParams({
         query: query,
         limit: 50,
         radius: 25 // Limit to 25 miles from user location
       });
+
+      // Add category filter if selected
+      if (selectedCategory) {
+        params.append('category_filter', selectedCategory);
+      }
 
       // Intelligent location detection from search query
       let searchLat = 33.4484; // Phoenix, AZ latitude (default)
@@ -546,11 +555,14 @@ export default function SearchScreen() {
         throw new Error('Invalid JSON response from server');
       }
 
-      // Handle response format from semantic search API
+      // Handle response format from enhanced search API
       if (data && data.businesses && Array.isArray(data.businesses)) {
         console.log(`[MOBILE-SEARCH] Found ${data.businesses.length} businesses in data.businesses`);
         console.log(`[MOBILE-SEARCH] Setting searchResults with businesses:`, data.businesses.slice(0, 3));
         setSearchResults(data.businesses);
+        
+        // Store enhanced search metadata
+        setSearchMetadata(data.searchMetadata || null);
       } else if (data && Array.isArray(data)) {
         console.log(`[MOBILE-SEARCH] Found ${data.length} businesses in data array`);
         console.log(`[MOBILE-SEARCH] Setting searchResults with direct array:`, data.slice(0, 3));
@@ -648,57 +660,17 @@ export default function SearchScreen() {
   };
 
   const renderSearchResult = ({ item }) => {
-    const isSelected = selectedBusiness && selectedBusiness.id === item.id;
+    // Add distance formatting for enhanced business card
+    const businessWithDistance = {
+      ...item,
+      distance: item.distance ? formatDistance(item.distance).replace(' mi', '') : null
+    };
     
     return (
-      <TouchableOpacity 
-        style={[styles.resultCard, isSelected && styles.selectedResultCard]}
+      <EnhancedBusinessCard
+        business={businessWithDistance}
         onPress={() => handleBusinessSelect(item)}
-      >
-        <View style={styles.cardContentContainer}>
-          {/* Favorite Button positioned in upper-right corner */}
-          <View style={styles.favoriteButtonContainer}>
-            <FavoriteButton
-              businessId={item.id}
-              size={20}
-              testID={`favorite-button-${item.id}`}
-            />
-          </View>
-          
-          <View style={styles.resultHeader}>
-            <Text style={styles.resultName}>{item.name}</Text>
-          </View>
-        <Text style={styles.resultAddress}>{item.address}</Text>
-        <View style={styles.resultFooter}>
-          <Text style={[styles.category, item.lfa_member && styles.lfaMember]}>
-            {item.lfa_member ? 'LFA Member • ' : ''}{item.category}
-          </Text>
-          <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
-        </View>
-        
-        {/* Expanded details when selected */}
-        {isSelected && (
-          <View style={styles.expandedDetails}>
-            {item.phone && (
-              <View style={styles.detailRow}>
-                <Ionicons name="call-outline" size={16} color="#718096" />
-                <Text style={styles.detailText}>{item.phone}</Text>
-              </View>
-            )}
-            {item.website && (
-              <View style={styles.detailRow}>
-                <Ionicons name="globe-outline" size={16} color="#718096" />
-                <Text style={styles.detailText}>{item.website}</Text>
-              </View>
-            )}
-            <View style={styles.detailRow}>
-              <Ionicons name="location-outline" size={16} color="#718096" />
-              <Text style={styles.detailText}>Tap pin on map to view location</Text>
-            </View>
-          </View>
-        )}
-        </View>
-      </TouchableOpacity>
+      />
     );
   };
 
@@ -794,6 +766,17 @@ export default function SearchScreen() {
           <Ionicons name="search" size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
+
+      {/* Category Filter */}
+      <CategoryFilter
+        selectedCategory={selectedCategory}
+        onCategoryChange={(category) => {
+          setSelectedCategory(category);
+          if (searchQuery.trim()) {
+            performSearch(searchQuery);
+          }
+        }}
+      />
 
       {/* Location Error Message */}
       {locationError && (
@@ -1121,68 +1104,6 @@ const styles = StyleSheet.create({
   voiceButtonTextDisabled: {
     color: '#a0aec0',
   },
-  resultCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  cardContentContainer: {
-    position: 'relative',
-  },
-  favoriteButtonContainer: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    zIndex: 1,
-    elevation: 3,
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  resultName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2d3748',
-    flex: 1,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rating: {
-    fontSize: 14,
-    color: '#718096',
-    marginLeft: 4,
-  },
-  resultAddress: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 12,
-  },
-  resultFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  category: {
-    fontSize: 14,
-    color: '#3182ce',
-    fontWeight: '500',
-  },
-  distance: {
-    fontSize: 14,
-    color: '#718096',
-  },
   voiceStatusContainer: {
     backgroundColor: '#e6f3ff',
     marginHorizontal: 16,
@@ -1198,32 +1119,6 @@ const styles = StyleSheet.create({
     color: '#1e40af',
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  selectedResultCard: {
-    borderColor: '#3182ce',
-    borderWidth: 2,
-    backgroundColor: '#f0f9ff',
-  },
-  lfaMember: {
-    color: '#3182ce',
-    fontWeight: 'bold',
-  },
-  expandedDetails: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#4a5568',
-    marginLeft: 8,
-    flex: 1,
   },
   voiceButtonMinimized: {
     position: 'absolute',

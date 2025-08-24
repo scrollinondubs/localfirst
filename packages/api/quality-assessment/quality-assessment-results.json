@@ -1,0 +1,1500 @@
+{
+  "timestamp": "2025-08-24T08:49:41.421Z",
+  "config": {
+    "sampleSize": 10,
+    "outputDir": "./quality-assessment",
+    "assessmentFile": "quality-assessment-results.json",
+    "autoAssess": true,
+    "manualReview": false,
+    "verbose": true,
+    "qualityThresholds": {
+      "description": {
+        "minScore": 0.7,
+        "minLength": 100,
+        "maxLength": 1200
+      },
+      "keywords": {
+        "minCount": 3,
+        "maxCount": 15
+      },
+      "products": {
+        "minItems": 1
+      },
+      "confidence": {
+        "minScore": 0.6
+      }
+    }
+  },
+  "overallScores": {
+    "description": 0.8762499999999998,
+    "keywords": 1,
+    "products": 0.7999999999999987,
+    "confidence": 0.628750000000001,
+    "overall": 0.8362500000000012
+  },
+  "businessAssessments": [
+    {
+      "businessId": "4b2f2b29-fdf1-455e-8d8a-5e2a433cad98",
+      "businessName": "Phoenix Local Bakery",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://phoenixlocalbakery.com",
+      "descriptionScore": 1,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.95,
+      "overallScore": 0.9500000000000002,
+      "issues": [
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "d73f3396-c05a-4ba3-bc03-b758903ee128",
+      "businessName": "Scottsdale Web Design Studio",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://scottsdalewebdesign.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "0578c355-5e43-472a-808c-25a5e543cd09",
+      "businessName": "Tempe Coffee Roasters",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://tempecoffeeroasters.com",
+      "descriptionScore": 1,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.8,
+      "overallScore": 0.9200000000000002,
+      "issues": [
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "bbe44d37-b572-4231-b7c0-a7550f40d093",
+      "businessName": "Mesa Fitness Center",
+      "category": "health_wellness",
+      "lfaMember": false,
+      "website": "https://mesafitnesscenter.com",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.8,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "d1a21a54-6127-4854-a0cd-32ef0cc21f07",
+      "businessName": "Tucson Art Gallery",
+      "category": "arts_entertainment",
+      "lfaMember": true,
+      "website": "https://tucsonartgallery.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "301a1b92-5ac5-453f-bc6c-1836315a305d",
+      "businessName": "Chandler Auto Repair",
+      "category": "automotive",
+      "lfaMember": false,
+      "website": "https://chandlerautorepair.com",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.8,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "b34f022f-c108-41cd-a92f-a9d2378f9ece",
+      "businessName": "Glendale Pet Grooming",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://glendalepetgrooming.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "c882c5c9-2d73-4e1c-ae24-757097bbc865",
+      "businessName": "Gilbert Photography Studio",
+      "category": "nonprofit_community",
+      "lfaMember": true,
+      "website": "https://gilbertphotography.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "1b58166c-8c68-4186-92bf-ab328f43237d",
+      "businessName": "Peoria Plumbing Services",
+      "category": "home_services",
+      "lfaMember": false,
+      "website": "https://peoriaplumbing.com",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.95,
+      "overallScore": 0.8700000000000001,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "7099ec2a-d0e1-4327-8b1f-93a40a376052",
+      "businessName": "Flagstaff Mountain Gear",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://flagstaffmountaingear.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "9cdc58c4-ba7f-42b6-a627-3922071c7d70",
+      "businessName": "Sedona Red Rock Cafe",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://sedonacafe.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "683d5671-3d2c-4482-ba58-a4fc80426bc4",
+      "businessName": "Phoenix Thai Kitchen",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://phoenixthaikitchen.com",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "51459bd7-4701-41de-849b-4b0daf8b7122",
+      "businessName": "Tucson Taco Truck",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tucsontacotruck.net",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "2c8d3773-38b3-4f5d-8f7c-80aed7be0344",
+      "businessName": "Flagstaff Brewery & Grill",
+      "category": "food_dining",
+      "lfaMember": false,
+      "website": "https://flagstaffbrewery.beer",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "fbe77a2c-ffde-4e41-b105-79f6b7adf959",
+      "businessName": "Scottsdale Fine Dining",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://scottsdalerestaurant.com",
+      "descriptionScore": 1,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.8,
+      "overallScore": 0.9200000000000002,
+      "issues": [
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "251b4984-3150-451f-b4ff-114a6c84ed59",
+      "businessName": "Mesa Family Bakery",
+      "category": "food_dining",
+      "lfaMember": false,
+      "website": "https://mesafamilybakery.com",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "38f602e5-efc4-44b2-a7f9-47b78579a930",
+      "businessName": "Tempe Coffee House",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://tempecoffee.local",
+      "descriptionScore": 1,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.8,
+      "overallScore": 0.9200000000000002,
+      "issues": [
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "05701084-f37e-4be3-b521-e0aa64ffb753",
+      "businessName": "Glendale Pizza Palace",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://glendalepizzapalace.org",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "2e10693d-fb34-4e93-bd2c-57e835d07d72",
+      "businessName": "Chandler Sushi Bar",
+      "category": "food_dining",
+      "lfaMember": true,
+      "website": "https://chandlersushi.biz",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "26d486a4-6547-4895-be89-d389f30bd251",
+      "businessName": "Peoria BBQ Joint",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://peoriabbq.info",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "265bc3f1-282e-4455-8d10-c0ff36de7a20",
+      "businessName": "Ahwatukee Healthy Eats",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://healthyeatsaz.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "3ce74d70-6093-4650-b971-126327b3212c",
+      "businessName": "Surprise Burger Shack",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://surpriseburgers.net",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "3571435e-4311-4c10-afab-a24f73974f24",
+      "businessName": "Gilbert Gelato",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://gilbertgelato.co",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "14692a19-0af7-4b60-bf27-955c275f3972",
+      "businessName": "Queen Creek Vineyard",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://queencreekvineyard.wine",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "4486ff0e-5d03-426c-ae44-e8bf9d16f340",
+      "businessName": "Sun City Diner",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://suncitydiner.az",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "0b689039-4771-4d63-8caa-18500e32a22e",
+      "businessName": "Paradise Valley Bistro",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://pvbistro.restaurant",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "2fe10a68-6bea-497f-a1ec-d60465099d64",
+      "businessName": "Avondale Tacos",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://avondaletacos.mx",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "6ada5f5c-4ad2-407e-894e-7c0c1c8d3191",
+      "businessName": "Carefree Organic Kitchen",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://carefreeorganic.farm",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "c4bc7283-7ed0-4afa-bb20-dddeff880223",
+      "businessName": "Fountain Hills Food Truck",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://fhfoodtruck.mobile",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "922c6aea-2dc8-46a1-95d6-227ab3fe3f74",
+      "businessName": "Cave Creek Steakhouse",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://cavecreeksteaks.beef",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "c5e4d036-46bd-4db9-a7d2-5eef80397f35",
+      "businessName": "Phoenix Law Group",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://phoenixlawgroup.com",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "58b3fbb9-b2a0-446b-9af9-ac35358a96ae",
+      "businessName": "Scottsdale CPA Firm",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://scottsdaleaccounting.biz",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "30a5df55-5efd-4dce-8131-bbd46de59620",
+      "businessName": "Tempe Digital Marketing",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://tempedigital.agency",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "f85fb95c-dfbe-45a7-9121-c537d45a2262",
+      "businessName": "Mesa Consulting Group",
+      "category": "professional_services",
+      "lfaMember": false,
+      "website": "https://mesaconsulting.pro",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "5e273f56-306f-4ab4-a910-f550dc4cb5e8",
+      "businessName": "Chandler Architecture Studio",
+      "category": "nonprofit_community",
+      "lfaMember": true,
+      "website": "https://chandlerarch.design",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "47c080d6-a900-48c3-bd28-c82a0e4c6d05",
+      "businessName": "Glendale Real Estate",
+      "category": "real_estate",
+      "lfaMember": false,
+      "website": "https://glendaleproperties.homes",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "cbd5b49b-7960-4375-8b07-8a410c9a0d36",
+      "businessName": "Peoria Insurance Agency",
+      "category": "financial_services",
+      "lfaMember": true,
+      "website": "https://peoriainsurance.protect",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "886156d7-23c4-4ca2-839b-d54c2010eac1",
+      "businessName": "Gilbert Financial Planning",
+      "category": "financial_services",
+      "lfaMember": false,
+      "website": "https://gilbertfinancial.money",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "192f5923-4f33-45c4-8c8c-666b67243a4c",
+      "businessName": "Tucson Web Design",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://tucsonweb.dev",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "f964da66-79d6-4894-a9c7-94ac843fa61b",
+      "businessName": "Flagstaff Engineering",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://flagstaffeng.tech",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "6c8ba68e-c787-4dd0-8425-a93a5a6aa08b",
+      "businessName": "Sedona Photography",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://sedonaphotos.art",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "5c534215-1c95-4764-ab49-0cfad3e42ab7",
+      "businessName": "Queen Creek Tax Services",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://queencreektax.irs",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "ec63d869-1f97-40d9-b25e-fa1dfb4e489d",
+      "businessName": "Sun City Legal Aid",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://suncitylegal.help",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "39156856-fa0e-41aa-9235-3933f2c1cda7",
+      "businessName": "Paradise Valley Investment",
+      "category": "financial_services",
+      "lfaMember": false,
+      "website": "https://pvinvestment.wealth",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "6e509773-51ae-415f-89ac-70ec7dfc517c",
+      "businessName": "Avondale HR Solutions",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://avondalehr.people",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "42edf4e8-febb-49c3-8b6d-0192967bfc7d",
+      "businessName": "Carefree Business Coach",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://carefreecoach.success",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "289fb480-9ff0-434c-8258-219bfedad48f",
+      "businessName": "Fountain Hills PR Agency",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://fhpr.media",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "e367656f-3ec8-4c55-8286-e7bc1691cf5f",
+      "businessName": "Cave Creek Patent Law",
+      "category": "professional_services",
+      "lfaMember": false,
+      "website": "https://cavecreekpatents.ip",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "c1752f13-b15d-4324-bc64-92c1c25abef4",
+      "businessName": "Ahwatukee Graphic Design",
+      "category": "professional_services",
+      "lfaMember": true,
+      "website": "https://ahwatukeegraphics.visual",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "ebf93795-0f94-4370-b78c-42e674da9052",
+      "businessName": "Surprise IT Support",
+      "category": "other",
+      "lfaMember": false,
+      "website": "https://surpriseit.tech",
+      "descriptionScore": 0.8,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8,
+      "issues": [
+        "Description needs more sentences for readability",
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "5a701ae6-c18c-4217-93fc-8796ed81d8fc",
+      "businessName": "Phoenix Medical Center",
+      "category": "health_wellness",
+      "lfaMember": true,
+      "website": "https://phoenixmedical.health",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "7b7b8aa9-b66e-4ee4-8bbe-900de65501cc",
+      "businessName": "Tempe Fitness Gym",
+      "category": "health_wellness",
+      "lfaMember": true,
+      "website": "https://tempefitness.strong",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "84956fa6-e03d-4ccf-b00a-bea5f9cd14bf",
+      "businessName": "Chandler Chiropractor",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://chandlerchiro.spine",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "1485e563-f599-46bc-87d6-741ccb413ce4",
+      "businessName": "Peoria Mental Health",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://peoriamentalhealth.mind",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "183667ad-0eae-436d-b55e-b0175f963c68",
+      "businessName": "Tucson Yoga Studio",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tucsonyoga.om",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "7d4146e0-523d-4f63-9293-5b9b8e2d276f",
+      "businessName": "Sedona Holistic Health",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://sedonaholistic.heal",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "8d3070a4-e4e6-4136-a81f-8a52015a4b63",
+      "businessName": "Sun City Senior Care",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://suncityseniors.care",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "7d010ad9-76ed-4e8f-a004-fbbbec333aca",
+      "businessName": "Avondale Vision Center",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://avondalevision.see",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "00b96e13-3ea3-4056-ac5a-035828d50689",
+      "businessName": "Phoenix Gift Shop",
+      "category": "retail_shopping",
+      "lfaMember": true,
+      "website": "https://phoenixgifts.shop",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "fefa217b-2ad0-4245-bcc2-35b3d8f796cf",
+      "businessName": "Tempe Book Store",
+      "category": "retail_shopping",
+      "lfaMember": true,
+      "website": "https://tempebooks.read",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "c4f4c57e-56b6-4550-94c6-450cb94d5705",
+      "businessName": "Chandler Electronics",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://chandlerelectronics.tech",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "faa2cbe1-4c55-4173-ba9e-8a6c8395c626",
+      "businessName": "Peoria Pet Supplies",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://peoriapets.woof",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "d4be3875-366b-4d6a-8c4c-3015383f273b",
+      "businessName": "Tucson Antique Mall",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tucsonantiques.vintage",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "1590f529-13b4-4024-b124-2571d4d34011",
+      "businessName": "Sedona Crystal Shop",
+      "category": "retail_shopping",
+      "lfaMember": true,
+      "website": "https://sedonacrystals.energy",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "0eea2676-e4f0-4598-9f65-bffaa5f0d5be",
+      "businessName": "Sun City Pharmacy",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://suncitypharmacy.rx",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "da1dea31-da51-4287-8546-e6d093f32543",
+      "businessName": "Avondale Thrift Store",
+      "category": "retail_shopping",
+      "lfaMember": true,
+      "website": "https://avondalethrift.secondhand",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "1cddf35a-238d-44ee-a403-9ed23ce93ac7",
+      "businessName": "Phoenix Plumbing Pro",
+      "category": "home_services",
+      "lfaMember": true,
+      "website": "https://phoenixplumbing.fix",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "6bb30042-8de7-4a46-b9a9-7a834a1e20f3",
+      "businessName": "Tempe Electrical Services",
+      "category": "home_services",
+      "lfaMember": true,
+      "website": "https://tempeelectric.power",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "7e5777b7-7b0e-4d8f-a1fb-86c47d20fc3e",
+      "businessName": "Chandler House Cleaning",
+      "category": "home_services",
+      "lfaMember": true,
+      "website": "https://chandlercleaning.spotless",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "ad0f53b1-70a8-410a-a5e4-3973b9862397",
+      "businessName": "Peoria Painting",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://peoriapainting.color",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "e6bb7cfa-b576-459f-b4d6-855411808cca",
+      "businessName": "Tucson Pool Service",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tucsonpool.swim",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "befb55c6-b30c-4ad2-bb2d-7df0307b4300",
+      "businessName": "Sedona Window Washing",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://sedonawindows.clear",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "b89ac0fb-882c-4dc7-948e-8595f0538930",
+      "businessName": "Sun City Security Systems",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://suncitysecurity.safe",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "dadc1304-09b0-44fb-91b6-08c1e15b247d",
+      "businessName": "Avondale Construction",
+      "category": "home_services",
+      "lfaMember": true,
+      "website": "https://avondaleconstruction.build",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "f9d9c3cc-2ef4-45e3-b2b4-00f6474acd69",
+      "businessName": "Phoenix Auto Repair",
+      "category": "automotive",
+      "lfaMember": true,
+      "website": "https://phoenixauto.repair",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.7,
+      "overallScore": 0.8600000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "637d3de8-8224-4b14-b9b0-9ed048bf081b",
+      "businessName": "Tempe Quick Lube",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tempequicklube.fast",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "fb5bb55a-397f-4939-8680-0801f6367983",
+      "businessName": "Chandler Car Wash",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://chandlercarwash.clean",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "38da6324-46e3-496b-afb1-8944fff07381",
+      "businessName": "Peoria Transmission",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://peoriatransmission.shift",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "4712b7c7-f423-42de-8af8-ac3288f0d5ba",
+      "businessName": "Tucson Classic Cars",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://tucsonclassics.vintage",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    },
+    {
+      "businessId": "61cc8d27-913f-4d4c-bc7c-3ed5312aeaff",
+      "businessName": "Unique Arizona Business",
+      "category": "other",
+      "lfaMember": true,
+      "website": "https://uniqueaz.weird",
+      "descriptionScore": 0.9,
+      "keywordsScore": 1,
+      "productsScore": 0.8,
+      "confidenceScore": 0.6,
+      "overallScore": 0.8400000000000001,
+      "issues": [
+        "Description lacks specific details or credentials",
+        "Products/services lack detail"
+      ],
+      "recommendations": []
+    }
+  ],
+  "categoryAnalysis": [
+    {
+      "category": "food_dining",
+      "count": 8,
+      "averageScore": 0.87625,
+      "grade": "A"
+    },
+    {
+      "category": "health_wellness",
+      "count": 3,
+      "averageScore": 0.8533333333333335,
+      "grade": "A"
+    },
+    {
+      "category": "automotive",
+      "count": 2,
+      "averageScore": 0.8500000000000001,
+      "grade": "A"
+    },
+    {
+      "category": "home_services",
+      "count": 5,
+      "averageScore": 0.85,
+      "grade": "A"
+    },
+    {
+      "category": "arts_entertainment",
+      "count": 1,
+      "averageScore": 0.8400000000000001,
+      "grade": "A"
+    },
+    {
+      "category": "nonprofit_community",
+      "count": 2,
+      "averageScore": 0.8400000000000001,
+      "grade": "A"
+    },
+    {
+      "category": "retail_shopping",
+      "count": 4,
+      "averageScore": 0.8400000000000001,
+      "grade": "A"
+    },
+    {
+      "category": "professional_services",
+      "count": 8,
+      "averageScore": 0.8325,
+      "grade": "A"
+    },
+    {
+      "category": "other",
+      "count": 43,
+      "averageScore": 0.8279069767441865,
+      "grade": "A"
+    },
+    {
+      "category": "financial_services",
+      "count": 3,
+      "averageScore": 0.8133333333333335,
+      "grade": "A"
+    },
+    {
+      "category": "real_estate",
+      "count": 1,
+      "averageScore": 0.8,
+      "grade": "A"
+    }
+  ],
+  "recommendations": [],
+  "issuesSummary": {
+    "shortDescriptions": 0,
+    "longDescriptions": 0,
+    "genericDescriptions": 0,
+    "fewKeywords": 0,
+    "missingProducts": 0,
+    "lowConfidence": 0
+  },
+  "summary": {
+    "totalBusinessesAssessed": 80,
+    "overallGrade": "A",
+    "passRate": 1,
+    "topPerformingCategory": "food_dining",
+    "needsImprovementCount": 0
+  }
+}

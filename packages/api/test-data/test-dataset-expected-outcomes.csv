@@ -1,0 +1,101 @@
+id,name,website,currentCategory,expectedPrimaryCategory,city,businessType,lfaMember,complexity,testingNotes
+9cdc58c4-ba7f-42b6-a627-3922071c7d70,Sedona Red Rock Cafe,https://sedonacafe.com,restaurant,food_dining,Sedona,simple,true,1,LFA Member - test Firecrawl method
+683d5671-3d2c-4482-ba58-a4fc80426bc4,Phoenix Thai Kitchen,https://phoenixthaikitchen.com,restaurant,food_dining,Phoenix,complex,false,3,Non-LFA - test Playwright method
+51459bd7-4701-41de-849b-4b0daf8b7122,Tucson Taco Truck,https://tucsontacotruck.net,restaurant,food_dining,Tucson,mobile,true,2,Mobile business - may have limited website content; LFA Member - test Firecrawl method
+2c8d3773-38b3-4f5d-8f7c-80aed7be0344,Flagstaff Brewery & Grill,https://flagstaffbrewery.beer,restaurant,food_dining,Flagstaff,brewery,false,2,Non-LFA - test Playwright method
+fbe77a2c-ffde-4e41-b105-79f6b7adf959,Scottsdale Fine Dining,https://scottsdalerestaurant.com,restaurant,food_dining,Scottsdale,upscale,true,2,High-end business - expect sophisticated website; LFA Member - test Firecrawl method
+251b4984-3150-451f-b4ff-114a6c84ed59,Mesa Family Bakery,https://mesafamilybakery.com,restaurant,food_dining,Mesa,bakery,false,2,Non-LFA - test Playwright method
+38f602e5-efc4-44b2-a7f9-47b78579a930,Tempe Coffee House,https://tempecoffee.local,restaurant,food_dining,Tempe,coffeeshop,true,2,LFA Member - test Firecrawl method
+05701084-f37e-4be3-b521-e0aa64ffb753,Glendale Pizza Palace,https://glendalepizzapalace.org,restaurant,food_dining,Glendale,pizza,false,2,Non-LFA - test Playwright method
+2e10693d-fb34-4e93-bd2c-57e835d07d72,Chandler Sushi Bar,https://chandlersushi.biz,restaurant,food_dining,Chandler,sushi,true,2,LFA Member - test Firecrawl method
+26d486a4-6547-4895-be89-d389f30bd251,Peoria BBQ Joint,https://peoriabbq.info,restaurant,food_dining,Peoria,bbq,false,2,Non-LFA - test Playwright method
+265bc3f1-282e-4455-8d10-c0ff36de7a20,Ahwatukee Healthy Eats,https://healthyeatsaz.com,restaurant,food_dining,Ahwatukee,health,true,2,LFA Member - test Firecrawl method
+3ce74d70-6093-4650-b971-126327b3212c,Surprise Burger Shack,https://surpriseburgers.net,restaurant,food_dining,Surprise,casual,false,2,Non-LFA - test Playwright method
+3571435e-4311-4c10-afab-a24f73974f24,Gilbert Gelato,https://gilbertgelato.co,restaurant,food_dining,Gilbert,dessert,true,2,LFA Member - test Firecrawl method
+14692a19-0af7-4b60-bf27-955c275f3972,Queen Creek Vineyard,https://queencreekvineyard.wine,restaurant,food_dining,Queen Creek,winery,false,2,Non-LFA - test Playwright method
+4486ff0e-5d03-426c-ae44-e8bf9d16f340,Sun City Diner,https://suncitydiner.az,restaurant,food_dining,Sun City,diner,true,2,LFA Member - test Firecrawl method
+0b689039-4771-4d63-8caa-18500e32a22e,Paradise Valley Bistro,https://pvbistro.restaurant,restaurant,food_dining,Paradise Valley,french,false,2,Non-LFA - test Playwright method
+2fe10a68-6bea-497f-a1ec-d60465099d64,Avondale Tacos,https://avondaletacos.mx,restaurant,food_dining,Avondale,mexican,true,2,LFA Member - test Firecrawl method
+6ada5f5c-4ad2-407e-894e-7c0c1c8d3191,Carefree Organic Kitchen,https://carefreeorganic.farm,restaurant,food_dining,Carefree,organic,false,2,Non-LFA - test Playwright method
+c4bc7283-7ed0-4afa-bb20-dddeff880223,Fountain Hills Food Truck,https://fhfoodtruck.mobile,restaurant,food_dining,Fountain Hills,food_truck,true,2,Mobile business - may have limited website content; LFA Member - test Firecrawl method
+922c6aea-2dc8-46a1-95d6-227ab3fe3f74,Cave Creek Steakhouse,https://cavecreeksteaks.beef,restaurant,food_dining,Cave Creek,steakhouse,false,2,Non-LFA - test Playwright method
+c5e4d036-46bd-4db9-a7d2-5eef80397f35,Phoenix Law Group,https://phoenixlawgroup.com,professional_services,professional_services,Phoenix,legal,true,2,LFA Member - test Firecrawl method
+58b3fbb9-b2a0-446b-9af9-ac35358a96ae,Scottsdale CPA Firm,https://scottsdaleaccounting.biz,professional_services,professional_services,Scottsdale,accounting,false,2,Non-LFA - test Playwright method
+30a5df55-5efd-4dce-8131-bbd46de59620,Tempe Digital Marketing,https://tempedigital.agency,professional_services,professional_services,Tempe,marketing,true,2,LFA Member - test Firecrawl method
+f85fb95c-dfbe-45a7-9121-c537d45a2262,Mesa Consulting Group,https://mesaconsulting.pro,professional_services,professional_services,Mesa,consulting,false,2,Non-LFA - test Playwright method
+5e273f56-306f-4ab4-a910-f550dc4cb5e8,Chandler Architecture Studio,https://chandlerarch.design,professional_services,professional_services,Chandler,architecture,true,2,LFA Member - test Firecrawl method
+47c080d6-a900-48c3-bd28-c82a0e4c6d05,Glendale Real Estate,https://glendaleproperties.homes,professional_services,professional_services,Glendale,real_estate,false,2,Non-LFA - test Playwright method
+cbd5b49b-7960-4375-8b07-8a410c9a0d36,Peoria Insurance Agency,https://peoriainsurance.protect,professional_services,professional_services,Peoria,insurance,true,2,LFA Member - test Firecrawl method
+886156d7-23c4-4ca2-839b-d54c2010eac1,Gilbert Financial Planning,https://gilbertfinancial.money,professional_services,professional_services,Gilbert,financial,false,2,Non-LFA - test Playwright method
+192f5923-4f33-45c4-8c8c-666b67243a4c,Tucson Web Design,https://tucsonweb.dev,professional_services,professional_services,Tucson,web_design,true,2,LFA Member - test Firecrawl method
+f964da66-79d6-4894-a9c7-94ac843fa61b,Flagstaff Engineering,https://flagstaffeng.tech,professional_services,professional_services,Flagstaff,engineering,false,2,Non-LFA - test Playwright method
+6c8ba68e-c787-4dd0-8425-a93a5a6aa08b,Sedona Photography,https://sedonaphotos.art,professional_services,professional_services,Sedona,photography,true,2,LFA Member - test Firecrawl method
+5c534215-1c95-4764-ab49-0cfad3e42ab7,Queen Creek Tax Services,https://queencreektax.irs,professional_services,professional_services,Queen Creek,tax,false,2,Non-LFA - test Playwright method
+ec63d869-1f97-40d9-b25e-fa1dfb4e489d,Sun City Legal Aid,https://suncitylegal.help,professional_services,professional_services,Sun City,legal_aid,true,2,LFA Member - test Firecrawl method
+39156856-fa0e-41aa-9235-3933f2c1cda7,Paradise Valley Investment,https://pvinvestment.wealth,professional_services,professional_services,Paradise Valley,investment,false,2,Non-LFA - test Playwright method
+6e509773-51ae-415f-89ac-70ec7dfc517c,Avondale HR Solutions,https://avondalehr.people,professional_services,professional_services,Avondale,hr,true,2,LFA Member - test Firecrawl method
+42edf4e8-febb-49c3-8b6d-0192967bfc7d,Carefree Business Coach,https://carefreecoach.success,professional_services,professional_services,Carefree,coaching,false,2,Non-LFA - test Playwright method
+289fb480-9ff0-434c-8258-219bfedad48f,Fountain Hills PR Agency,https://fhpr.media,professional_services,professional_services,Fountain Hills,pr,true,2,LFA Member - test Firecrawl method
+e367656f-3ec8-4c55-8286-e7bc1691cf5f,Cave Creek Patent Law,https://cavecreekpatents.ip,professional_services,professional_services,Cave Creek,patent,false,2,Non-LFA - test Playwright method
+c1752f13-b15d-4324-bc64-92c1c25abef4,Ahwatukee Graphic Design,https://ahwatukeegraphics.visual,professional_services,professional_services,Ahwatukee,design,true,2,LFA Member - test Firecrawl method
+ebf93795-0f94-4370-b78c-42e674da9052,Surprise IT Support,https://surpriseit.tech,professional_services,professional_services,Surprise,it,false,2,Non-LFA - test Playwright method
+5a701ae6-c18c-4217-93fc-8796ed81d8fc,Phoenix Medical Center,https://phoenixmedical.health,health_wellness,health_wellness,Phoenix,medical,true,2,LFA Member - test Firecrawl method
+ed4b5a6a-fb63-477b-8a3e-e0969edb088d,Scottsdale Dental Practice,https://scottsdaledental.smile,health_wellness,health_wellness,Scottsdale,dental,false,2,Non-LFA - test Playwright method
+7b7b8aa9-b66e-4ee4-8bbe-900de65501cc,Tempe Fitness Gym,https://tempefitness.strong,health_wellness,health_wellness,Tempe,fitness,true,2,LFA Member - test Firecrawl method
+f6103f58-d3f8-49b2-8498-43eaa19c4b6a,Mesa Physical Therapy,https://mesapt.rehab,health_wellness,health_wellness,Mesa,therapy,false,2,Non-LFA - test Playwright method
+84956fa6-e03d-4ccf-b00a-bea5f9cd14bf,Chandler Chiropractor,https://chandlerchiro.spine,health_wellness,health_wellness,Chandler,chiropractic,true,2,LFA Member - test Firecrawl method
+945427db-624d-49d4-b4c0-7538e956aee2,Glendale Wellness Spa,https://glendalewellness.relax,health_wellness,health_wellness,Glendale,spa,false,2,Non-LFA - test Playwright method
+1485e563-f599-46bc-87d6-741ccb413ce4,Peoria Mental Health,https://peoriamentalhealth.mind,health_wellness,health_wellness,Peoria,mental_health,true,2,LFA Member - test Firecrawl method
+1db125f2-42c9-4a52-986e-e2d97de5e355,Gilbert Nutrition Center,https://gilbertnutrition.healthy,health_wellness,health_wellness,Gilbert,nutrition,false,2,Non-LFA - test Playwright method
+183667ad-0eae-436d-b55e-b0175f963c68,Tucson Yoga Studio,https://tucsonyoga.om,health_wellness,health_wellness,Tucson,yoga,true,2,LFA Member - test Firecrawl method
+dbf3f00c-40dc-4d78-8bac-b503b1819f36,Flagstaff Urgent Care,https://flagstaffurgent.now,health_wellness,health_wellness,Flagstaff,urgent_care,false,2,Non-LFA - test Playwright method
+7d4146e0-523d-4f63-9293-5b9b8e2d276f,Sedona Holistic Health,https://sedonaholistic.heal,health_wellness,health_wellness,Sedona,holistic,true,2,LFA Member - test Firecrawl method
+d94eaa2a-6e84-45ff-998c-9ea185122e7e,Queen Creek Pediatrics,https://queencreekpeds.kids,health_wellness,health_wellness,Queen Creek,pediatrics,false,2,Non-LFA - test Playwright method
+8d3070a4-e4e6-4136-a81f-8a52015a4b63,Sun City Senior Care,https://suncityseniors.care,health_wellness,health_wellness,Sun City,senior_care,true,2,LFA Member - test Firecrawl method
+f86ff168-fcb0-48fe-b3b7-c19d3608bbf8,Paradise Valley Dermatology,https://pvdermatology.skin,health_wellness,health_wellness,Paradise Valley,dermatology,false,2,Non-LFA - test Playwright method
+7d010ad9-76ed-4e8f-a004-fbbbec333aca,Avondale Vision Center,https://avondalevision.see,health_wellness,health_wellness,Avondale,vision,true,2,LFA Member - test Firecrawl method
+00b96e13-3ea3-4056-ac5a-035828d50689,Phoenix Gift Shop,https://phoenixgifts.shop,retail,retail_shopping,Phoenix,gifts,true,2,LFA Member - test Firecrawl method
+bcc3feb4-5f28-414b-84df-fe061e5bccfc,Scottsdale Fashion Boutique,https://scottsdalefashion.style,retail,retail_shopping,Scottsdale,fashion,false,2,Non-LFA - test Playwright method
+fefa217b-2ad0-4245-bcc2-35b3d8f796cf,Tempe Book Store,https://tempebooks.read,retail,retail_shopping,Tempe,books,true,2,LFA Member - test Firecrawl method
+0ff3175a-3241-4b6f-b94c-f2d065b65a3c,Mesa Outdoor Gear,https://mesaoutdoor.adventure,retail,retail_shopping,Mesa,outdoor,false,2,Non-LFA - test Playwright method
+c4f4c57e-56b6-4550-94c6-450cb94d5705,Chandler Electronics,https://chandlerelectronics.tech,retail,retail_shopping,Chandler,electronics,true,2,LFA Member - test Firecrawl method
+fa1f3bd1-9028-4cf4-8bf6-5440506164a9,Glendale Furniture Store,https://glendalefurniture.home,retail,retail_shopping,Glendale,furniture,false,2,Non-LFA - test Playwright method
+faa2cbe1-4c55-4173-ba9e-8a6c8395c626,Peoria Pet Supplies,https://peoriapets.woof,retail,retail_shopping,Peoria,pets,true,2,LFA Member - test Firecrawl method
+d0dd78d2-0a21-4c84-8cc5-fa4106cd7da7,Gilbert Garden Center,https://gilbertgarden.grow,retail,retail_shopping,Gilbert,garden,false,2,Non-LFA - test Playwright method
+d4be3875-366b-4d6a-8c4c-3015383f273b,Tucson Antique Mall,https://tucsonantiques.vintage,retail,retail_shopping,Tucson,antiques,true,2,LFA Member - test Firecrawl method
+b8bbf41e-9623-47b1-bd76-8166c0a7007d,Flagstaff Outdoor Store,https://flagstaffoutdoor.mountain,retail,retail_shopping,Flagstaff,outdoor,false,2,Non-LFA - test Playwright method
+1590f529-13b4-4024-b124-2571d4d34011,Sedona Crystal Shop,https://sedonacrystals.energy,retail,retail_shopping,Sedona,crystals,true,2,LFA Member - test Firecrawl method
+e9725ed9-078b-44d5-a7f0-d8b1e1dc9d2b,Queen Creek Craft Store,https://queencreekcrafts.make,retail,retail_shopping,Queen Creek,crafts,false,2,Non-LFA - test Playwright method
+0eea2676-e4f0-4598-9f65-bffaa5f0d5be,Sun City Pharmacy,https://suncitypharmacy.rx,retail,retail_shopping,Sun City,pharmacy,true,2,LFA Member - test Firecrawl method
+89ad56bc-5029-4d68-95f4-d0be818bccf3,Paradise Valley Jewelry,https://pvjewelry.sparkle,retail,retail_shopping,Paradise Valley,jewelry,false,2,Non-LFA - test Playwright method
+da1dea31-da51-4287-8546-e6d093f32543,Avondale Thrift Store,https://avondalethrift.secondhand,retail,retail_shopping,Avondale,thrift,true,2,LFA Member - test Firecrawl method
+1cddf35a-238d-44ee-a403-9ed23ce93ac7,Phoenix Plumbing Pro,https://phoenixplumbing.fix,home_services,home_services,Phoenix,plumbing,true,2,LFA Member - test Firecrawl method
+7bc473cb-6624-448c-8d5a-62d4f762b3d1,Scottsdale HVAC Expert,https://scottsdalehvac.cool,home_services,home_services,Scottsdale,hvac,false,2,Non-LFA - test Playwright method
+6bb30042-8de7-4a46-b9a9-7a834a1e20f3,Tempe Electrical Services,https://tempeelectric.power,home_services,home_services,Tempe,electrical,true,2,LFA Member - test Firecrawl method
+64d9ab36-981a-4b46-b0de-f4e5a79be505,Mesa Landscaping,https://mesalandscape.green,home_services,home_services,Mesa,landscaping,false,2,Non-LFA - test Playwright method
+7e5777b7-7b0e-4d8f-a1fb-86c47d20fc3e,Chandler House Cleaning,https://chandlercleaning.spotless,home_services,home_services,Chandler,cleaning,true,2,LFA Member - test Firecrawl method
+45d8b597-b971-4ef2-8812-23f148bd4daf,Glendale Roofing,https://glendaleroof.protect,home_services,home_services,Glendale,roofing,false,2,Non-LFA - test Playwright method
+ad0f53b1-70a8-410a-a5e4-3973b9862397,Peoria Painting,https://peoriapainting.color,home_services,home_services,Peoria,painting,true,2,LFA Member - test Firecrawl method
+a40b2680-9d32-43ca-a566-950c547ac590,Gilbert Pest Control,https://gilbertpest.bug,home_services,home_services,Gilbert,pest,false,2,Non-LFA - test Playwright method
+e6bb7cfa-b576-459f-b4d6-855411808cca,Tucson Pool Service,https://tucsonpool.swim,home_services,home_services,Tucson,pool,true,2,LFA Member - test Firecrawl method
+7ace80aa-f465-4a2d-a70a-f37d3c346e28,Flagstaff Handyman,https://flagstaffhandyman.fixit,home_services,home_services,Flagstaff,handyman,false,2,Non-LFA - test Playwright method
+befb55c6-b30c-4ad2-bb2d-7df0307b4300,Sedona Window Washing,https://sedonawindows.clear,home_services,home_services,Sedona,windows,true,2,LFA Member - test Firecrawl method
+56299631-f920-40e0-9fde-48e396ba42b5,Queen Creek Tree Service,https://queencreektrees.trim,home_services,home_services,Queen Creek,tree,false,2,Non-LFA - test Playwright method
+b89ac0fb-882c-4dc7-948e-8595f0538930,Sun City Security Systems,https://suncitysecurity.safe,home_services,home_services,Sun City,security,true,2,LFA Member - test Firecrawl method
+5ab8687f-8c3b-4bfb-973e-bbac7b3f7242,Paradise Valley Solar,https://pvsolar.energy,home_services,home_services,Paradise Valley,solar,false,2,Non-LFA - test Playwright method
+dadc1304-09b0-44fb-91b6-08c1e15b247d,Avondale Construction,https://avondaleconstruction.build,home_services,home_services,Avondale,construction,true,2,LFA Member - test Firecrawl method
+f9d9c3cc-2ef4-45e3-b2b4-00f6474acd69,Phoenix Auto Repair,https://phoenixauto.repair,automotive,automotive,Phoenix,repair,true,2,LFA Member - test Firecrawl method
+27721845-5634-4e38-b566-aa0327e01231,Scottsdale BMW Service,https://scottsdalebmw.luxury,automotive,automotive,Scottsdale,luxury,false,2,High-end business - expect sophisticated website; Non-LFA - test Playwright method
+637d3de8-8224-4b14-b9b0-9ed048bf081b,Tempe Quick Lube,https://tempequicklube.fast,automotive,automotive,Tempe,quicklube,true,2,LFA Member - test Firecrawl method
+bd60659b-0d97-4b6a-afae-f6b63887044b,Mesa Tire Shop,https://mesatires.roll,automotive,automotive,Mesa,tires,false,2,Non-LFA - test Playwright method
+fb5bb55a-397f-4939-8680-0801f6367983,Chandler Car Wash,https://chandlercarwash.clean,automotive,automotive,Chandler,carwash,true,2,LFA Member - test Firecrawl method
+1800e7bf-cd8c-4181-a027-9c1d23eeac99,Glendale Auto Body,https://glendaleautobody.restore,automotive,automotive,Glendale,bodyshop,false,2,Non-LFA - test Playwright method
+38da6324-46e3-496b-afb1-8944fff07381,Peoria Transmission,https://peoriatransmission.shift,automotive,automotive,Peoria,transmission,true,2,LFA Member - test Firecrawl method
+58de1b85-a9a5-4a2d-aef1-03a14611f753,Gilbert Muffler Shop,https://gilbertmuffler.quiet,automotive,automotive,Gilbert,muffler,false,2,Non-LFA - test Playwright method
+4712b7c7-f423-42de-8af8-ac3288f0d5ba,Tucson Classic Cars,https://tucsonclassics.vintage,automotive,automotive,Tucson,classic,true,2,LFA Member - test Firecrawl method
+daeeb99d-3895-42c7-aab1-14879a82748e,Flagstaff 4x4 Service,https://flagstaff4x4.offroad,automotive,automotive,Flagstaff,4x4,false,2,Non-LFA - test Playwright method
+61cc8d27-913f-4d4c-bc7c-3ed5312aeaff,Unique Arizona Business,https://uniqueaz.weird,other,other,Phoenix,unusual,true,4,Complex business model - test edge case classification; LFA Member - test Firecrawl method
+5b7bb886-6cee-411c-a596-1478cf164a27,Multi-Service Company,https://multiservice.everything,other,other,Tucson,multi,false,4,Complex business model - test edge case classification; Non-LFA - test Playwright method
+468d55d8-b151-4fb8-add5-299e25f86df6,Innovation Hub,https://innovationhub.future,other,other,Tempe,innovation,true,3,LFA Member - test Firecrawl method
+5c9daa4f-204e-44cb-8a78-6bf62de32c6e,Community Center,https://communitycenter.together,other,other,Mesa,community,false,2,Non-LFA - test Playwright method
+6e78b73a-b478-4745-ada6-36f94b21a678,Startup Incubator,https://startupincubator.launch,other,other,Scottsdale,startup,true,2,LFA Member - test Firecrawl method

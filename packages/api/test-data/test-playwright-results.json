@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:48:28.995Z",
+    "config": {
+      "batchSize": 10,
+      "concurrency": 2,
+      "method": "playwright",
+      "priority": "all",
+      "retryAttempts": 3,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 2000,
+      "verbose": 1,
+      "dryRun": false,
+      "resumeFile": "./test-playwright-progress.json",
+      "exportResults": "./test-playwright-results.json"
+    },
+    "stats": {
+      "total": 10,
+      "processed": 10,
+      "successful": 10,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:48:16.387Z",
+      "costs": {
+        "firecrawl": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "3ce74d70-6093-4650-b971-126327b3212c",
+      "businessName": "Surprise Burger Shack",
+      "website": "https://surpriseburgers.net",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "14692a19-0af7-4b60-bf27-955c275f3972",
+      "businessName": "Queen Creek Vineyard",
+      "website": "https://queencreekvineyard.wine",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "0b689039-4771-4d63-8caa-18500e32a22e",
+      "businessName": "Paradise Valley Bistro",
+      "website": "https://pvbistro.restaurant",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "6ada5f5c-4ad2-407e-894e-7c0c1c8d3191",
+      "businessName": "Carefree Organic Kitchen",
+      "website": "https://carefreeorganic.farm",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "922c6aea-2dc8-46a1-95d6-227ab3fe3f74",
+      "businessName": "Cave Creek Steakhouse",
+      "website": "https://cavecreeksteaks.beef",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "58b3fbb9-b2a0-446b-9af9-ac35358a96ae",
+      "businessName": "Scottsdale CPA Firm",
+      "website": "https://scottsdaleaccounting.biz",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "f85fb95c-dfbe-45a7-9121-c537d45a2262",
+      "businessName": "Mesa Consulting Group",
+      "website": "https://mesaconsulting.pro",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "47c080d6-a900-48c3-bd28-c82a0e4c6d05",
+      "businessName": "Glendale Real Estate",
+      "website": "https://glendaleproperties.homes",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "886156d7-23c4-4ca2-839b-d54c2010eac1",
+      "businessName": "Gilbert Financial Planning",
+      "website": "https://gilbertfinancial.money",
+      "success": true,
+      "lfaMember": false
+    },
+    {
+      "businessId": "f964da66-79d6-4894-a9c7-94ac843fa61b",
+      "businessName": "Flagstaff Engineering",
+      "website": "https://flagstaffeng.tech",
+      "success": true,
+      "lfaMember": false
+    }
+  ]
+}

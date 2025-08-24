@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:49:04.373Z",
+    "config": {
+      "batchSize": 10,
+      "concurrency": 2,
+      "method": "auto",
+      "priority": "lfa",
+      "retryAttempts": 3,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 2000,
+      "verbose": 1,
+      "dryRun": false,
+      "resumeFile": "./test-batch-10-progress.json",
+      "exportResults": "./test-batch-10-results.json"
+    },
+    "stats": {
+      "total": 10,
+      "processed": 10,
+      "successful": 10,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:48:50.803Z",
+      "costs": {
+        "firecrawl": 0.09999999999999999
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "7d4146e0-523d-4f63-9293-5b9b8e2d276f",
+      "businessName": "Sedona Holistic Health",
+      "website": "https://sedonaholistic.heal",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "8d3070a4-e4e6-4136-a81f-8a52015a4b63",
+      "businessName": "Sun City Senior Care",
+      "website": "https://suncityseniors.care",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "7d010ad9-76ed-4e8f-a004-fbbbec333aca",
+      "businessName": "Avondale Vision Center",
+      "website": "https://avondalevision.see",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "00b96e13-3ea3-4056-ac5a-035828d50689",
+      "businessName": "Phoenix Gift Shop",
+      "website": "https://phoenixgifts.shop",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "fefa217b-2ad0-4245-bcc2-35b3d8f796cf",
+      "businessName": "Tempe Book Store",
+      "website": "https://tempebooks.read",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "c4f4c57e-56b6-4550-94c6-450cb94d5705",
+      "businessName": "Chandler Electronics",
+      "website": "https://chandlerelectronics.tech",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "faa2cbe1-4c55-4173-ba9e-8a6c8395c626",
+      "businessName": "Peoria Pet Supplies",
+      "website": "https://peoriapets.woof",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "d4be3875-366b-4d6a-8c4c-3015383f273b",
+      "businessName": "Tucson Antique Mall",
+      "website": "https://tucsonantiques.vintage",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "1590f529-13b4-4024-b124-2571d4d34011",
+      "businessName": "Sedona Crystal Shop",
+      "website": "https://sedonacrystals.energy",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "0eea2676-e4f0-4598-9f65-bffaa5f0d5be",
+      "businessName": "Sun City Pharmacy",
+      "website": "https://suncitypharmacy.rx",
+      "success": true,
+      "lfaMember": true
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "timestamp": "2025-08-24T08:48:50.774Z",
+    "config": {
+      "batchSize": 5,
+      "concurrency": 2,
+      "method": "auto",
+      "priority": "lfa",
+      "retryAttempts": 3,
+      "retryDelayMs": 5000,
+      "requestDelayMs": 2000,
+      "verbose": 1,
+      "dryRun": false,
+      "resumeFile": "./test-batch-5-progress.json",
+      "exportResults": "./test-batch-5-results.json"
+    },
+    "stats": {
+      "total": 5,
+      "processed": 5,
+      "successful": 5,
+      "failed": 0,
+      "skipped": 0,
+      "startTime": "2025-08-24T08:48:42.639Z",
+      "costs": {
+        "firecrawl": 0.05
+      }
+    }
+  },
+  "results": [
+    {
+      "businessId": "5a701ae6-c18c-4217-93fc-8796ed81d8fc",
+      "businessName": "Phoenix Medical Center",
+      "website": "https://phoenixmedical.health",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "7b7b8aa9-b66e-4ee4-8bbe-900de65501cc",
+      "businessName": "Tempe Fitness Gym",
+      "website": "https://tempefitness.strong",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "84956fa6-e03d-4ccf-b00a-bea5f9cd14bf",
+      "businessName": "Chandler Chiropractor",
+      "website": "https://chandlerchiro.spine",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "1485e563-f599-46bc-87d6-741ccb413ce4",
+      "businessName": "Peoria Mental Health",
+      "website": "https://peoriamentalhealth.mind",
+      "success": true,
+      "lfaMember": true
+    },
+    {
+      "businessId": "183667ad-0eae-436d-b55e-b0175f963c68",
+      "businessName": "Tucson Yoga Studio",
+      "website": "https://tucsonyoga.om",
+      "success": true,
+      "lfaMember": true
+    }
+  ]
+}

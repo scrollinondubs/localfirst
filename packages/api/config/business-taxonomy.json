@@ -1,0 +1,282 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-08-24",
+  "description": "LocalFirst Arizona Business Taxonomy for AI Classification",
+  "categories": {
+    "food_dining": {
+      "name": "food_dining",
+      "displayName": "Food & Dining",
+      "description": "Restaurants, cafes, bars, bakeries, and food service businesses",
+      "keywords": ["restaurant", "cafe", "bar", "brewery", "bakery", "food", "dining", "catering", "pizza", "coffee", "diner", "bistro", "grill", "kitchen", "eatery", "tavern", "pub", "steakhouse", "sushi", "mexican", "italian", "chinese", "thai", "sandwich", "burger", "taco", "bbq"],
+      "subcategories": [
+        "restaurant",
+        "cafe",
+        "bar_pub",
+        "bakery",
+        "catering",
+        "food_truck",
+        "brewery_winery"
+      ]
+    },
+    "retail_shopping": {
+      "name": "retail_shopping",
+      "displayName": "Retail & Shopping",
+      "description": "Stores, shops, boutiques, and retail businesses",
+      "keywords": ["store", "shop", "retail", "boutique", "market", "mall", "shopping", "gift", "clothing", "fashion", "jewelry", "electronics", "furniture", "books", "toys", "sports", "outdoor", "antique", "thrift", "pharmacy", "grocery", "convenience"],
+      "subcategories": [
+        "clothing_fashion",
+        "electronics",
+        "furniture_home",
+        "books_media",
+        "gifts_novelty",
+        "grocery_market",
+        "pharmacy"
+      ]
+    },
+    "professional_services": {
+      "name": "professional_services",
+      "displayName": "Professional Services",
+      "description": "Legal, accounting, consulting, and business services",
+      "keywords": ["law", "legal", "attorney", "lawyer", "accounting", "cpa", "tax", "consulting", "marketing", "advertising", "design", "architecture", "engineering", "real estate", "insurance", "financial", "investment", "business", "professional", "service", "consultant", "advisor"],
+      "subcategories": [
+        "legal_services",
+        "accounting_tax",
+        "consulting",
+        "marketing_advertising",
+        "real_estate",
+        "insurance",
+        "financial_services"
+      ]
+    },
+    "health_wellness": {
+      "name": "health_wellness",
+      "displayName": "Health & Wellness",
+      "description": "Medical, dental, fitness, and wellness services",
+      "keywords": ["medical", "doctor", "physician", "clinic", "hospital", "dental", "dentist", "fitness", "gym", "spa", "wellness", "health", "therapy", "physical", "mental", "chiropractic", "massage", "yoga", "nutrition", "pharmacy", "urgent", "care", "pediatric", "dermatology", "vision", "optometry"],
+      "subcategories": [
+        "medical_services",
+        "dental_services",
+        "fitness_gym",
+        "spa_wellness",
+        "mental_health",
+        "alternative_medicine"
+      ]
+    },
+    "home_services": {
+      "name": "home_services",
+      "displayName": "Home Services",
+      "description": "Construction, repair, maintenance, and home improvement services",
+      "keywords": ["construction", "contractor", "plumbing", "electrical", "hvac", "roofing", "painting", "landscaping", "cleaning", "handyman", "repair", "maintenance", "home", "house", "residential", "commercial", "remodel", "renovation", "installation", "service"],
+      "subcategories": [
+        "construction_contractor",
+        "plumbing_electrical",
+        "landscaping_lawn",
+        "cleaning_maintenance",
+        "hvac_heating_cooling"
+      ]
+    },
+    "automotive": {
+      "name": "automotive",
+      "displayName": "Automotive",
+      "description": "Auto repair, car sales, and automotive services",
+      "keywords": ["auto", "car", "automotive", "repair", "mechanic", "service", "dealer", "dealership", "parts", "tire", "oil", "brake", "transmission", "body", "paint", "collision", "wash", "detail", "towing", "smog", "inspection"],
+      "subcategories": [
+        "auto_repair",
+        "car_dealer",
+        "auto_parts",
+        "car_wash_detail",
+        "towing_services"
+      ]
+    },
+    "arts_entertainment": {
+      "name": "arts_entertainment",
+      "displayName": "Arts & Entertainment",
+      "description": "Galleries, theaters, music, and entertainment venues",
+      "keywords": ["art", "gallery", "museum", "theater", "theatre", "music", "concert", "entertainment", "event", "venue", "performance", "artist", "creative", "cultural", "recreation", "fun", "leisure"],
+      "subcategories": [
+        "art_gallery",
+        "music_venue",
+        "theater_performance",
+        "event_venue",
+        "recreation"
+      ]
+    },
+    "education_training": {
+      "name": "education_training",
+      "displayName": "Education & Training",
+      "description": "Schools, training centers, and educational services",
+      "keywords": ["school", "education", "training", "learning", "tutor", "tutoring", "teaching", "instructor", "class", "course", "workshop", "seminar", "academy", "institute", "college", "university"],
+      "subcategories": [
+        "schools",
+        "tutoring_training",
+        "workshops_seminars",
+        "professional_development"
+      ]
+    },
+    "beauty_personal_care": {
+      "name": "beauty_personal_care",
+      "displayName": "Beauty & Personal Care",
+      "description": "Salons, barbershops, spas, and personal care services",
+      "keywords": ["salon", "beauty", "hair", "barber", "barbershop", "nail", "massage", "spa", "skincare", "cosmetic", "personal", "care", "grooming", "styling", "makeover", "facial"],
+      "subcategories": [
+        "hair_salon",
+        "barbershop",
+        "nail_salon",
+        "massage_therapy",
+        "skincare_spa"
+      ]
+    },
+    "financial_services": {
+      "name": "financial_services", 
+      "displayName": "Financial Services",
+      "description": "Banks, credit unions, and financial institutions",
+      "keywords": ["bank", "banking", "credit", "union", "loan", "mortgage", "finance", "financial", "investment", "insurance", "money", "atm", "checking", "savings", "wealth", "advisor"],
+      "subcategories": [
+        "banks_credit_unions",
+        "investment_services",
+        "insurance_agencies",
+        "loan_mortgage"
+      ]
+    },
+    "technology": {
+      "name": "technology",
+      "displayName": "Technology",
+      "description": "IT services, software development, and technology companies",
+      "keywords": ["technology", "tech", "it", "computer", "software", "hardware", "web", "website", "development", "programming", "coding", "digital", "internet", "online", "cyber", "security", "data", "cloud"],
+      "subcategories": [
+        "it_support",
+        "web_development",
+        "software_development",
+        "cybersecurity"
+      ]
+    },
+    "manufacturing_industrial": {
+      "name": "manufacturing_industrial",
+      "displayName": "Manufacturing & Industrial",
+      "description": "Manufacturing, wholesale, and industrial businesses",
+      "keywords": ["manufacturing", "industrial", "factory", "warehouse", "wholesale", "distribution", "supply", "supplier", "production", "fabrication", "assembly", "equipment", "machinery", "materials"],
+      "subcategories": [
+        "manufacturing",
+        "wholesale_distribution",
+        "industrial_supply",
+        "equipment_machinery"
+      ]
+    },
+    "nonprofit_community": {
+      "name": "nonprofit_community",
+      "displayName": "Nonprofit & Community",
+      "description": "Nonprofit organizations, charities, and community services",
+      "keywords": ["nonprofit", "non-profit", "charity", "charitable", "community", "organization", "association", "foundation", "volunteer", "donation", "social", "service", "church", "religious", "civic"],
+      "subcategories": [
+        "nonprofit_org",
+        "religious_org",
+        "community_center",
+        "charitable_foundation"
+      ]
+    },
+    "transportation_logistics": {
+      "name": "transportation_logistics",
+      "displayName": "Transportation & Logistics",
+      "description": "Transportation, shipping, and logistics services",
+      "keywords": ["transportation", "transport", "shipping", "delivery", "logistics", "freight", "trucking", "moving", "storage", "warehouse", "courier", "mail", "postal", "taxi", "rideshare"],
+      "subcategories": [
+        "shipping_delivery",
+        "moving_storage",
+        "transportation_services",
+        "logistics"
+      ]
+    },
+    "other": {
+      "name": "other",
+      "displayName": "Other",
+      "description": "Businesses that don't fit into other categories",
+      "keywords": ["other", "miscellaneous", "various", "general", "specialty", "unique", "custom"],
+      "subcategories": [
+        "specialty_services",
+        "unique_business",
+        "multi_service"
+      ]
+    }
+  },
+  "attributeTypes": {
+    "ownership": {
+      "displayName": "Ownership Type",
+      "description": "Business ownership characteristics",
+      "values": [
+        { "key": "woman_owned", "displayName": "Woman Owned", "description": "Business owned by women" },
+        { "key": "veteran_owned", "displayName": "Veteran Owned", "description": "Business owned by veterans" },
+        { "key": "family_owned", "displayName": "Family Owned", "description": "Family-owned business" },
+        { "key": "minority_owned", "displayName": "Minority Owned", "description": "Minority-owned business" },
+        { "key": "locally_owned", "displayName": "Locally Owned", "description": "Local Arizona-owned business" }
+      ]
+    },
+    "certifications": {
+      "displayName": "Certifications",
+      "description": "Professional certifications and awards",
+      "values": [
+        { "key": "licensed_bonded", "displayName": "Licensed & Bonded", "description": "Licensed and bonded business" },
+        { "key": "organic_certified", "displayName": "Organic Certified", "description": "Organic certification" },
+        { "key": "award_winning", "displayName": "Award Winning", "description": "Business has won awards" },
+        { "key": "professional_certification", "displayName": "Professional Certification", "description": "Industry professional certification" },
+        { "key": "bbb_accredited", "displayName": "BBB Accredited", "description": "Better Business Bureau accredited" }
+      ]
+    },
+    "accessibility": {
+      "displayName": "Accessibility",
+      "description": "Accessibility features and compliance",
+      "values": [
+        { "key": "wheelchair_accessible", "displayName": "Wheelchair Accessible", "description": "Wheelchair accessible facilities" },
+        { "key": "ada_compliant", "displayName": "ADA Compliant", "description": "Americans with Disabilities Act compliant" },
+        { "key": "hearing_accessible", "displayName": "Hearing Accessible", "description": "Hearing accessibility features" },
+        { "key": "vision_accessible", "displayName": "Vision Accessible", "description": "Vision accessibility features" }
+      ]
+    },
+    "service_options": {
+      "displayName": "Service Options",
+      "description": "Available service delivery options",
+      "values": [
+        { "key": "delivery_available", "displayName": "Delivery Available", "description": "Offers delivery services" },
+        { "key": "online_ordering", "displayName": "Online Ordering", "description": "Online ordering system" },
+        { "key": "curbside_pickup", "displayName": "Curbside Pickup", "description": "Curbside pickup available" },
+        { "key": "emergency_service", "displayName": "Emergency Service", "description": "Emergency service available" },
+        { "key": "24_7_service", "displayName": "24/7 Service", "description": "24 hour service availability" },
+        { "key": "appointment_only", "displayName": "Appointment Only", "description": "Appointment required" },
+        { "key": "walk_ins_welcome", "displayName": "Walk-ins Welcome", "description": "Walk-in customers welcome" }
+      ]
+    }
+  },
+  "qualityGuidelines": {
+    "description": {
+      "minLength": 100,
+      "maxLength": 1000,
+      "tone": "professional yet conversational",
+      "requirements": [
+        "Include Arizona/local context",
+        "Highlight unique value propositions", 
+        "Use consumer-friendly language",
+        "Avoid generic descriptions",
+        "Include specific services or products"
+      ]
+    },
+    "keywords": {
+      "minCount": 5,
+      "maxCount": 15,
+      "requirements": [
+        "Include business name variations",
+        "Include location keywords (Arizona, city names)",
+        "Include category-specific terms",
+        "Include service-related terms",
+        "Avoid keyword stuffing"
+      ]
+    },
+    "products_services": {
+      "structure": "array or object",
+      "requirements": [
+        "List specific offerings",
+        "Group by category when applicable",
+        "Include brand names when mentioned",
+        "Highlight specialties and unique offerings"
+      ]
+    }
+  }
+}
