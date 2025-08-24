@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
 import voiceService from '../services/VoiceService';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787';
+import { buildApiUrl } from '../config/api';
 
 export default function ProfileInterviewScreen({ navigation }) {
   const { currentUser, token } = useAuth();
@@ -46,7 +45,7 @@ export default function ProfileInterviewScreen({ navigation }) {
   const initializeSession = async () => {
     try {
       setIsInitialLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/interview/session`, {
+      const response = await fetch(buildApiUrl('/api/interview/session'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-User-ID': currentUser.id,
@@ -86,7 +85,7 @@ export default function ProfileInterviewScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/interview/message`, {
+      const response = await fetch(buildApiUrl('/api/interview/message'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -243,7 +242,7 @@ export default function ProfileInterviewScreen({ navigation }) {
           onPress: async () => {
             try {
               setIsLoading(true);
-              const response = await fetch(`${API_BASE_URL}/api/interview/complete`, {
+              const response = await fetch(buildApiUrl('/api/interview/complete'), {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${token}`,

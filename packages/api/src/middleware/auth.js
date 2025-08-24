@@ -14,7 +14,7 @@ export const requireAuth = async (c, next) => {
     }
     
     // Verify token
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token, c.env);
     
     // Get user from database
     const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
@@ -45,7 +45,7 @@ export const optionalAuth = async (c, next) => {
     
     if (token) {
       try {
-        const decoded = verifyToken(token);
+        const decoded = verifyToken(token, c.env);
         const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
         
         if (user.length && user[0].isActive) {

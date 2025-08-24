@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { v4 as uuidv4 } from 'uuid';
 import { users } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import {
@@ -46,7 +45,7 @@ auth.post('/register', async (c) => {
     const passwordHash = await hashPassword(password);
     
     // Create user
-    const userId = uuidv4();
+    const userId = crypto.randomUUID();
     const now = new Date().toISOString();
     
     const newUser = {
@@ -63,7 +62,7 @@ auth.post('/register', async (c) => {
     await db.insert(users).values(newUser);
     
     // Generate JWT token
-    const token = generateToken({ userId, email: email.toLowerCase() });
+    const token = generateToken({ userId, email: email.toLowerCase() }, c.env);
     
     // Return user data (without password hash)
     const userResponse = {
@@ -125,7 +124,7 @@ auth.post('/login', async (c) => {
       .where(eq(users.id, user[0].id));
     
     // Generate JWT token
-    const token = generateToken({ userId: user[0].id, email: user[0].email });
+    const token = generateToken({ userId: user[0].id, email: user[0].email }, c.env);
     
     // Return user data (without password hash)
     const userResponse = {

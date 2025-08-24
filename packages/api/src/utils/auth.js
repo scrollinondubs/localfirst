@@ -3,13 +3,19 @@ import { randomBytes } from '@noble/hashes/utils';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
-// JWT Secret - In production, this should be in environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'local-first-arizona-dev-secret-key';
+// JWT configuration
 const JWT_EXPIRES_IN = '24h';
+const DEFAULT_JWT_SECRET = 'local-first-arizona-dev-secret-key';
 
-// Scrypt parameters (equivalent security to bcrypt with 10 rounds)
+// Helper function to get JWT secret from environment
+const getJwtSecret = (env) => {
+  return env?.JWT_SECRET || DEFAULT_JWT_SECRET;
+};
+
+// Scrypt parameters optimized for Cloudflare Workers CPU limits
+// Still provides good security but avoids timeout issues
 const SCRYPT_PARAMS = {
-  N: 16384, // CPU/memory cost parameter (2^14)
+  N: 4096,  // CPU/memory cost parameter (2^12) - reduced from 16384
   r: 8,     // Block size parameter  
   p: 1,     // Parallelization parameter
   dkLen: 64 // Derived key length (bytes)
@@ -92,18 +98,20 @@ export const verifyPassword = async (password, storedHash) => {
 };
 
 // JWT utilities
-export const generateToken = (payload) => {
+export const generateToken = (payload, env) => {
   try {
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const jwtSecret = getJwtSecret(env);
+    const token = jwt.sign(payload, jwtSecret, { expiresIn: JWT_EXPIRES_IN });
     return token;
   } catch (error) {
     throw new Error('Token generation failed');
   }
 };
 
-export const verifyToken = (token) => {
+export const verifyToken = (token, env) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const jwtSecret = getJwtSecret(env);
+    const decoded = jwt.verify(token, jwtSecret);
     return decoded;
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

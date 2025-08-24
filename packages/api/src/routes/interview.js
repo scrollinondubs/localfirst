@@ -1,23 +1,25 @@
 import { Hono } from 'hono';
 import { conversationSessions, consumerProfiles, users } from '../db/schema.js';
 import { eq, desc, and } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
 
 const interview = new Hono();
 
-// Initialize OpenAI (only if API key is available)
-let openai = null;
-try {
-  if (process.env.OPENAI_API_KEY) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-  } else {
-    console.warn('OPENAI_API_KEY not found. Interview functionality will be limited.');
+// Initialize OpenAI dynamically per request (for Cloudflare Workers)
+function createOpenAIClient(env) {
+  try {
+    if (env.OPENAI_API_KEY) {
+      return new OpenAI({
+        apiKey: env.OPENAI_API_KEY
+      });
+    } else {
+      console.warn('OPENAI_API_KEY not found. Interview functionality will be limited.');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error initializing OpenAI:', error);
+    return null;
   }
-} catch (error) {
-  console.error('Error initializing OpenAI:', error);
 }
 
 // AI Interviewer system prompt
@@ -81,7 +83,7 @@ interview.get('/session', async (c) => {
     }
 
     // Create new session with welcome message
-    const sessionId = uuidv4();
+    const sessionId = crypto.randomUUID();
     const welcomeMessage = {
       role: 'assistant',
       content: "Hi! I'm here to help you discover amazing local Arizona businesses that match your interests. Let's have a quick chat so I can get to know what you're into. What do you like to do in your free time?",
@@ -106,7 +108,11 @@ interview.get('/session', async (c) => {
 
   } catch (error) {
     console.error('Error getting interview session:', error);
-    return c.json({ error: 'Failed to get session' }, 500);
+    // Return more detailed error in development
+    const errorMessage = c.env?.NODE_ENV === 'production' 
+      ? 'Failed to get session' 
+      : `Failed to get session: ${error.message}`;
+    return c.json({ error: errorMessage }, 500);
   }
 });
 
@@ -154,6 +160,7 @@ interview.post('/message', async (c) => {
 
     // Get AI response
     let aiResponse;
+    const openai = createOpenAIClient(c.env);
     if (openai) {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4',
@@ -211,7 +218,11 @@ interview.post('/message', async (c) => {
 
   } catch (error) {
     console.error('Error processing message:', error);
-    return c.json({ error: 'Failed to process message' }, 500);
+    // Return more detailed error in development
+    const errorMessage = c.env?.NODE_ENV === 'production' 
+      ? 'Failed to process message' 
+      : `Failed to process message: ${error.message}`;
+    return c.json({ error: errorMessage }, 500);
   }
 });
 
@@ -244,10 +255,10 @@ interview.post('/complete', async (c) => {
     const messages = JSON.parse(currentSession.messages || '[]');
 
     // Extract insights from full conversation
-    const insights = await extractProfileInsights(messages);
+    const insights = await extractProfileInsights(messages, c.env);
     
     // Generate summary
-    const summary = await generateProfileSummary(messages);
+    const summary = await generateProfileSummary(messages, c.env);
 
     const profileCompleteness = Math.min(100, Math.floor((messages.length / 2) * 6));
 
@@ -302,7 +313,7 @@ async function updateProfileCompleteness(db, userId, messages, completeness, sum
         .where(eq(consumerProfiles.userId, userId));
     } else {
       await db.insert(consumerProfiles).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         userId: userId,
         ...updateData
       });
@@ -313,8 +324,9 @@ async function updateProfileCompleteness(db, userId, messages, completeness, sum
 }
 
 // Extract structured insights from conversation
-async function extractProfileInsights(messages) {
+async function extractProfileInsights(messages, env) {
   try {
+    const openai = createOpenAIClient(env);
     if (!openai) {
       // Simple keyword extraction when OpenAI is not available
       const conversation = messages
@@ -384,8 +396,9 @@ Only include specific, actionable insights. Return valid JSON only.`;
 }
 
 // Generate readable summary of user profile
-async function generateProfileSummary(messages) {
+async function generateProfileSummary(messages, env) {
   try {
+    const openai = createOpenAIClient(env);
     if (!openai) {
       // Simple summary when OpenAI is not available
       const userMessages = messages

@@ -3,6 +3,7 @@ const getIsProduction = () => {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
   return hostname.includes('localfirst-mobile.pages.dev') || 
+         hostname === 'mobile.localfirst.site' ||
          hostname === 'localfirst.dev' ||
          hostname === 'app.localfirst.dev' ||
          (hostname !== 'localhost' && hostname !== '127.0.0.1');
