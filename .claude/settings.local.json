@@ -251,7 +251,13 @@
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"INSERT OR REPLACE INTO users (id, email, password_hash, name, email_verified, is_active) VALUES (''test-debug-user-123'', ''test@example.com'', ''dummy-hash'', ''Test User'', 1, 1);\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT userId, results_per_notification, search_radius, notification_frequency FROM user_preferences WHERE userId = ''test-debug-user-123'';\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema user_preferences\")",
-      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT user_id, results_per_notification, search_radius, notification_frequency FROM user_preferences WHERE user_id = ''test-debug-user-123'';\")"
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT user_id, results_per_notification, search_radius, notification_frequency FROM user_preferences WHERE user_id = ''test-debug-user-123'';\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"\nALTER TABLE consumer_profiles ADD COLUMN personal_dossier TEXT;\nALTER TABLE consumer_profiles ADD COLUMN dossier_generated_at TEXT;\nALTER TABLE consumer_profiles ADD COLUMN dossier_version INTEGER DEFAULT 1;\n\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT userId, personal_dossier IS NOT NULL as has_dossier, LENGTH(personal_dossier) as dossier_length FROM consumer_profiles WHERE userId = ''test-debug-user-123'';\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema consumer_profiles\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT user_id, personal_dossier IS NOT NULL as has_dossier, LENGTH(personal_dossier) as dossier_length FROM consumer_profiles WHERE user_id = ''test-debug-user-123'';\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT id, user_id, message_count, session_status FROM conversation_sessions WHERE user_id = ''test-debug-user-123'' LIMIT 1;\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT user_id, LENGTH(personal_dossier) as dossier_length, personal_dossier IS NOT NULL as has_dossier FROM consumer_profiles WHERE personal_dossier IS NOT NULL LIMIT 5;\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

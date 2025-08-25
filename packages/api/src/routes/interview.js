@@ -440,4 +440,255 @@ Focus on specific interests, lifestyle, values, and needs that emerged from the 
   }
 }
 
+// Generate personal dossier from conversation
+interview.post('/generate-dossier', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    const { sessionId } = await c.req.json();
+    if (!sessionId) {
+      return c.json({ error: 'Session ID required' }, 400);
+    }
+
+    const db = c.get('db');
+    const env = c.env;
+
+    // Get conversation messages
+    const session = await db.select()
+      .from(conversationSessions)
+      .where(and(
+        eq(conversationSessions.id, sessionId),
+        eq(conversationSessions.userId, userId)
+      ))
+      .limit(1);
+
+    if (session.length === 0) {
+      return c.json({ error: 'Session not found' }, 404);
+    }
+
+    const messages = JSON.parse(session[0].messages || '[]');
+    const userMessages = messages.filter(msg => msg.role === 'user');
+
+    if (userMessages.length < 3) {
+      return c.json({ error: 'Need at least 3 responses to generate dossier' }, 400);
+    }
+
+    // Generate dossier using OpenAI
+    const dossier = await generatePersonalDossier(messages, env);
+
+    // Save to database
+    const existingProfile = await db.select()
+      .from(consumerProfiles)
+      .where(eq(consumerProfiles.userId, userId))
+      .limit(1);
+
+    const updateData = {
+      personalDossier: JSON.stringify(dossier),
+      dossierGeneratedAt: new Date().toISOString(),
+      dossierVersion: existingProfile.length > 0 ? (existingProfile[0].dossierVersion || 0) + 1 : 1,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingProfile.length > 0) {
+      await db.update(consumerProfiles)
+        .set(updateData)
+        .where(eq(consumerProfiles.userId, userId));
+    } else {
+      await db.insert(consumerProfiles).values({
+        id: crypto.randomUUID(),
+        userId: userId,
+        ...updateData
+      });
+    }
+
+    return c.json({ 
+      success: true, 
+      dossier,
+      version: updateData.dossierVersion,
+      generatedAt: updateData.dossierGeneratedAt
+    });
+
+  } catch (error) {
+    console.error('Error generating dossier:', error);
+    return c.json({ error: 'Failed to generate dossier' }, 500);
+  }
+});
+
+// Get current personal dossier
+interview.get('/dossier', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    const db = c.get('db');
+
+    const profile = await db.select({
+      personalDossier: consumerProfiles.personalDossier,
+      dossierGeneratedAt: consumerProfiles.dossierGeneratedAt,
+      dossierVersion: consumerProfiles.dossierVersion
+    })
+      .from(consumerProfiles)
+      .where(eq(consumerProfiles.userId, userId))
+      .limit(1);
+
+    if (profile.length === 0 || !profile[0].personalDossier) {
+      return c.json({ dossier: null });
+    }
+
+    return c.json({
+      dossier: JSON.parse(profile[0].personalDossier),
+      generatedAt: profile[0].dossierGeneratedAt,
+      version: profile[0].dossierVersion
+    });
+
+  } catch (error) {
+    console.error('Error fetching dossier:', error);
+    return c.json({ error: 'Failed to fetch dossier' }, 500);
+  }
+});
+
+// Update personal dossier
+interview.put('/dossier', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    const { dossier } = await c.req.json();
+    if (!dossier) {
+      return c.json({ error: 'Dossier data required' }, 400);
+    }
+
+    const db = c.get('db');
+
+    const existingProfile = await db.select()
+      .from(consumerProfiles)
+      .where(eq(consumerProfiles.userId, userId))
+      .limit(1);
+
+    if (existingProfile.length === 0) {
+      return c.json({ error: 'Profile not found' }, 404);
+    }
+
+    await db.update(consumerProfiles)
+      .set({
+        personalDossier: JSON.stringify(dossier),
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(consumerProfiles.userId, userId));
+
+    return c.json({ success: true, message: 'Dossier updated successfully' });
+
+  } catch (error) {
+    console.error('Error updating dossier:', error);
+    return c.json({ error: 'Failed to update dossier' }, 500);
+  }
+});
+
+// Generate personal dossier from conversation messages
+async function generatePersonalDossier(messages, env) {
+  try {
+    const openai = createOpenAIClient(env);
+    
+    if (!openai) {
+      // Fallback when OpenAI is not available
+      const userMessages = messages.filter(msg => msg.role === 'user');
+      return {
+        summary: `Profile based on ${userMessages.length} conversation exchanges`,
+        interests: [],
+        lifestyle: { values: [], priorities: [], dailyRoutines: [] },
+        shoppingPreferences: { style: 'unknown', budgetRange: 'unknown', favoriteTypes: [] },
+        giftingProfile: { recipients: [], occasions: [], typicalBudget: '' },
+        upcomingNeeds: [],
+        specialOccasions: []
+      };
+    }
+
+    const conversation = messages.map(msg => 
+      `${msg.role}: ${msg.content}`
+    ).join('\n');
+
+    const dossierPrompt = `Based on this conversation, create a comprehensive personal dossier that will help match this person with perfect local Arizona businesses. 
+
+Conversation:
+${conversation}
+
+Create a JSON response with the following structure:
+{
+  "summary": "2-3 sentence overview of this person's personality and lifestyle",
+  "interests": ["list of hobbies and activities they enjoy"],
+  "lifestyle": {
+    "values": ["what they value/prioritize in life"],
+    "priorities": ["current life priorities or focus areas"],
+    "dailyRoutines": ["typical activities or routines mentioned"]
+  },
+  "shoppingPreferences": {
+    "style": "their shopping style (e.g., 'quality over quantity', 'bargain hunter', 'convenience-focused')",
+    "budgetRange": "their typical budget approach (e.g., 'budget-conscious', 'moderate', 'premium')",
+    "favoriteTypes": ["types of products/services they typically seek"]
+  },
+  "giftingProfile": {
+    "recipients": ["who they buy gifts for (e.g., 'family', 'friends', 'colleagues')"],
+    "occasions": ["occasions they shop for (e.g., 'birthdays', 'holidays', 'anniversaries')"],
+    "typicalBudget": "their typical gift budget range"
+  },
+  "upcomingNeeds": ["any upcoming purchases or needs they mentioned"],
+  "specialOccasions": ["any special events or occasions they're planning for"]
+}
+
+Focus on extracting concrete, actionable information that would help recommend specific types of local businesses. Be specific but avoid over-interpretation.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { 
+          role: 'system', 
+          content: 'You are an expert at analyzing conversations to create detailed personal profiles for business matching. Always respond with valid JSON only.' 
+        },
+        { role: 'user', content: dossierPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 1000
+    });
+
+    const content = response.choices[0].message.content.trim();
+    
+    // Try to parse the JSON response
+    try {
+      return JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI JSON response:', content);
+      // Return fallback structure
+      return {
+        summary: content.substring(0, 200) + '...',
+        interests: [],
+        lifestyle: { values: [], priorities: [], dailyRoutines: [] },
+        shoppingPreferences: { style: 'unknown', budgetRange: 'unknown', favoriteTypes: [] },
+        giftingProfile: { recipients: [], occasions: [], typicalBudget: '' },
+        upcomingNeeds: [],
+        specialOccasions: []
+      };
+    }
+
+  } catch (error) {
+    console.error('Error generating dossier:', error);
+    // Return minimal fallback dossier
+    return {
+      summary: 'Personal dossier generated from conversation',
+      interests: [],
+      lifestyle: { values: [], priorities: [], dailyRoutines: [] },
+      shoppingPreferences: { style: 'unknown', budgetRange: 'unknown', favoriteTypes: [] },
+      giftingProfile: { recipients: [], occasions: [], typicalBudget: '' },
+      upcomingNeeds: [],
+      specialOccasions: []
+    };
+  }
+}
+
 export { interview };

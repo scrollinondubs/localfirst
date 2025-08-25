@@ -17,6 +17,9 @@ import ProfileScreen from '../screens/ProfileScreen';
 import ProfileInterviewScreen from '../screens/ProfileInterviewScreen';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import ForceLogoutScreen from '../screens/ForceLogoutScreen';
+import RecommendationsScreen from '../screens/RecommendationsScreen';
+import ViewDossierScreen from '../screens/ViewDossierScreen';
+import { useRecommendationsEligibility } from '../hooks/useRecommendationsEligibility';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -27,6 +30,7 @@ function ProfileStack() {
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="ProfileInterview" component={ProfileInterviewScreen} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+      <Stack.Screen name="ViewDossier" component={ViewDossierScreen} />
       <Stack.Screen name="ForceLogout" component={ForceLogoutScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
@@ -38,6 +42,7 @@ function ProfileStack() {
 
 function MainTabs() {
   const { isAuthenticated } = useAuth();
+  const { isEligible: showRecommendationsTab } = useRecommendationsEligibility();
   const showFavoritesTab = isAuthenticated();
   
   return (
@@ -63,6 +68,8 @@ function MainTabs() {
           let iconName;
           if (route.name === 'Favorites') {
             iconName = focused ? 'heart' : 'heart-outline';
+          } else if (route.name === 'Recommendations') {
+            iconName = focused ? 'sparkles' : 'sparkles-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -91,6 +98,13 @@ function MainTabs() {
           name="Favorites" 
           component={FavoritesScreen}
           options={{ title: 'Favorites' }}
+        />
+      )}
+      {showRecommendationsTab && (
+        <Tab.Screen 
+          name="Recommendations" 
+          component={RecommendationsScreen}
+          options={{ title: 'Recommendations' }}
         />
       )}
       <Tab.Screen 

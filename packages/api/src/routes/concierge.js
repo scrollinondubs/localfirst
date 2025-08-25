@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { userPreferences, consumerProfiles, users } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { userPreferences, consumerProfiles, users, conversationSessions, conciergeRecommendations, businesses } from '../db/schema.js';
+import { eq, and } from 'drizzle-orm';
 
 const concierge = new Hono();
 
@@ -407,6 +407,211 @@ concierge.put('/profile-dossier', async (c) => {
   } catch (error) {
     console.error('Error updating profile dossier:', error);
     return c.json({ error: 'Failed to update profile dossier' }, 500);
+  }
+});
+
+/**
+ * GET /api/concierge/eligibility
+ * Check if user is eligible for recommendations feature
+ */
+concierge.get('/eligibility', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    const db = c.get('db');
+
+    // Check if user has valid preferences saved
+    const preferences = await db.select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
+    const hasPreferences = preferences.length > 0;
+
+    // Check if user has personal dossier with at least 100 characters
+    const profile = await db.select({
+      personalDossier: consumerProfiles.personalDossier
+    })
+      .from(consumerProfiles)
+      .where(eq(consumerProfiles.userId, userId))
+      .limit(1);
+
+    const dossierText = profile.length > 0 ? profile[0].personalDossier : null;
+    const hasDossier = dossierText && dossierText.length >= 100;
+    const dossierLength = dossierText ? dossierText.length : 0;
+
+    // Also check current interview progress for UI guidance
+    const interviews = await db.select()
+      .from(conversationSessions)
+      .where(eq(conversationSessions.userId, userId))
+      .limit(1);
+
+    const messageCount = interviews[0]?.messageCount || 0;
+    const userMessageCount = interviews.length > 0 ? 
+      JSON.parse(interviews[0].messages || '[]').filter(msg => msg.role === 'user').length : 0;
+
+    return c.json({
+      eligible: hasPreferences && hasDossier,
+      hasPreferences,
+      hasDossier,
+      dossierLength,
+      messageCount,
+      userMessageCount
+    });
+
+  } catch (error) {
+    console.error('Error checking eligibility:', error);
+    return c.json({ error: 'Failed to check eligibility' }, 500);
+  }
+});
+
+/**
+ * GET /api/concierge/recommendations
+ * Fetch user's recommendations with business details
+ */
+concierge.get('/recommendations', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    const db = c.get('db');
+
+    // Get recommendations with business details, excluding dismissed ones
+    const recommendations = await db.select({
+      id: conciergeRecommendations.id,
+      businessId: conciergeRecommendations.businessId,
+      matchScore: conciergeRecommendations.matchScore,
+      rationale: conciergeRecommendations.rationale,
+      status: conciergeRecommendations.status,
+      createdAt: conciergeRecommendations.createdAt,
+      // Business details
+      businessName: businesses.name,
+      businessAddress: businesses.address,
+      businessPhone: businesses.phone,
+      businessWebsite: businesses.website,
+      businessDescription: businesses.description,
+      businessCategories: businesses.categories,
+      businessLat: businesses.lat,
+      businessLng: businesses.lng,
+      businessRating: businesses.rating,
+      businessImage: businesses.image
+    })
+    .from(conciergeRecommendations)
+    .innerJoin(businesses, eq(conciergeRecommendations.businessId, businesses.id))
+    .where(and(
+      eq(conciergeRecommendations.userId, userId),
+      ne(conciergeRecommendations.status, 'dismissed')
+    ))
+    .orderBy(sql`${conciergeRecommendations.createdAt} DESC`)
+    .limit(50);
+
+    return c.json({
+      recommendations: recommendations.map(r => ({
+        id: r.id,
+        matchScore: r.matchScore,
+        rationale: r.rationale,
+        status: r.status,
+        createdAt: r.createdAt,
+        business: {
+          id: r.businessId,
+          name: r.businessName,
+          address: r.businessAddress,
+          phone: r.businessPhone,
+          website: r.businessWebsite,
+          description: r.businessDescription,
+          categories: r.businessCategories,
+          lat: r.businessLat,
+          lng: r.businessLng,
+          rating: r.businessRating,
+          image: r.businessImage
+        }
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    return c.json({ error: 'Failed to fetch recommendations' }, 500);
+  }
+});
+
+/**
+ * POST /api/concierge/recommendations/generate
+ * Manually trigger new recommendations generation
+ */
+concierge.post('/recommendations/generate', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    // Import the matching engine
+    const { MatchingEngine } = await import('../services/matching-engine.js');
+    const db = c.get('db');
+    const matchingEngine = new MatchingEngine(db, c.env);
+
+    // Generate new recommendations
+    const recommendations = await matchingEngine.generateRecommendations(userId);
+
+    return c.json({
+      message: 'Recommendations generated successfully',
+      count: recommendations.length,
+      recommendations: recommendations.map(r => ({
+        businessId: r.businessId,
+        matchScore: r.matchScore,
+        rationale: r.rationale
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error generating recommendations:', error);
+    return c.json({ error: 'Failed to generate recommendations' }, 500);
+  }
+});
+
+/**
+ * PATCH /api/concierge/recommendations/:id/dismiss
+ * Mark recommendation as dismissed
+ */
+concierge.patch('/recommendations/:id/dismiss', async (c) => {
+  try {
+    const userId = c.req.header('X-User-ID');
+    const recommendationId = c.req.param('id');
+    
+    if (!userId) {
+      return c.json({ error: 'User ID required' }, 401);
+    }
+
+    if (!recommendationId) {
+      return c.json({ error: 'Recommendation ID required' }, 400);
+    }
+
+    const db = c.get('db');
+
+    // Verify recommendation belongs to user and update status
+    const result = await db.update(conciergeRecommendations)
+      .set({
+        status: 'dismissed',
+        updatedAt: new Date().toISOString()
+      })
+      .where(and(
+        eq(conciergeRecommendations.id, recommendationId),
+        eq(conciergeRecommendations.userId, userId)
+      ));
+
+    return c.json({
+      message: 'Recommendation dismissed successfully',
+      recommendationId
+    });
+
+  } catch (error) {
+    console.error('Error dismissing recommendation:', error);
+    return c.json({ error: 'Failed to dismiss recommendation' }, 500);
   }
 });
 
