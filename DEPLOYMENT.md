@@ -31,28 +31,48 @@ This guide covers deploying the LocalFirst Arizona application stack to Cloudfla
 - **Mobile App**: Cloudflare Pages (React Native Web)
 - **Chrome Extension**: Connects to Workers API
 
-## ⚡ Quick Deployment
+## ⚡ Development vs Production Deployment
 
-### Option 1: Automated Deployment (Recommended)
+### 🏠 Local Development Setup
+
+**CRITICAL**: Always start both API and mobile servers for local development:
+
 ```bash
-# Run complete deployment
+# ✅ RECOMMENDED: Start both API and mobile app simultaneously
+npm run dev:all
+
+# 🔍 Alternative: Start servers individually (if needed)
+npm run dev:api    # Starts API server on http://localhost:8787
+npm run dev:mobile:web  # Starts mobile web app on http://localhost:8081
+```
+
+**Common Issue Prevention**: 
+- Registration and other API calls will fail with "❌ Registration failed" if only the mobile app is running
+- The mobile app expects the API server on port 8787 - ensure both servers are running
+- Use `npm run dev:all` to avoid this issue entirely
+
+### ☁️ Production Deployment to Cloudflare
+
+#### Option 1: Automated Deployment (Recommended)
+```bash
+# Run complete production deployment
 ./scripts/deploy-all.sh
 ```
 
-### Option 2: Manual Step-by-step
+#### Option 2: Manual Step-by-step
 
 1. **Setup Cloudflare Infrastructure**
    ```bash
    ./scripts/setup-cloudflare.sh
    ```
 
-2. **Deploy API**
+2. **Deploy API to Cloudflare Workers**
    ```bash
    cd packages/api
    npm run deploy
    ```
 
-3. **Deploy Mobile App**
+3. **Deploy Mobile App to Cloudflare Pages**
    ```bash
    cd packages/mobile
    npm run build:production
@@ -206,6 +226,34 @@ npm run d1:migrate
 
 ## 🚨 Critical Issues & Lessons Learned
 
+### Local Development Server Dependencies
+
+**Issue**: User registration failing with "❌ Registration failed. Please try again" in local development.
+
+**Root Cause**: Only mobile app running (port 8081), but API server (port 8787) not started. Mobile app cannot connect to backend API.
+
+**Key Lesson**: Always start both API server and mobile app for local development.
+
+#### What Went Wrong
+- Developer started only mobile app with `expo start --web`
+- API server wasn't running on expected port 8787
+- All API requests fail silently or with connection errors
+- Error messages don't clearly indicate missing backend
+
+#### Prevention Strategy
+```bash
+# ✅ ALWAYS use this command for local development
+npm run dev:all
+
+# ❌ DON'T start only mobile app
+npm run dev:mobile:web
+```
+
+#### Fixed Implementation
+- Updated DEPLOYMENT.md with clear local development section
+- Emphasized `npm run dev:all` as the standard development command
+- Added troubleshooting for "Registration failed" errors
+
 ### Production API Endpoints vs Frontend Integration
 
 **Issue**: Mobile app was broken despite API endpoints working perfectly.
@@ -320,8 +368,12 @@ const sessionId = crypto.randomUUID();
 
 ### Deployment Checklist Updates
 
-Always verify before marking deployment complete:
+**Local Development Verification:**
+- [ ] Both API server (8787) and mobile app (8081) running via `npm run dev:all`
+- [ ] Registration and login working in local environment
+- [ ] All API calls succeeding without connection errors
 
+**Production Deployment Verification:**
 - [ ] All components use centralized API configuration (`buildApiUrl()`)
 - [ ] Environment variables properly configured for Workers context
 - [ ] Database migrations applied to production

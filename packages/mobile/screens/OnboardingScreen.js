@@ -45,11 +45,11 @@ export default function OnboardingScreen({ navigation }) {
       image: '🌟'
     },
     {
-      title: 'You\'re All Set!',
-      subtitle: 'Ready to start exploring local businesses?',
-      content: 'Tap below to begin your journey and discover what makes Arizona\'s local business community so special.',
-      buttonText: 'Start Exploring',
-      image: '🎉'
+      title: 'Let\'s Get Personal!',
+      subtitle: 'Help us learn about your lifestyle and preferences',
+      content: 'Take a quick interview to get personalized business recommendations tailored to your interests, habits, and needs. The more we know, the better we can help you discover amazing local spots!',
+      buttonText: 'Start My Interview',
+      image: '💬'
     }
   ];
 
@@ -58,10 +58,19 @@ export default function OnboardingScreen({ navigation }) {
 
   const handleNext = () => {
     if (isLastStep) {
-      // Complete onboarding and navigate to main app
+      // Navigate to profile interview
       navigation.reset({
         index: 0,
-        routes: [{ name: 'MainTabs' }],
+        routes: [{ 
+          name: 'MainTabs', 
+          state: {
+            routes: [
+              { name: 'Home' },
+              { name: 'Profile', state: { routes: [{ name: 'ProfileInterview' }] } }
+            ],
+            index: 1 // Start on Profile tab with interview screen
+          }
+        }],
       });
     } else {
       setCurrentStep(currentStep + 1);
@@ -154,6 +163,21 @@ export default function OnboardingScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Skip Interview Option (only on last step) */}
+        {isLastStep && (
+          <TouchableOpacity 
+            style={styles.skipInterviewButton}
+            onPress={() => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
+              });
+            }}
+          >
+            <Text style={styles.skipInterviewText}>Skip for now, explore the app</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Step Indicator Text */}
         <Text style={styles.stepIndicator}>
@@ -281,5 +305,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#a0aec0',
     fontSize: 14,
+  },
+  skipInterviewButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  skipInterviewText: {
+    color: '#718096',
+    fontSize: 14,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
   },
 });
