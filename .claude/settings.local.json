@@ -226,7 +226,12 @@
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler tail localfirst-api-production --format pretty --search \"register\")",
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler deploy --env production)",
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --command \"INSERT INTO users (id, email, password_hash, name, email_verified, is_active) VALUES (''test-interview-user-fixed'', ''test-fixed@example.com'', ''dummy-hash-for-test'', ''Test Interview User'', 1, 1) ON CONFLICT(id) DO UPDATE SET email=''test-fixed@example.com'';\" --remote)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT COUNT(*) as total_businesses, COUNT(CASE WHEN enrichment_status = ''completed'' THEN 1 END) as enriched, COUNT(CASE WHEN enrichment_status IS NULL OR enrichment_status != ''completed'' THEN 1 END) as remaining FROM businesses;\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT COUNT(*) as total_businesses, COUNT(CASE WHEN enrichment_status = ''completed'' THEN 1 END) as enriched, COUNT(CASE WHEN enrichment_status IS NULL OR enrichment_status != ''completed'' THEN 1 END) as remaining FROM businesses;\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT COUNT(*) as total_businesses, COUNT(CASE WHEN enrichment_status = ''completed'' THEN 1 END) as enriched, COUNT(CASE WHEN enrichment_status IS NULL OR enrichment_status != ''completed'' THEN 1 END) as remaining FROM businesses;\")",
+      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/enrich-remaining-businesses.js)",
+      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/enrich-remaining-businesses-improved.js)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
