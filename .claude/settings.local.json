@@ -231,7 +231,13 @@
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT COUNT(*) as total_businesses, COUNT(CASE WHEN enrichment_status = ''completed'' THEN 1 END) as enriched, COUNT(CASE WHEN enrichment_status IS NULL OR enrichment_status != ''completed'' THEN 1 END) as remaining FROM businesses;\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT COUNT(*) as total_businesses, COUNT(CASE WHEN enrichment_status = ''completed'' THEN 1 END) as enriched, COUNT(CASE WHEN enrichment_status IS NULL OR enrichment_status != ''completed'' THEN 1 END) as remaining FROM businesses;\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/enrich-remaining-businesses.js)",
-      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/enrich-remaining-businesses-improved.js)"
+      "Bash(DATABASE_URL=\"file:../../local.db\" node scripts/enrich-remaining-businesses-improved.js)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/mobile npm run web:dev)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api npm run)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst npm run dev:all)",
+      "Bash(playwright --version)",
+      "Bash(playwright install:*)",
+      "Read(//Users/aiden/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
