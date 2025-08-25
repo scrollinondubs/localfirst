@@ -27,11 +27,12 @@ export default function ProfileScreen({ navigation }) {
             <TouchableOpacity style={styles.optionButton}>
               <Text style={styles.optionText}>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton}>
+            <TouchableOpacity 
+              style={styles.optionButton}
+              onPress={() => navigation.navigate('NotificationPreferences')}
+            >
               <Text style={styles.optionText}>Notification Preferences</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton}>
-              <Text style={styles.optionText}>Saved Searches</Text>
+              <Text style={styles.optionSubtext}>Configure your recommendation settings</Text>
             </TouchableOpacity>
           </View>
 
@@ -43,12 +44,6 @@ export default function ProfileScreen({ navigation }) {
             >
               <Text style={styles.optionText}>Complete Profile Interview</Text>
               <Text style={styles.optionSubtext}>Get personalized business recommendations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton}>
-              <Text style={styles.optionText}>Business Preferences</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionButton}>
-              <Text style={styles.optionText}>Location History</Text>
             </TouchableOpacity>
           </View>
 

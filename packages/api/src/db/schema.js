@@ -185,3 +185,96 @@ export const conversationSessions = sqliteTable('conversation_sessions', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
+
+// User preferences for AI Concierge
+export const userPreferences = sqliteTable('user_preferences', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Notification settings
+  notificationFrequency: text('notification_frequency').default('weekly'), // daily, twice_weekly, weekly, bi_weekly, monthly
+  notificationChannels: text('notification_channels'), // JSON: {in_app: true, push: false, email: false, sms: false}
+  quietHours: text('quiet_hours'), // JSON: {enabled: true, start: "22:00", end: "08:00"}
+  preferredDays: text('preferred_days'), // JSON: ["monday", "wednesday", "friday"]
+  
+  // Location settings
+  locationSettings: text('location_settings'), // JSON: {home: {lat, lng, address}, work: {lat, lng, address}, current: "home"}
+  searchRadius: integer('search_radius').default(15), // Miles for regular searches
+  weekendRadius: integer('weekend_radius').default(25), // Miles for weekend/leisure searches
+  
+  // Recommendation tracking
+  lastRecommendationDate: text('last_recommendation_date'),
+  nextRecommendationDue: text('next_recommendation_due'),
+  totalRecommendationsReceived: integer('total_recommendations_received').default(0),
+  resultsPerNotification: integer('results_per_notification').default(3), // Number of recommendations per notification (1-5)
+  
+  // Privacy settings
+  dataUsageConsent: integer('data_usage_consent', { mode: 'boolean' }).default(true),
+  profileSharingLevel: text('profile_sharing_level').default('minimal'), // minimal, standard, detailed
+  
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// AI Concierge recommendations
+export const conciergeRecommendations = sqliteTable('concierge_recommendations', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  
+  // Recommendation metadata
+  recommendationType: text('recommendation_type').default('regular'), // regular, seasonal, gift, event, urgent
+  matchScore: real('match_score').notNull(), // 0.0 to 1.0 scoring
+  batchId: text('batch_id'), // Groups recommendations from same cron run
+  
+  // AI-generated content
+  rationale: text('rationale').notNull(), // Human-readable explanation
+  rationaleHighlights: text('rationale_highlights'), // JSON: ["key point 1", "key point 2"]
+  matchingFactors: text('matching_factors'), // JSON: {interests: 0.4, location: 0.15, ...}
+  
+  // Delivery and engagement tracking
+  status: text('status').default('pending'), // pending, delivered, viewed, acted_on, dismissed
+  deliveredAt: text('delivered_at'),
+  viewedAt: text('viewed_at'),
+  interactedAt: text('interacted_at'),
+  
+  // User feedback
+  feedback: text('feedback'), // liked, disliked, neutral
+  feedbackComment: text('feedback_comment'),
+  feedbackAt: text('feedback_at'),
+  
+  // Performance tracking
+  generationTimeMs: integer('generation_time_ms'),
+  openaiTokensUsed: integer('openai_tokens_used'),
+  
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
+});
+
+// Recommendation processing logs for monitoring and debugging
+export const recommendationLogs = sqliteTable('recommendation_logs', {
+  id: text('id').primaryKey(),
+  batchId: text('batch_id').notNull(),
+  
+  // Processing metrics
+  usersProcessed: integer('users_processed').default(0),
+  usersEligible: integer('users_eligible').default(0),
+  recommendationsGenerated: integer('recommendations_generated').default(0),
+  processingTimeMs: integer('processing_time_ms'),
+  
+  // Error tracking
+  errors: text('errors'), // JSON array of error objects
+  errorCount: integer('error_count').default(0),
+  
+  // Resource usage
+  totalTokensUsed: integer('total_tokens_used').default(0),
+  estimatedCost: real('estimated_cost').default(0.0), // USD
+  
+  // Performance stats
+  avgMatchScore: real('avg_match_score'),
+  avgGenerationTime: real('avg_generation_time'),
+  
+  startedAt: text('started_at').default(sql`CURRENT_TIMESTAMP`),
+  completedAt: text('completed_at'),
+  status: text('status').default('running') // running, completed, failed
+});

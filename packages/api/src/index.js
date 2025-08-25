@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.js';
 import favoritesRoutes from './routes/favorites.js';
 import enhancedSearchRoutes from './routes/enhanced-search.js';
 import { interview as interviewRoutes } from './routes/interview.js';
+import { concierge as conciergeRoutes } from './routes/concierge.js';
+import { conciergeCron as conciergeCronRoutes } from './routes/concierge-cron.js';
 
 const app = new Hono();
 
@@ -57,6 +59,8 @@ app.route('/api/analytics', analyticsRoutes);
 app.route('/api/favorites', favoritesRoutes);
 app.route('/api/enhanced-search', enhancedSearchRoutes);
 app.route('/api/interview', interviewRoutes);
+app.route('/api/concierge', conciergeRoutes);
+app.route('/api/concierge', conciergeCronRoutes);
 
 // 404 handler
 app.notFound((c) => {
@@ -68,5 +72,24 @@ app.onError((err, c) => {
   console.error(`${err}`);
   return c.json({ error: 'Internal Server Error' }, 500);
 });
+
+// Cron handler for scheduled events
+export async function scheduled(event, env, ctx) {
+  console.log('[CRON] Scheduled event triggered:', event.cron);
+  
+  try {
+    const db = createDatabase(env);
+    const { ConciergeProcessor } = await import('./routes/concierge-cron.js');
+    
+    const processor = new ConciergeProcessor(db, env);
+    const result = await processor.run();
+    
+    console.log('[CRON] Cron execution completed:', result);
+    return result;
+  } catch (error) {
+    console.error('[CRON] Scheduled event error:', error);
+    throw error;
+  }
+}
 
 export default app;
