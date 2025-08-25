@@ -32,7 +32,56 @@ export class MatchingEngine {
    */
   parseUserProfile(userProfile) {
     try {
-      const insights = JSON.parse(userProfile.interviewInsights || '{}');
+      console.log('[MATCHING-ENGINE] Parsing user profile:', {
+        hasInterviewInsights: !!userProfile.interviewInsights,
+        hasPersonalDossier: !!userProfile.personalDossier,
+        dossierLength: userProfile.personalDossier ? userProfile.personalDossier.length : 0
+      });
+      
+      let insights = {};
+      
+      // First try to use interview_insights
+      if (userProfile.interviewInsights) {
+        insights = JSON.parse(userProfile.interviewInsights);
+        console.log('[MATCHING-ENGINE] Using interview insights:', insights);
+      } 
+      // Fallback to personal_dossier if available
+      else if (userProfile.personalDossier) {
+        const dossier = JSON.parse(userProfile.personalDossier);
+        console.log('[MATCHING-ENGINE] Using personal dossier:', dossier);
+        
+        // Extract interests from dossier summary and interests fields
+        insights = {
+          interests: dossier.interests || [],
+          values: dossier.values || ['supporting local'], // Default assumption
+          businessTypes: dossier.businessTypes || [],
+          budgetStyle: dossier.budgetStyle || 'moderate',
+          shoppingStyle: dossier.shoppingStyle || 'balanced'
+        };
+        
+        // Extract interests from dossier summary if interests array is empty
+        if (insights.interests.length === 0 && dossier.summary) {
+          const summaryText = dossier.summary.toLowerCase();
+          const extractedInterests = [];
+          
+          console.log('[MATCHING-ENGINE] Extracting interests from summary:', summaryText);
+          
+          // Extract common interests from summary text
+          if (summaryText.includes('guitar') || summaryText.includes('music')) {
+            extractedInterests.push('music');
+          }
+          if (summaryText.includes('skiing') || summaryText.includes('snowboarding')) {
+            extractedInterests.push('outdoor activities', 'skiing', 'snowboarding');
+          }
+          if (summaryText.includes('open mic') || summaryText.includes('performing')) {
+            extractedInterests.push('entertainment', 'live music', 'venues');
+          }
+          
+          insights.interests = extractedInterests;
+          console.log('[MATCHING-ENGINE] Extracted interests:', extractedInterests);
+        }
+      }
+      
       return {
         interests: insights.interests || [],
         upcomingNeeds: insights.upcomingNeeds || [],
@@ -522,7 +571,8 @@ export class MatchingEngine {
         weekendRadius: userPreferences.weekendRadius,
         profileCompleteness: consumerProfiles.profileCompleteness,
         interviewInsights: consumerProfiles.interviewInsights,
-        interviewSummary: consumerProfiles.interviewSummary
+        interviewSummary: consumerProfiles.interviewSummary,
+        personalDossier: consumerProfiles.personalDossier
       })
       .from(userPreferences)
       .leftJoin(consumerProfiles, eq(userPreferences.userId, consumerProfiles.userId))
@@ -535,13 +585,79 @@ export class MatchingEngine {
 
       const profile = userProfile[0];
       const locationSettings = JSON.parse(profile.locationSettings);
-      const currentLocation = locationSettings[locationSettings.current] || locationSettings.home;
       
-      if (!currentLocation) {
-        throw new Error('User location not configured');
+      console.log('[MATCHING-ENGINE] Parsed location settings:', JSON.stringify(locationSettings, null, 2));
+      console.log('[MATCHING-ENGINE] Location settings properties:', {
+        hasLat: 'lat' in locationSettings,
+        hasLng: 'lng' in locationSettings,
+        hasCurrent: 'current' in locationSettings,
+        hasHome: 'home' in locationSettings,
+        latValue: locationSettings.lat,
+        lngValue: locationSettings.lng,
+        latType: typeof locationSettings.lat,
+        lngType: typeof locationSettings.lng
+      });
+      
+      // Handle different location settings formats
+      let currentLocation;
+      if (locationSettings.current && locationSettings[locationSettings.current]) {
+        // Expected format: {current: "home", home: {lat, lng, address}, work: {lat, lng, address}}
+        currentLocation = locationSettings[locationSettings.current];
+        console.log('[MATCHING-ENGINE] Using nested location format');
+      } else if (locationSettings.lat && locationSettings.lng) {
+        // Legacy format: {lat, lng, address}
+        currentLocation = { lat: locationSettings.lat, lng: locationSettings.lng };
+        console.log('[MATCHING-ENGINE] Using direct lat/lng format');
+      } else if (locationSettings.home) {
+        // Fallback to home if no current is set
+        currentLocation = locationSettings.home;
+        console.log('[MATCHING-ENGINE] Using home fallback');
+      }
+      
+      console.log('[MATCHING-ENGINE] Selected currentLocation:', JSON.stringify(currentLocation));
+      
+      if (!currentLocation || !currentLocation.lat || !currentLocation.lng) {
+        console.error('[MATCHING-ENGINE] Invalid location data:', JSON.stringify(locationSettings));
+        throw new Error('User location not configured properly. Missing lat/lng coordinates.');
+      }
+      
+      // Debug the exact types we're getting
+      console.log('[MATCHING-ENGINE] Raw location data types:', {
+        lat: typeof currentLocation.lat,
+        lng: typeof currentLocation.lng,
+        latValue: currentLocation.lat,
+        lngValue: currentLocation.lng
+      });
+      
+      // Convert coordinates to numbers if they're strings
+      const originalLat = currentLocation.lat;
+      const originalLng = currentLocation.lng;
+      
+      currentLocation.lat = typeof currentLocation.lat === 'string' ? parseFloat(currentLocation.lat) : currentLocation.lat;
+      currentLocation.lng = typeof currentLocation.lng === 'string' ? parseFloat(currentLocation.lng) : currentLocation.lng;
+      
+      console.log('[MATCHING-ENGINE] After conversion:', {
+        latBefore: originalLat,
+        latAfter: currentLocation.lat,
+        lngBefore: originalLng, 
+        lngAfter: currentLocation.lng,
+        latType: typeof currentLocation.lat,
+        lngType: typeof currentLocation.lng
+      });
+      
+      // Validate that coordinates are valid numbers
+      if (isNaN(currentLocation.lat) || isNaN(currentLocation.lng)) {
+        console.error('[MATCHING-ENGINE] Invalid coordinate values after parsing:', JSON.stringify(locationSettings));
+        throw new Error('User location coordinates are not valid numbers.');
       }
 
       // Parse profile insights
+      console.log('[MATCHING-ENGINE] Profile data before parsing:', {
+        userId: profile.userId,
+        hasInterviewInsights: !!profile.interviewInsights,
+        hasPersonalDossier: !!profile.personalDossier,
+        profileCompleteness: profile.profileCompleteness
+      });
       const insights = this.parseUserProfile(profile);
       const searchTerms = this.generateSearchTerms(insights);
       
