@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/AuthContext';
 import { buildApiUrl } from '../config/api';
+import FavoriteButton from '../components/FavoriteButton';
 
 export default function RecommendationsScreen({ navigation }) {
   const { currentUser, token } = useAuth();
@@ -55,8 +56,15 @@ export default function RecommendationsScreen({ navigation }) {
 
   const generateNewRecommendations = async () => {
     try {
+      console.log('[RECOMMENDATIONS] Starting recommendation generation...');
       setGenerating(true);
-      const response = await fetch(buildApiUrl('/api/concierge/recommendations/generate'), {
+      
+      const url = buildApiUrl('/api/concierge/recommendations/generate');
+      console.log('[RECOMMENDATIONS] API URL:', url);
+      console.log('[RECOMMENDATIONS] User ID:', currentUser?.id);
+      console.log('[RECOMMENDATIONS] Token exists:', !!token);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -65,47 +73,32 @@ export default function RecommendationsScreen({ navigation }) {
         }
       });
 
+      console.log('[RECOMMENDATIONS] Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[RECOMMENDATIONS] Success response:', data);
         Alert.alert(
           'Success!',
           `Generated ${data.count} new recommendations for you.`,
           [{ text: 'OK', onPress: () => fetchRecommendations() }]
         );
       } else {
-        Alert.alert('Error', 'Failed to generate new recommendations. Please try again.');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[RECOMMENDATIONS] Error response:', errorData);
+        Alert.alert(
+          'Error', 
+          errorData.details || errorData.error || 'Failed to generate new recommendations. Please try again.'
+        );
       }
     } catch (error) {
-      console.error('Error generating recommendations:', error);
+      console.error('[RECOMMENDATIONS] Exception during generation:', error);
       Alert.alert('Error', 'Failed to generate new recommendations. Please try again.');
     } finally {
       setGenerating(false);
     }
   };
 
-  const addToFavorites = async (businessId) => {
-    try {
-      const response = await fetch(buildApiUrl(`/api/favorites/${businessId}`), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-ID': currentUser?.id,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        Alert.alert('Added to Favorites!', 'This business has been added to your favorites.');
-      } else if (response.status === 409) {
-        Alert.alert('Already Favorited', 'This business is already in your favorites.');
-      } else {
-        Alert.alert('Error', 'Failed to add to favorites. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error adding to favorites:', error);
-      Alert.alert('Error', 'Failed to add to favorites. Please try again.');
-    }
-  };
 
   const dismissRecommendation = async (recommendationId) => {
     try {
@@ -156,17 +149,15 @@ export default function RecommendationsScreen({ navigation }) {
             <View style={styles.businessInfo}>
               <Text style={styles.businessName}>{business.name}</Text>
               <Text style={styles.businessAddress}>{business.address}</Text>
-              <Text style={styles.matchScore}>{matchPercentage}% match</Text>
             </View>
             
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity
+              <FavoriteButton
+                businessId={business.id}
+                size={24}
                 style={styles.favoriteButton}
-                onPress={() => addToFavorites(business.id)}
-              >
-                <Ionicons name="heart-outline" size={24} color="#e53e3e" />
-              </TouchableOpacity>
+              />
               
               <TouchableOpacity
                 style={styles.dismissButton}
@@ -176,11 +167,6 @@ export default function RecommendationsScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Categories */}
-          {business.categories && (
-            <Text style={styles.categories}>{business.categories}</Text>
-          )}
 
           {/* AI Rationale */}
           <Text style={styles.rationale}>{recommendation.rationale}</Text>

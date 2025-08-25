@@ -1,8 +1,29 @@
 import { Hono } from 'hono';
 import { userPreferences, consumerProfiles, users, conversationSessions, conciergeRecommendations, businesses } from '../db/schema.js';
 import { eq, and, ne, sql } from 'drizzle-orm';
+import OpenAI from 'openai';
 
 const concierge = new Hono();
+
+// Initialize OpenAI dynamically per request (for Cloudflare Workers)
+function createOpenAIClient(env) {
+  try {
+    if (env?.OPENAI_API_KEY) {
+      return new OpenAI({
+        apiKey: env.OPENAI_API_KEY
+      });
+    } else if (process.env.OPENAI_API_KEY) {
+      return new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+    }
+    console.log('[CONCIERGE] No OpenAI API key found');
+    return null;
+  } catch (error) {
+    console.error('Error initializing OpenAI:', error);
+    return null;
+  }
+}
 
 /**
  * GET /api/concierge/preferences
@@ -497,12 +518,10 @@ concierge.get('/recommendations', async (c) => {
       businessAddress: businesses.address,
       businessPhone: businesses.phone,
       businessWebsite: businesses.website,
-      businessDescription: businesses.description,
-      businessCategories: businesses.categories,
-      businessLat: businesses.lat,
-      businessLng: businesses.lng,
-      businessRating: businesses.rating,
-      businessImage: businesses.image
+      businessDescription: businesses.businessDescription,
+      businessCategory: businesses.category,
+      businessLat: businesses.latitude,
+      businessLng: businesses.longitude
     })
     .from(conciergeRecommendations)
     .innerJoin(businesses, eq(conciergeRecommendations.businessId, businesses.id))
@@ -527,11 +546,9 @@ concierge.get('/recommendations', async (c) => {
           phone: r.businessPhone,
           website: r.businessWebsite,
           description: r.businessDescription,
-          categories: r.businessCategories,
+          categories: r.businessCategory,
           lat: r.businessLat,
-          lng: r.businessLng,
-          rating: r.businessRating,
-          image: r.businessImage
+          lng: r.businessLng
         }
       }))
     });
@@ -561,21 +578,232 @@ concierge.post('/recommendations/generate', async (c) => {
     // Generate new recommendations
     const recommendations = await matchingEngine.generateRecommendations(userId);
 
+    // Get user profile for AI rationale generation
+    const userProfile = await db.select({
+      userId: consumerProfiles.userId,
+      personalDossier: consumerProfiles.personalDossier,
+      interviewInsights: consumerProfiles.interviewInsights,
+      interviewTranscript: consumerProfiles.interviewTranscript
+    })
+    .from(consumerProfiles)
+    .where(eq(consumerProfiles.userId, userId))
+    .limit(1);
+
+    const profile = userProfile[0] || { userId };
+
+    // Save recommendations to database
+    const batchId = crypto.randomUUID();
+    const savedRecommendations = [];
+
+    for (const recommendation of recommendations) {
+      const recommendationId = crypto.randomUUID();
+      
+      // Get full business data for AI rationale generation
+      const businessData = await db.select({
+        id: businesses.id,
+        name: businesses.name,
+        businessDescription: businesses.businessDescription,
+        productsServices: businesses.productsServices,
+        primaryCategory: businesses.primaryCategory,
+        category: businesses.category
+      })
+      .from(businesses)
+      .where(eq(businesses.id, recommendation.id))
+      .limit(1);
+
+      const business = businessData[0] || recommendation;
+      
+      // Generate AI-powered personalized rationale
+      const rationale = await generateRationaleWithOpenAI(recommendation, profile, business, c.env);
+      
+      await db.insert(conciergeRecommendations).values({
+        id: recommendationId,
+        userId: userId,
+        businessId: recommendation.id,
+        recommendationType: 'manual',
+        matchScore: recommendation.scoring.total,
+        batchId: batchId,
+        rationale: rationale,
+        rationaleHighlights: JSON.stringify(recommendation.scoring.reasons || []),
+        matchingFactors: JSON.stringify({
+          profileInterestMatch: recommendation.scoring.profileInterestMatch,
+          businessQuality: recommendation.scoring.businessQuality,
+          locationProximity: recommendation.scoring.locationProximity,
+          categoryDiversity: recommendation.scoring.categoryDiversity,
+          temporalRelevance: recommendation.scoring.temporalRelevance,
+          distance: recommendation.scoring.distance
+        }),
+        status: 'pending',
+        generationTimeMs: recommendation.scoring.processingTimeMs,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      savedRecommendations.push({
+        id: recommendationId,
+        businessId: recommendation.id,
+        businessName: recommendation.name,
+        matchScore: recommendation.scoring.total,
+        rationale: rationale
+      });
+    }
+
     return c.json({
-      message: 'Recommendations generated successfully',
-      count: recommendations.length,
-      recommendations: recommendations.map(r => ({
-        businessId: r.businessId,
-        matchScore: r.matchScore,
-        rationale: r.rationale
-      }))
+      message: 'Recommendations generated and saved successfully',
+      count: savedRecommendations.length,
+      batchId: batchId,
+      recommendations: savedRecommendations
     });
 
   } catch (error) {
     console.error('Error generating recommendations:', error);
-    return c.json({ error: 'Failed to generate recommendations' }, 500);
+    return c.json({ 
+      error: 'Failed to generate recommendations',
+      details: error.message 
+    }, 500);
   }
 });
+
+/**
+ * Generate AI-powered personalized rationale for recommendation
+ */
+async function generateRationaleWithOpenAI(recommendation, userProfile, business, env) {
+  const openai = createOpenAIClient(env);
+  
+  if (!openai) {
+    console.log('[CONCIERGE] No OpenAI available, using fallback rationale');
+    return generateFallbackRationale(recommendation);
+  }
+
+  try {
+    // Extract user context from personal dossier
+    let userContext = 'No detailed profile available';
+    if (userProfile.personalDossier) {
+      const dossier = JSON.parse(userProfile.personalDossier);
+      userContext = `User Profile: ${dossier.summary || ''}`;
+      if (dossier.interests && dossier.interests.length > 0) {
+        userContext += ` Interests: ${dossier.interests.join(', ')}.`;
+      }
+    }
+
+    // Create rich business context
+    let businessContext = `Business: ${business.name}`;
+    if (business.businessDescription) {
+      businessContext += `\nDescription: ${business.businessDescription}`;
+    }
+    if (business.productsServices) {
+      try {
+        const services = JSON.parse(business.productsServices);
+        businessContext += `\nServices: ${JSON.stringify(services)}`;
+      } catch (e) {
+        businessContext += `\nServices: ${business.productsServices}`;
+      }
+    }
+    if (business.primaryCategory || business.category) {
+      businessContext += `\nCategory: ${business.primaryCategory || business.category}`;
+    }
+
+    // Create prompt for OpenAI
+    const prompt = `You are an AI concierge creating personalized business recommendations. 
+
+${userContext}
+
+${businessContext}
+
+Distance: ${recommendation.scoring.distance.toFixed(1)} miles away
+Match Score: ${(recommendation.scoring.total * 100).toFixed(0)}%
+
+Create a compelling, personalized rationale (2-3 sentences max) explaining why this business is specifically recommended for this user. Be specific about how the business aligns with their interests and lifestyle. Avoid generic phrases like "great match" - instead explain the specific connection.
+
+Examples of good rationale:
+- "This yoga studio aligns perfectly with your interest in wellness and outdoor activities, offering classes that complement your active lifestyle."
+- "As a guitar enthusiast who enjoys live music, this venue's open mic nights and acoustic performances would be ideal for both performing and discovering new talent."
+
+Your rationale:`;
+
+    console.log('[CONCIERGE] Generating OpenAI rationale for:', business.name);
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.7
+    });
+
+    const rationale = response.choices[0].message.content.trim();
+    console.log('[CONCIERGE] Generated OpenAI rationale:', rationale);
+    
+    return rationale;
+
+  } catch (error) {
+    console.error('[CONCIERGE] Error generating OpenAI rationale:', error);
+    return generateFallbackRationale(recommendation);
+  }
+}
+
+/**
+ * Fallback rationale generation (rule-based)
+ */
+function generateFallbackRationale(recommendation) {
+  const reasons = [];
+  const scoring = recommendation.scoring;
+  const business = recommendation;
+  
+  // Interest matching (lowered thresholds and more specific)
+  if (scoring.profileInterestMatch > 0.4) {
+    reasons.push('Great match for your interests and preferences');
+  } else if (scoring.profileInterestMatch > 0.2) {
+    reasons.push('Aligns well with your lifestyle');
+  } else if (scoring.profileInterestMatch > 0.1) {
+    reasons.push('Could be a good fit based on your profile');
+  }
+  
+  // Quality indicators (lowered threshold)
+  if (scoring.businessQuality > 0.5) {
+    reasons.push('Well-regarded local business');
+  } else if (scoring.businessQuality > 0.3) {
+    reasons.push('Local business worth exploring');
+  }
+  
+  // Location-based reasoning (more varied)
+  if (scoring.distance < 3) {
+    reasons.push(`Right nearby at ${scoring.distance.toFixed(1)} miles`);
+  } else if (scoring.distance < 8) {
+    reasons.push(`Close to you at ${scoring.distance.toFixed(1)} miles`);
+  } else if (scoring.distance < 20) {
+    reasons.push(`${scoring.distance.toFixed(1)} miles away - worth the drive`);
+  } else {
+    reasons.push(`${scoring.distance.toFixed(1)} miles away`);
+  }
+  
+  // Add specific reasons from scoring (these come from interest matching)
+  if (scoring.reasons && scoring.reasons.length > 0) {
+    const specificReasons = scoring.reasons.slice(0, 1); // Take top 1 specific reason
+    reasons.push(...specificReasons);
+  }
+  
+  // Business-specific enhancements based on categories
+  const category = (business.primaryCategory || business.category || '').toLowerCase();
+  if (category.includes('restaurant') || category.includes('food')) {
+    reasons.push('Perfect for trying something new');
+  } else if (category.includes('music') || category.includes('entertainment')) {
+    reasons.push('Great for entertainment and social activities');
+  } else if (category.includes('outdoor') || category.includes('recreation')) {
+    reasons.push('Ideal for active lifestyle pursuits');
+  }
+  
+  // Ensure we have at least one reason
+  if (reasons.length === 0) {
+    reasons.push('Recommended based on your location and preferences');
+  }
+  
+  return reasons.slice(0, 3).join('. ') + '.'; // Limit to top 3 reasons
+}
 
 /**
  * PATCH /api/concierge/recommendations/:id/dismiss
