@@ -1,0 +1,808 @@
+{
+  "startTime": "2025-08-24T23:50:36.518Z",
+  "processed": 150,
+  "successful": 17,
+  "failed": 133,
+  "estimatedCost": 1.36,
+  "lastProcessedId": "1e12ee50-2c76-4df3-9bb7-ef625b7c0f2b",
+  "failedBusinesses": [
+    {
+      "id": "006ac49e-d26a-41dc-b9ea-b5ce796442c4",
+      "name": "FoundRE Hotel",
+      "website": "www.matcphx.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "00b872c3-d155-4bd9-947d-bd5eb24a950e",
+      "name": "The Flying Pigeon Food Truck",
+      "website": "https://www.facebook.com/flyingpigeonfoodtruck?ref=aymt_homepage_panel",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "00d6213c-2874-49c4-8edd-37c8fe133fdf",
+      "name": "Antigone Books",
+      "website": "www.antigonebooks.com",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "012a3a72-020f-4f62-a092-cce2dc9e29f1",
+      "name": "Desert Willow Environmental Education Center",
+      "website": "emnrcd.org/education/desert-willow-education-center/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "01620268-e550-4a7f-95c5-8f12816dff07",
+      "name": "Sun Sprout Cloth Diaper Delivery Service",
+      "website": "https://www.sunsprout.us/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "016421db-ece4-4fab-b0d1-8b1332f013fe",
+      "name": "Tarango Strategy LLC",
+      "website": "tarangostrategy.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "016cd90d-e62b-4311-a0da-3fa91ddc45e0",
+      "name": "Kinetic Arts Tucson",
+      "website": "www.kineticartstucson.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "016dc187-900e-452f-845b-2130f70a403a",
+      "name": "Lively Mind Art Studio",
+      "website": "www.livelymindart.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "017c241a-6c44-4813-aeff-94b0e6b16768",
+      "name": "Pierre's Prime Beef",
+      "website": "https://www.facebook.com/PierresPrimeBeef/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "019d3baa-a1f2-472d-b70f-0147a8b5a1c5",
+      "name": "Glo-Ink Cosmetics",
+      "website": "https://www.glo-inkcosmetics.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "01d2fd6a-2f60-4c8e-a745-121118dcd554",
+      "name": "White Tank Microgreens",
+      "website": "https://www.facebook.com/White-Tank-Microgreens-109809607278810/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "01f255b9-891a-4ac9-91fc-f73fdd1b65a8",
+      "name": "Dona Rosa Pupuseria",
+      "website": "https://www.facebook.com/pupusasdonarosa",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "023dd825-ad50-4ccd-a38c-d478433d9012",
+      "name": "Mercado Y Carniceria El Pima",
+      "website": "https://www.elpimacarniceria.com/",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "0264d7aa-a4ab-48cc-a521-62349d826d26",
+      "name": "Mariscos Empalme",
+      "website": "Na",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "02f1f72d-6eff-410a-ae4e-870f249fd628",
+      "name": "Verde Valley Honey",
+      "website": "https://verde-valley-honey-llc.business.site/",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "02fcf29d-c711-4686-b5e3-ad1b778b4476",
+      "name": "Food You Can Say",
+      "website": "foodyoucansay.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "034217b0-3f39-4895-b2d1-39293187bb94",
+      "name": "Bia Collaborative",
+      "website": "https://thebiacollaborative.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "0343c50d-ac3f-4362-a59b-e0053db04e2a",
+      "name": "Shay-Shay Garden",
+      "website": "https://tucsonjcc.org/culture-community/community-garden/",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "03e4de52-7c0e-400b-903b-c016de8cd355",
+      "name": "Southwest Mushrooms",
+      "website": "https://southwestmushrooms.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0438b843-eeae-4e54-a4e3-07b4233c8421",
+      "name": "Ollie Vaughns",
+      "website": "https://ollievaughns.com/",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "04418481-a856-40f3-a4f8-80bf155f3e00",
+      "name": "Tassels Poms & Love",
+      "website": "https://tasselspomsandlove.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "04487126-b6f9-4bd0-8209-50950934e6d2",
+      "name": "The Tucson Boutique",
+      "website": "https://tucsonboutique.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "04c10021-ccd8-4a4a-aa9b-06508f4f348d",
+      "name": "Bee Oasis Permaculture Homesite",
+      "website": "https://www.facebook.com/beeoasis/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "052b3a42-1371-4124-ab97-8e799fb8dfc7",
+      "name": "Sol Vibes Photo Booth",
+      "website": "www.solvibesphotobooth.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0555c164-6102-4606-b756-3683466c737a",
+      "name": "Trainual",
+      "website": "organizechaos.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "05646467-46a8-4f02-bc87-33f08569a19b",
+      "name": "Rhythm n Boots Dance Hall",
+      "website": "https://rhythm-n-boots-resort.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "057a4ece-75b8-4cb1-bc0a-c6f45dbb6d54",
+      "name": "1912 Brewing Company",
+      "website": "www.1912brewing.com/",
+      "error": "Scraping failed: HTTP 503"
+    },
+    {
+      "id": "059183b7-4875-4304-b630-57705a77f0a7",
+      "name": "Paulinas Kitchen",
+      "website": "Paulinaskitchen22",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "05c3af1b-c2b0-4279-817d-e3a2c544f9c8",
+      "name": "Sammi's Cookie Co.",
+      "website": "sammiscookieco.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0629e79f-306d-4599-b9f0-2b12c717a441",
+      "name": "Azteca Tradition",
+      "website": "N/A",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "06680298-0756-4d21-a015-5212c3d69037",
+      "name": "R&B Luxury Candles LLC",
+      "website": "n/a",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "06876e97-b635-4fa5-a74b-1eeb5bc8f54a",
+      "name": "Cowboy Up Hay And Ranch Supply",
+      "website": "www.cowboyupsupply.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "06dfc8c8-fd23-4bb4-9ff1-326f1676ba38",
+      "name": "Sky Blue Distribution",
+      "website": "skyblueco.com",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "0703d7ce-d900-45c4-b15a-40c66ebf0ac5",
+      "name": "TRUE SHINE",
+      "website": "www.TrueShineFlagstaff.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0713db34-e206-46fe-a5e0-a49cb4e07421",
+      "name": "Desert Diamond Home Inspections",
+      "website": "https://desertdiamondhomeinspections.com/",
+      "error": "Scraping failed: HTTP 503"
+    },
+    {
+      "id": "072f18f5-d9e3-4da5-a819-8c864d45324d",
+      "name": "Our Urban Village",
+      "website": "https://oururbanvillage.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "07590d6a-6fcc-4271-8604-a1e6937bac79",
+      "name": "Arcadia News",
+      "website": "www.arcadianews.com",
+      "error": "Scraping failed: HTTP 451"
+    },
+    {
+      "id": "07d6db61-25f6-4ebb-9526-8989f42fd246",
+      "name": "Farmers Market on High Street (closed for summer)",
+      "website": "https://www.facebook.com/Farmers-Market-on-High-Street",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "07f2b022-5c72-4445-969f-0084a42a9477",
+      "name": "Elaman1234.Com Llc",
+      "website": "www.elaman1234.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0860a789-7d57-4e5b-b39f-e4ed305bb7ae",
+      "name": "Hope's Artisan Bread",
+      "website": "https://www.hopesartisanbread.com/",
+      "error": "Scraping failed: HTTP 410"
+    },
+    {
+      "id": "0875de5e-6fc0-4f93-a50f-58b2fa0e9037",
+      "name": "Forvilla",
+      "website": "TBD",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "089b6602-e169-41c9-8948-285c99ff126f",
+      "name": "Summer Place Pecan Farm",
+      "website": "https://www.facebook.com/summerplace.pecanfarm/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "08e329fd-d2ea-45ff-b065-9195958c91d1",
+      "name": "The Creative Cottage",
+      "website": "www.etsy.com/shop/thecreativecottageaz",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "0911f06a-0e02-484e-9231-9b75660e3057",
+      "name": "Saffron Jak",
+      "website": "www.saffronjak.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "091bce10-78d1-49d8-8fd7-36070a53e598",
+      "name": "Nourish Curated Meals",
+      "website": "https://www.nourishmeals.net/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "09ba12da-109e-48b0-af5f-6f6f6ea2a61a",
+      "name": "Proactive Onsite",
+      "website": "https://www.proactiveonsite.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "09e342e4-d21d-4b26-af47-6d2facc3bef5",
+      "name": "Star Woman Crystals",
+      "website": "www.StarWomanCrystals.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0aa9022d-772f-4ca2-b741-71859feaf1be",
+      "name": "Suzy Q Market",
+      "website": "suzyqaz.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0b796dd7-83c9-41c8-92a2-cc9b6d91984f",
+      "name": "Miracle Executive Services",
+      "website": "milabesichlira.com/services/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0b7fa99f-37cb-47c4-a9b6-4d3522a619dc",
+      "name": "Antojitos Puro Jalisco!",
+      "website": "https://www.facebook.com/AntojitospurojaliscoAZ/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0b891f10-c482-4c85-b7e3-e0948d8f2275",
+      "name": "Artes Wendy",
+      "website": "N/A",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0be28733-4075-455b-a169-332fe5c4c66b",
+      "name": "Sweets By Deb - temporarily closed",
+      "website": "https://www.facebook.com/SweetsByDebAZ/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0bf5bfe7-ff63-442b-a903-d2875ea46e06",
+      "name": "Yuma Community Farmers Market (Closed for Summer)",
+      "website": "https://www.facebook.com/yumacommunityfarmersmarket/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0c16689a-ac17-43da-8267-c432cb28a169",
+      "name": "North Leupp Family Farms",
+      "website": "https://www.facebook.com/people/North-Leupp-Family-Farms-Inc/100064832552767/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0c31069f-b212-4d83-9f1e-aa91c624900d",
+      "name": "Bonzai Studio",
+      "website": "www.evemstudios.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0c5f6cb8-ba55-4711-9c34-f8937df53577",
+      "name": "Jireh Bakery Pasteleria LLC",
+      "website": "N/A",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0c7dafad-9619-42f5-8166-eb379cfd8b7c",
+      "name": "Paira",
+      "website": "paira.info",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "0cfea819-22dd-4e79-8fbe-0d3df2819808",
+      "name": "Stellas Farmers Market",
+      "website": "https://www.facebook.com/people/Stellas-Farmers-Market-Free-Food-Distribution-Tolleson-AZ/100064566827479/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0e1685b6-eca9-4dc5-a710-cb0e13ef1676",
+      "name": "Larry's Veggies",
+      "website": "https://www.facebook.com/LarrysVeggies",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "0e6379e2-8bd6-407c-b0c3-ccdff79be2f0",
+      "name": "Imex Live Events",
+      "website": "imexliveevents.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0e74d6aa-640b-47d8-8020-39b1d7699bed",
+      "name": "Del Rio Springs Vineyard",
+      "website": "delriospringsvineyard.com/home.html",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "0eb8a15b-832a-4cb0-91ba-4a98677e611d",
+      "name": "Southwest Aquaponics",
+      "website": "southwesttilapiafarm.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0edde2f6-e8e6-492c-98d1-1ec6be02adda",
+      "name": "Vera Vara",
+      "website": "www.etsy.com/shop/veravara",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "0f3ec337-80ea-4412-94f6-cb612454b69f",
+      "name": "Mat Phoenix",
+      "website": "cleanlanudry.delivery",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0f61500b-1ade-4118-9447-3dd4957911a8",
+      "name": "Arizona Historical Society",
+      "website": "https://arizonahistoricalsociety.org/",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "0f66d937-10bb-4ba2-ba1f-f26b85657d69",
+      "name": "M.R. Designs And Gifts",
+      "website": "www.MRDesignsandGifts.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0f76ea5e-89b5-4940-87af-a2e912f225ce",
+      "name": "Blacupuncturist, S.A.",
+      "website": "https://www.blacupuncturist.me/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0fabb68d-590f-4287-ad07-0401da5299ce",
+      "name": "Think Outside the Box",
+      "website": "www.thinkoutsidetheboxllc.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0fac0022-e15f-4d06-9dc5-44b17282c249",
+      "name": "Feed The Family Micro Farm",
+      "website": "https://feedthefamilymicrofarm.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0fe9538f-f7ad-47e5-9785-43d1224255f1",
+      "name": "Desert Moon Market",
+      "website": "www.desertmoonmarket.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "0ff00f12-a80e-4bfc-9419-65dc0e2cb463",
+      "name": "Belly Kitchen and Bar",
+      "website": "https://www.bellyphx.com/gilbert/belly-gilbert",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "0ffbbdda-bed5-4dbc-8de6-26a7d572eb6a",
+      "name": "AHA Alliance",
+      "website": "www.ahaalliance.net",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "100e8ebb-6c35-49aa-b60b-7c4e313e1975",
+      "name": "Florence Farmers Market",
+      "website": "www.florenceazchamber.com/event/florence-farmers-market-2",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "108fd112-6449-4c59-bddb-a84d2f186e23",
+      "name": "Paige Artists Studio Gallery",
+      "website": "susanpaige.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1131dbe9-3cbe-4429-a7cc-c00c080f0f2f",
+      "name": "Glass Restoration Guru",
+      "website": "https://www.phoenixglassrepair.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "113e52c3-9afe-4bb3-ab40-8b93d50cdda0",
+      "name": "Cave Creek Olive Oil",
+      "website": "https://cavecreekoliveoil.com/",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "120a8bba-6ff7-4a19-be0e-2e64aa7a7a0b",
+      "name": "Cell Plus",
+      "website": "www.cellplusavondale.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "128716cb-0d41-417c-a998-23040dc7235c",
+      "name": "Culture Mix Coffee",
+      "website": "www.culturemixcoffee.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "129cd030-0b73-4092-8eac-9da6ea750d77",
+      "name": "Killip Elementary School Garden",
+      "website": "https://www.facebook.com/KillipSchool",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "12c95645-4b2f-4b56-98e4-35a7078fe32b",
+      "name": "Wild Daisy Clothing Co",
+      "website": "https://www.facebook.com/thewilddaisylife/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "12e39fa2-8b55-48ff-a1f8-46b6b254f9be",
+      "name": "Virginias House",
+      "website": "www.virginiashouse.com",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "134a7cfb-da59-48b3-8d1e-dc5ac89182d4",
+      "name": "The Tiny Farmer",
+      "website": "Thetinyfarmer.com",
+      "error": "Scraping failed: HTTP 403"
+    },
+    {
+      "id": "14044c32-e9da-4a75-9c39-514c00f360fb",
+      "name": "9 Herbs Kitchen",
+      "website": "9herbskitchen.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1417993c-d817-4df7-8409-c2c8d0cce627",
+      "name": "Fork Me Better",
+      "website": "N/A",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1423c567-7d81-4e0d-a385-18844383fb3a",
+      "name": "Talia Tray Company",
+      "website": "www.taliatrayco.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1424a753-4016-4863-98df-45add35b98b6",
+      "name": "Mondo Farms (formerly Dirty Girl Farmette)",
+      "website": "https://www.facebook.com/dirtygirlfarmette/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "142619aa-b835-4812-b833-2c816872a61e",
+      "name": "Clay Coffee Co.",
+      "website": "claycoffeeco.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "144cc163-bf73-4432-bdb6-80a568819108",
+      "name": "Define Mortgage Solutions",
+      "website": "https://www.definemortgagesolutions.com/personal",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1496a565-6441-4094-8f1d-430f5eaf33db",
+      "name": "ACRES",
+      "website": "https://archwoodexchange.com/pages/acres-retail-store",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "14e4f046-b06b-4425-9496-c94ab84b12d1",
+      "name": "Rovey Family Farms",
+      "website": "https://roveyfamilyfarms.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1505c908-5d3d-4c97-9d14-17b210e8525d",
+      "name": "Chef On Wheels",
+      "website": "https://www.facebook.com/chefonwheelsaz/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "150c3ddc-ed4e-493f-bc03-66cac857a84f",
+      "name": "Time To Eat Arizona",
+      "website": "www.timetoeatarizona.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "15aec375-6bb3-4691-b3ec-1f3d6e7058b4",
+      "name": "The Escalante Community Garden",
+      "website": "www.facebook.com/EscalanteCommunityGarden",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "15bf2241-bba9-4c9d-9932-d9d2c0440458",
+      "name": "Badass Coffee Causes",
+      "website": "https://badasscoffeecauses.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "15cae560-878e-43c3-9672-a3ebfe360830",
+      "name": "Community Action Security",
+      "website": "www.communitysecurity.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "15ed19bd-ed38-4e74-a9f9-7960cd863718",
+      "name": "Write Hook Content",
+      "website": "https://www.linkedin.com/in/writehookcontent/",
+      "error": "Scraping failed: HTTP 999"
+    },
+    {
+      "id": "15f29779-f75b-44bd-a828-ed84be6e60bf",
+      "name": "Lavender's Blue Farm",
+      "website": "https://www.facebook.com/lavendersbluefarm/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1610b335-c8f0-44a0-868a-32a671918c90",
+      "name": "Canyon Inn",
+      "website": "canyoninnflagstaff.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1657d0a1-a474-435d-b713-2cf5b6a88bda",
+      "name": "Cinjo Shop",
+      "website": "https://www.cinjoshop.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "165a4047-bace-43ca-97e1-8071b343c93a",
+      "name": "AZ Boot Bootique",
+      "website": "www.azbootco.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "16734cf1-1879-4653-92b1-ef04381ee65d",
+      "name": "Udderly Divine",
+      "website": "https://www.facebook.com/pg/udderlydivine",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "168417e6-11f9-47b0-856c-7b46a040a5f7",
+      "name": "Maxim ATM Solutions",
+      "website": "Maximatms.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "16c0100c-c00f-4f00-9f8d-204f46ba4ea7",
+      "name": "PureLabs",
+      "website": "na",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "16d1c12c-6868-4942-be40-aa4485849425",
+      "name": "Campsite Outfitters LLC",
+      "website": "campsiteoutfitters.co",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "16f61275-acfb-45f1-a7cc-2707b79bd10a",
+      "name": "Belly Kitchen + Bar",
+      "website": "https://www.bellyphx.com/melrose/belly-melrose-home",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "170d686a-4bb1-4017-9860-a209a14beba5",
+      "name": "Rustic Barn Bakery",
+      "website": "https://www.facebook.com/TheRusticBarnBakery?notif_t=page_fan¬if_id=1591664835804112&ref=m_notif&paipv=0&eav=AfZobSaEmwbEsg7RrP57-qPQejVMoRlyvyBqdPbChK27SX2WQBfGTPudTzFdwee_-h8",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "17253fb6-4a24-4010-8e0f-96fa53761f18",
+      "name": "Reap & Sow",
+      "website": "https://shopreapandsow.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1770edc1-9743-46d2-b27f-1ed2fb410685",
+      "name": "Poppies Gourmet Popcorn",
+      "website": "PoppiesGourmetPopcorn.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "177f5448-9d80-4720-b42c-9286afea8791",
+      "name": "Essential I.V. Drip LLC",
+      "website": "www.eivdrip.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "17e3845e-11df-490c-a22e-ba6360b13c3d",
+      "name": "Epps Power Wash",
+      "website": "Epps Power Wash",
+      "error": "Scraping failed: Failed to parse URL from https://Epps Power Wash"
+    },
+    {
+      "id": "17e6a7e9-6578-49b0-ab4d-8a25c5dd9c2f",
+      "name": "PWR Design",
+      "website": "https://www.pwrdesignco.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "18d068cf-44e9-4a43-a8cc-7cf2bcaae0d1",
+      "name": "Urban Desert Brands",
+      "website": "urbandesertbrand.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "1a4b9bd7-d29c-4282-a640-348c65586a5f",
+      "name": "Happy Grow Lucky",
+      "website": "https://www.facebook.com/happygrowluckyaz/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1a9febb7-e4fd-4434-9375-2af8462c268e",
+      "name": "Good Eye Living",
+      "website": "goodeyeliving.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1aa82e8e-a6e6-4630-ad28-595e8dd4b9bf",
+      "name": "Veritas Medical Group",
+      "website": "www.veritasmedgroup.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1abb8c37-17fe-402a-a7c6-61a7e7e838aa",
+      "name": "Beco's Tacos",
+      "website": "https://www.facebook.com/becostaco/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1ac91135-0445-4550-931a-490fd1b38d39",
+      "name": "Captains",
+      "website": "captainssupply.net",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1ae12661-81cc-4039-9498-a8777ac0cecd",
+      "name": "Hopi Farmers Market and Exchange [Temporarily Closed]",
+      "website": "https://www.facebook.com/hopifarmersmarket/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1b31cfb4-2950-4fdf-87b9-f84b4679bbe2",
+      "name": "Body Therapy And Hair Spa",
+      "website": "https://bodytherapyaz.com",
+      "error": "Scraping failed: HTTP 500"
+    },
+    {
+      "id": "1b389c4d-a7c2-45dd-bd14-d7b86baf1fd9",
+      "name": "La deliciosa",
+      "website": "Na",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1b7ea9c1-07d5-4d7b-9957-f3470d0edcbe",
+      "name": "Agritopia Community Garden",
+      "website": "thefarmatagritopia.com/community-garden/",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "1b9c5f7a-cca5-44d5-a79b-db0b2d7366a4",
+      "name": "Alaska’s Best Seafood",
+      "website": "www.alaskasbestseafoods.com",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "1bd67d30-ad8e-4767-8be8-4055305b7b51",
+      "name": "Singh Meadows",
+      "website": "https://www.facebook.com/SinghMeadows/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1beea169-18aa-4090-9537-45aceef65a1f",
+      "name": "Vanidosa Cosmetics",
+      "website": "vanidosacosmetics.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1c620338-29b7-4691-afde-ae7228ce7cea",
+      "name": "The Edible Apothecary",
+      "website": "TheEdibleApothecary.org",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "1c72d69a-80fa-4f2d-818d-26b6bbfeda9b",
+      "name": "CITY Sun Times",
+      "website": "news.citysuntimes.com",
+      "error": "Scraping failed: HTTP 451"
+    },
+    {
+      "id": "1c9d274f-0bbc-41de-b4c9-268ee4b5d6e0",
+      "name": "Roque's Cafe",
+      "website": "www.roquecafe.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1cc64f1b-24b7-41b0-82c6-133e34f32bcb",
+      "name": "Arizona's Roasted Corn Llc",
+      "website": "https://www.facebook.com/arizonasroastedcorn/",
+      "error": "Scraping failed: HTTP 400"
+    },
+    {
+      "id": "1d36ff34-5fab-4770-bd66-99854bbcef1e",
+      "name": "Cottage Garden II",
+      "website": "www.cottagegarden2.blogspot.com/",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1d454582-58cd-4dde-b0b0-53797cf2e097",
+      "name": "Mane-LAN kitchen dba of Edwardsix, LLC",
+      "website": "www.manelankitchenaz.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1d47cf6e-a3cd-4d18-a376-833d788ed9fa",
+      "name": "Vanguard Strategies and Consulting, LLC",
+      "website": "www.roytatemtnv.com",
+      "error": "Scraping failed: fetch failed"
+    },
+    {
+      "id": "1d4f1042-fba3-4cee-8ff1-c4986020a4c4",
+      "name": "Hansel and Gretel Eatery LLC",
+      "website": "https://www.hanselandgreteldelivery.com/",
+      "error": "Scraping failed: HTTP 404"
+    },
+    {
+      "id": "1dd6cf0d-e6ac-440a-af5d-9c4678869e69",
+      "name": "Kactus Kate's Saloon",
+      "website": "https://www.facebook.com/pages/Kactus-Kates-Saloon/146339208754621",
+      "error": "Scraping failed: HTTP 400"
+    }
+  ]
+}
