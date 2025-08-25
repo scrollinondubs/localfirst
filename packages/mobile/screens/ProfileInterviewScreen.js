@@ -347,12 +347,7 @@ export default function ProfileInterviewScreen({ navigation }) {
             <Text style={styles.headerTitle}>Profile Interview</Text>
             <Text style={styles.headerSubtitle}>{profileCompleteness}% Complete</Text>
           </View>
-          <TouchableOpacity 
-            onPress={completeInterview}
-            style={styles.completeButton}
-          >
-            <Text style={styles.completeButtonText}>Finish</Text>
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
         </View>
 
         {/* Progress bar */}
@@ -474,13 +469,8 @@ const styles = StyleSheet.create({
     color: '#718096',
     marginTop: 2,
   },
-  completeButton: {
-    padding: 8,
-  },
-  completeButtonText: {
-    fontSize: 16,
-    color: '#38a169',
-    fontWeight: '500',
+  headerSpacer: {
+    width: 80, // Same width as back button area for balance
   },
   progressContainer: {
     paddingHorizontal: 16,
