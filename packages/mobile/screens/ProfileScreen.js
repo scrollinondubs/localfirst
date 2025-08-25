@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,37 @@ import {
   ScrollView
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
+import { buildApiUrl } from '../config/api';
 
 export default function ProfileScreen({ navigation }) {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, token } = useAuth();
   const [showAuthOptions, setShowAuthOptions] = useState(false);
+  const [hasDossier, setHasDossier] = useState(false);
+
+  useEffect(() => {
+    if (currentUser && token) {
+      checkDossierExists();
+    }
+  }, [currentUser, token]);
+
+  const checkDossierExists = async () => {
+    try {
+      const response = await fetch(buildApiUrl('/api/interview/dossier'), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-ID': currentUser.id,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHasDossier(data.dossier !== null);
+      }
+    } catch (error) {
+      console.error('Error checking dossier:', error);
+    }
+  };
 
   if (currentUser) {
     return (
@@ -24,8 +51,12 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>My Settings</Text>
-            <TouchableOpacity style={styles.optionButton}>
-              <Text style={styles.optionText}>Edit Profile</Text>
+            <TouchableOpacity 
+              style={styles.optionButton}
+              onPress={() => navigation.navigate('ViewDossier')}
+            >
+              <Text style={styles.optionText}>View My Dossier</Text>
+              <Text style={styles.optionSubtext}>Review and edit your personal profile</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.optionButton}

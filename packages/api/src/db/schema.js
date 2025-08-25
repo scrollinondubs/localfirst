@@ -110,6 +110,11 @@ export const consumerProfiles = sqliteTable('consumer_profiles', {
   profileCompleteness: integer('profile_completeness').default(0), // 0-100 score
   lastInterviewDate: text('last_interview_date'),
   
+  // Personal Dossier fields
+  personalDossier: text('personal_dossier'), // JSON structured dossier from AI synthesis
+  dossierGeneratedAt: text('dossier_generated_at'), // Timestamp of dossier creation/update
+  dossierVersion: integer('dossier_version').default(1), // Track regeneration count
+  
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });

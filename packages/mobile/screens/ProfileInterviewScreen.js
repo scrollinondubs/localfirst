@@ -27,7 +27,12 @@ export default function ProfileInterviewScreen({ navigation }) {
   const [voiceError, setVoiceError] = useState(null);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isGeneratingDossier, setIsGeneratingDossier] = useState(false);
   const scrollViewRef = useRef();
+  
+  // Dossier threshold constants
+  const DOSSIER_THRESHOLD = 6; // Total messages needed
+  const USER_MESSAGE_THRESHOLD = Math.floor(DOSSIER_THRESHOLD / 2); // 3 user messages needed
 
   useEffect(() => {
     if (currentUser) {
@@ -40,6 +45,35 @@ export default function ProfileInterviewScreen({ navigation }) {
       voiceService.clearCallbacks();
     };
   }, [currentUser]);
+
+
+  // Generate dossier status message based on message count
+  const getDossierMessage = () => {
+    // Count user messages only
+    const userMessageCount = messages.filter(msg => msg.role === 'user').length;
+    const messagesNeeded = Math.max(0, USER_MESSAGE_THRESHOLD - userMessageCount);
+    
+    console.log(`DEBUG getDossierMessage: userMessageCount=${userMessageCount}, threshold=${USER_MESSAGE_THRESHOLD}, messagesNeeded=${messagesNeeded}`);
+
+    // Show button if user has reached threshold
+    if (userMessageCount >= USER_MESSAGE_THRESHOLD) {
+      console.log('DEBUG: Returning SHOW BUTTON');
+      return {
+        text: "📝 Generate Personal Dossier",
+        color: "#805ad5",
+        backgroundColor: "#e9d8fd",
+        showButton: true
+      };
+    }
+
+    // Show countdown if user needs more messages
+    console.log('DEBUG: Returning COUNTDOWN');
+    return {
+      text: `💬 ${messagesNeeded} more answer${messagesNeeded === 1 ? '' : 's'} to unlock dossier generation`,
+      color: "#3182ce",
+      backgroundColor: "#bee3f8"
+    };
+  };
 
   // Initialize or get existing interview session
   const initializeSession = async () => {
@@ -79,10 +113,16 @@ export default function ProfileInterviewScreen({ navigation }) {
       timestamp: new Date().toISOString()
     };
 
-    // Add user message immediately
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message immediately and scroll
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setCurrentMessage('');
     setIsLoading(true);
+
+    // Auto-scroll to bottom immediately after user message
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 50);
 
     try {
       const response = await fetch(buildApiUrl('/api/interview/message'), {
@@ -108,13 +148,15 @@ export default function ProfileInterviewScreen({ navigation }) {
           timestamp: new Date().toISOString()
         };
         
-        setMessages(prev => [...prev, aiMessage]);
+        const allMessages = [...newMessages, aiMessage];
+        setMessages(allMessages);
         setProfileCompleteness(data.profileCompleteness || 0);
         
-        // Auto-scroll to bottom
+        // Auto-scroll to bottom after AI response
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
+        
       } else {
         throw new Error('Failed to send message');
       }
@@ -225,6 +267,43 @@ export default function ProfileInterviewScreen({ navigation }) {
       await voiceService.stopListening();
     } catch (error) {
       console.error('Error stopping voice search:', error);
+    }
+  };
+
+  // Generate personal dossier
+  const generatePersonalDossier = async () => {
+    if (!sessionId || !currentUser?.id) {
+      Alert.alert('Error', 'Missing session or user data');
+      return;
+    }
+
+    try {
+      setIsGeneratingDossier(true);
+      
+      const response = await fetch(buildApiUrl('/api/interview/generate-dossier'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-ID': currentUser.id,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Navigate directly to ViewDossier
+        navigation.navigate('ViewDossier');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.error || 'Failed to generate dossier');
+      }
+    } catch (error) {
+      console.error('Error generating dossier:', error);
+      Alert.alert('Error', 'Failed to generate dossier. Please try again.');
+    } finally {
+      setIsGeneratingDossier(false);
     }
   };
 
@@ -362,6 +441,45 @@ export default function ProfileInterviewScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Dossier Generation Status */}
+        {messages.length > 0 && (
+          <View 
+            style={[
+              styles.eligibilityBanner,
+              { backgroundColor: getDossierMessage().backgroundColor }
+            ]}
+          >
+            {getDossierMessage().showButton ? (
+              <TouchableOpacity 
+                style={styles.bannerButton}
+                onPress={() => {
+                  console.log('BUTTON CLICKED - Before generatePersonalDossier');
+                  Alert.alert('BUTTON DEBUG', 'Button was clicked!');
+                  generatePersonalDossier();
+                }}
+                disabled={isGeneratingDossier}
+              >
+                {isGeneratingDossier ? (
+                  <ActivityIndicator size="small" color="#805ad5" />
+                ) : (
+                  <Text style={styles.bannerButtonText}>
+                    {getDossierMessage().text}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.bannerTextContainer}>
+                <Text style={[
+                  styles.eligibilityText,
+                  { color: getDossierMessage().color }
+                ]}>
+                  {getDossierMessage().text}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Messages */}
         <ScrollView 
           ref={scrollViewRef}
@@ -487,12 +605,48 @@ const styles = StyleSheet.create({
     backgroundColor: '#3182ce',
     borderRadius: 2,
   },
+  eligibilityBanner: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#805ad5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 200,
+  },
+  bannerButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#805ad5',
+    textAlign: 'center',
+  },
+  eligibilityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   messagesContainer: {
     flex: 1,
     paddingHorizontal: 16,
   },
   messagesContent: {
     paddingVertical: 16,
+    paddingBottom: 30, // Small space at bottom to prevent nav bar from obscuring content
   },
   messageContainer: {
     marginVertical: 4,
