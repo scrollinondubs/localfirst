@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { buildApiUrl } from '../config/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const useRecommendationsEligibility = () => {
   const { currentUser, token, isAuthenticated } = useAuth();
@@ -9,7 +10,7 @@ export const useRecommendationsEligibility = () => {
   const [eligibilityData, setEligibilityData] = useState(null);
 
   const checkEligibility = async () => {
-    if (!isAuthenticated() || !currentUser || !token) {
+    if (!isAuthenticated() || !currentUser) {
       setIsEligible(false);
       setLoading(false);
       return;
@@ -19,7 +20,6 @@ export const useRecommendationsEligibility = () => {
     try {
       const response = await fetch(buildApiUrl('/api/concierge/eligibility'), {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'X-User-ID': currentUser.id,
           'Content-Type': 'application/json'
         }
@@ -27,7 +27,7 @@ export const useRecommendationsEligibility = () => {
 
       if (response.ok) {
         const data = await response.json();
-        // New eligibility: hasDossier && hasPreferences
+        // New eligibility: hasDossier && hasPreferences && hasCompletedInterview
         setIsEligible(data.eligible);
         setEligibilityData(data);
       } else {
@@ -45,7 +45,16 @@ export const useRecommendationsEligibility = () => {
 
   useEffect(() => {
     checkEligibility();
-  }, [currentUser, token, isAuthenticated]);
+  }, [currentUser, isAuthenticated]);
+
+  // Also refresh when navigation comes into focus (when tabs change)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentUser) {
+        checkEligibility();
+      }
+    }, [currentUser, isAuthenticated])
+  );
 
   return { isEligible, loading, eligibilityData, refresh: checkEligibility };
 };

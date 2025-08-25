@@ -9,23 +9,72 @@ import {
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
 import { buildApiUrl } from '../config/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen({ navigation }) {
   const { currentUser, logout, token } = useAuth();
   const [showAuthOptions, setShowAuthOptions] = useState(false);
   const [hasDossier, setHasDossier] = useState(false);
+  const [hasCompletedInterview, setHasCompletedInterview] = useState(false);
+  const [hasPreferences, setHasPreferences] = useState(false);
 
   useEffect(() => {
-    if (currentUser && token) {
-      checkDossierExists();
+    if (currentUser) {
+      checkAllCompletionStatus();
     }
   }, [currentUser, token]);
 
-  const checkDossierExists = async () => {
+  // Refresh completion status when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentUser) {
+        checkAllCompletionStatus();
+      }
+    }, [currentUser, token])
+  );
+
+  const checkAllCompletionStatus = async () => {
     try {
-      const response = await fetch(buildApiUrl('/api/interview/dossier'), {
+      // Check dossier exists
+      const dossierResponse = await fetch(buildApiUrl('/api/interview/dossier'), {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'X-User-ID': currentUser.id,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (dossierResponse.ok) {
+        const dossierData = await dossierResponse.json();
+        setHasDossier(dossierData.dossier !== null);
+      }
+
+      // Check interview completion (has session with 3+ user messages)
+      const sessionResponse = await fetch(buildApiUrl('/api/interview/session'), {
+        headers: {
+          'X-User-ID': currentUser.id,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        const userMessageCount = sessionData.messages?.filter(msg => msg.role === 'user').length || 0;
+        setHasCompletedInterview(userMessageCount >= 3);
+      }
+
+      // Check notification preferences exist
+      // We'll need to create an endpoint for this or use eligibility endpoint
+      checkPreferences();
+      
+    } catch (error) {
+      console.error('Error checking completion status:', error);
+    }
+  };
+
+  const checkPreferences = async () => {
+    try {
+      const response = await fetch(buildApiUrl('/api/concierge/eligibility'), {
+        headers: {
           'X-User-ID': currentUser.id,
           'Content-Type': 'application/json'
         }
@@ -33,10 +82,10 @@ export default function ProfileScreen({ navigation }) {
 
       if (response.ok) {
         const data = await response.json();
-        setHasDossier(data.dossier !== null);
+        setHasPreferences(data.hasPreferences);
       }
     } catch (error) {
-      console.error('Error checking dossier:', error);
+      console.error('Error checking preferences:', error);
     }
   };
 
@@ -55,22 +104,37 @@ export default function ProfileScreen({ navigation }) {
               style={styles.optionButton}
               onPress={() => navigation.navigate('ViewDossier')}
             >
-              <Text style={styles.optionText}>View My Dossier</Text>
-              <Text style={styles.optionSubtext}>Review and edit your personal profile</Text>
+              <View style={styles.optionContent}>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionText}>View My Dossier</Text>
+                  <Text style={styles.optionSubtext}>Review and edit your personal profile</Text>
+                </View>
+                {hasDossier && <Text style={styles.checkmark}>✓</Text>}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.optionButton}
               onPress={() => navigation.navigate('ProfileInterview')}
             >
-              <Text style={styles.optionText}>Complete Profile Interview</Text>
-              <Text style={styles.optionSubtext}>Get personalized business recommendations</Text>
+              <View style={styles.optionContent}>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionText}>Complete Profile Interview</Text>
+                  <Text style={styles.optionSubtext}>Get personalized business recommendations</Text>
+                </View>
+                {hasCompletedInterview && <Text style={styles.checkmark}>✓</Text>}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.optionButton}
               onPress={() => navigation.navigate('NotificationPreferences')}
             >
-              <Text style={styles.optionText}>Notification Preferences</Text>
-              <Text style={styles.optionSubtext}>Configure your recommendation settings</Text>
+              <View style={styles.optionContent}>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionText}>Notification Preferences</Text>
+                  <Text style={styles.optionSubtext}>Configure your recommendation settings</Text>
+                </View>
+                {hasPreferences && <Text style={styles.checkmark}>✓</Text>}
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -178,6 +242,14 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     marginBottom: 8,
   },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
   optionText: {
     fontSize: 16,
     color: '#2d3748',
@@ -186,6 +258,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     marginTop: 4,
+  },
+  checkmark: {
+    fontSize: 24,
+    color: '#38a169',
+    fontWeight: 'bold',
+    marginLeft: 16,
   },
   benefits: {
     marginBottom: 32,
