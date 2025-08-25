@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { userPreferences, consumerProfiles, users, conversationSessions, conciergeRecommendations, businesses } from '../db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne, sql } from 'drizzle-orm';
 
 const concierge = new Hono();
 
@@ -452,11 +452,14 @@ concierge.get('/eligibility', async (c) => {
     const messageCount = interviews[0]?.messageCount || 0;
     const userMessageCount = interviews.length > 0 ? 
       JSON.parse(interviews[0].messages || '[]').filter(msg => msg.role === 'user').length : 0;
+    
+    const hasCompletedInterview = userMessageCount >= 3;
 
     return c.json({
-      eligible: hasPreferences && hasDossier,
+      eligible: hasPreferences && hasDossier && hasCompletedInterview,
       hasPreferences,
       hasDossier,
+      hasCompletedInterview,
       dossierLength,
       messageCount,
       userMessageCount
