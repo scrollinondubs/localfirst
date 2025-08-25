@@ -47,6 +47,10 @@ zone_name = "localfirst.site"
 # [limits]
 # cpu_ms = 10000  # Requires paid plan
 
+# Cron triggers for AI Concierge
+[triggers]
+crons = ["0 */4 * * *"] # Run every 4 hours
+
 # Build configuration
 [build]
 command = ""

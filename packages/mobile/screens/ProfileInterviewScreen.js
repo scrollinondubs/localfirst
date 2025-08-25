@@ -261,7 +261,7 @@ export default function ProfileInterviewScreen({ navigation }) {
                   `Thanks for sharing! Your profile is now ${data.profileCompleteness}% complete. You'll start receiving personalized business recommendations.`,
                   [{ 
                     text: 'OK', 
-                    onPress: () => navigation.goBack()
+                    onPress: () => navigation.navigate('ProfileMain')
                   }]
                 );
               } else {
@@ -338,7 +338,7 @@ export default function ProfileInterviewScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate('ProfileMain')}
             style={styles.backButton}
           >
             <Text style={styles.backButtonText}>← Back</Text>
