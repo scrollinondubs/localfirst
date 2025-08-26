@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { analyticsEvents, userSessions } from '../db/schema.js';
-import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 
 const router = new Hono();
@@ -28,7 +27,7 @@ router.post('/events', async (c) => {
 
     // Process events
     const processedEvents = events.map(event => ({
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       extensionId: extension_id,
       eventType: event.type || 'unknown',
       businessId: event.business_id || null,
@@ -86,7 +85,7 @@ async function updateUserSession(extensionId, events, db) {
     } else {
       // Create new session
       await db.insert(userSessions).values({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         extensionId: extensionId,
         ...sessionData,
         sessionStart: new Date().toISOString()

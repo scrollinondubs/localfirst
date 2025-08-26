@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { v4 as uuidv4 } from 'uuid';
 import { userFavorites, businesses } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
@@ -147,7 +146,7 @@ favorites.post('/:businessId', async (c) => {
     }
 
     // Add to favorites
-    const favoriteId = uuidv4();
+    const favoriteId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     await db.insert(userFavorites).values({

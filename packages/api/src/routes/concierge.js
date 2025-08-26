@@ -12,10 +12,6 @@ function createOpenAIClient(env) {
       return new OpenAI({
         apiKey: env.OPENAI_API_KEY
       });
-    } else if (process.env.OPENAI_API_KEY) {
-      return new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY
-      });
     }
     console.log('[CONCIERGE] No OpenAI API key found');
     return null;

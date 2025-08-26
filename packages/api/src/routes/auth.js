@@ -242,7 +242,7 @@ auth.post('/reset-password-request', async (c) => {
       
       // In development, return the token directly
       // In production, remove this and send via email
-      if (process.env.NODE_ENV !== 'production') {
+      if (c.env?.NODE_ENV !== 'production') {
         return c.json({
           success: true,
           message: 'Reset token generated',

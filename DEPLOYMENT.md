@@ -35,16 +35,78 @@ This guide covers deploying the LocalFirst Arizona application stack to Cloudfla
 
 ### 🏠 Local Development Setup
 
-**CRITICAL**: Always start both API and mobile servers for local development:
+You have **two options** for running the API server locally. Choose based on your needs:
+
+#### Option 1: Node.js Development Server (Recommended for Most Development)
+
+**When to use**: General development, debugging, faster startup, easier debugging with Node.js tools.
 
 ```bash
 # ✅ RECOMMENDED: Start both API and mobile app simultaneously
 npm run dev:all
 
 # 🔍 Alternative: Start servers individually (if needed)
-npm run dev:api    # Starts API server on http://localhost:8787
+npm run dev:api    # Starts API server on http://localhost:8787 (Node.js)
 npm run dev:mobile:web  # Starts mobile web app on http://localhost:8081
 ```
+
+**Features**:
+- Uses Node.js with `@hono/node-server`
+- Faster startup and restart
+- Full Node.js debugging capabilities
+- Uses local SQLite database directly
+- Hot reload with nodemon
+
+#### Option 2: Cloudflare Workers Development (Wrangler Dev)
+
+**When to use**: Testing Cloudflare Workers-specific features, environment variable handling, D1 database interactions, or preparing for deployment.
+
+```bash
+# Start API with Cloudflare Workers runtime
+cd packages/api
+wrangler dev --env development  # Starts API on http://localhost:8787 (Workers runtime)
+
+# In another terminal, start mobile app
+cd packages/mobile
+npm run web  # Starts mobile web app on http://localhost:8081
+```
+
+**Features**:
+- Uses actual Cloudflare Workers runtime
+- Tests D1 database bindings
+- Environment variables via `c.env`
+- Scheduled Workers/cron testing
+- Identical to production environment
+
+#### 🚨 Port Conflict Resolution
+
+If you get `EADDRINUSE: address already in use :::8787`:
+
+1. **Kill conflicting processes**:
+```bash
+# Kill any existing processes on port 8787
+pkill -f "wrangler.*dev" || pkill -f "npm run dev" || true
+lsof -ti tcp:8787 | xargs -r kill -9 2>/dev/null || true
+```
+
+2. **Or use different ports temporarily**:
+```bash
+# Option A: Change Node.js dev server port in packages/api/dev-server.js
+const port = 8788; // Instead of 8787
+
+# Option B: Use wrangler on different port
+cd packages/api && wrangler dev --env development --port 8788
+```
+
+**Important**: Never run both Node.js dev server AND wrangler dev simultaneously - they both use port 8787 by default.
+
+#### 🎯 Development Workflow Recommendations
+
+- **Daily development**: Use `npm run dev:all` (Node.js)
+- **Pre-deployment testing**: Use `wrangler dev --env development`  
+- **Database testing**: Use `wrangler dev` to test D1 interactions
+- **Environment variable testing**: Use `wrangler dev` to test `c.env` access
+- **Debugging**: Use Node.js dev server for better debugging tools
 
 **Common Issue Prevention**: 
 - Registration and other API calls will fail with "❌ Registration failed" if only the mobile app is running
