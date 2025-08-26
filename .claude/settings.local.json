@@ -278,7 +278,9 @@
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"\nSELECT \n  u.id, \n  u.name,\n  up.location_settings IS NOT NULL as has_location,\n  cp.personal_dossier IS NOT NULL as has_dossier,\n  LENGTH(cp.personal_dossier) as dossier_length\nFROM users u \nJOIN user_preferences up ON u.id = up.user_id \nLEFT JOIN consumer_profiles cp ON u.id = cp.user_id\nWHERE up.location_settings IS NOT NULL \nAND cp.personal_dossier IS NOT NULL\nLIMIT 1;\n\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"\nSELECT \n  u.id, \n  u.name,\n  up.location_settings IS NOT NULL as has_location,\n  cp.personal_dossier IS NOT NULL as has_dossier,\n  LENGTH(cp.personal_dossier) as dossier_length,\n  SUBSTR(up.location_settings, 1, 100) as location_preview\nFROM users u \nLEFT JOIN user_preferences up ON u.id = up.user_id \nLEFT JOIN consumer_profiles cp ON u.id = cp.user_id\nWHERE u.id = ''18ecabd2-d761-4071-8f69-35c7ad02134c'';\n\")",
       "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT id, name, category, primary_category, sub_category FROM businesses WHERE primary_category IS NOT NULL LIMIT 3;\")",
-      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema businesses\")"
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \".schema businesses\")",
+      "mcp__context7__get-library-docs",
+      "Bash(wrangler dev:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

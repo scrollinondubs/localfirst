@@ -173,7 +173,9 @@ export default function RegisterScreen({ navigation }) {
     setLoading(true);
 
     try {
+      console.log('About to call register function...');
       const result = await register(email.toLowerCase().trim(), password, name.trim());
+      console.log('Register function returned:', result);
       if (!result.success) {
         // Show specific validation errors if available
         if (result.details && Array.isArray(result.details)) {
