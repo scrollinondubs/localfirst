@@ -161,17 +161,31 @@ interview.post('/message', async (c) => {
     // Get AI response
     let aiResponse;
     const openai = createOpenAIClient(c.env);
+    
     if (openai) {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: INTERVIEWER_PROMPT },
-          ...contextMessages
-        ],
-        temperature: 0.7,
-        max_tokens: 300
-      });
-      aiResponse = completion.choices[0].message.content.trim();
+      try {
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: INTERVIEWER_PROMPT },
+            ...contextMessages
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        });
+        aiResponse = completion.choices[0].message.content.trim();
+      } catch (error) {
+        console.error('OpenAI API call failed:', error);
+        // Fall back to random response on API error
+        const fallbackResponses = [
+          "That's really interesting! Can you tell me more about that?",
+          "I'd love to hear more about what you enjoy doing in your free time.",
+          "What kinds of places do you like to shop or visit?",
+          "Are there any special occasions coming up that you're planning for?",
+          "What do you value most when choosing where to spend your money?"
+        ];
+        aiResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+      }
     } else {
       // Fallback response when OpenAI is not available
       const fallbackResponses = [

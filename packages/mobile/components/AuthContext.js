@@ -141,16 +141,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, name) => {
     setLoading(true);
     try {
-      console.log('Making API request to /auth/register...');
       const response = await makeApiRequest('/auth/register', {
         method: 'POST',
         body: { email, password, name }
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         // Return specific error details if available

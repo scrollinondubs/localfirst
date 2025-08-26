@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS recommendation_logs;
+DROP TABLE IF EXISTS user_favorites;
+DROP TABLE IF EXISTS businesses;
+DROP TABLE IF EXISTS chain_businesses;
+DROP TABLE IF EXISTS analytics_events;
+DROP TABLE IF EXISTS user_sessions;
+DROP TABLE IF EXISTS sync_logs;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS consumer_profiles;
+DROP TABLE IF EXISTS user_preferences;
+DROP TABLE IF EXISTS concierge_recommendations;
+DROP TABLE IF EXISTS conversation_sessions;

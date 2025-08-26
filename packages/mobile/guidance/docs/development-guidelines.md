@@ -187,6 +187,19 @@ Authorization: Bearer <jwt-token>
 
 JWT tokens are obtained through login/register endpoints and contain user ID and permissions.
 
+#### AI Endpoint Requirements
+All AI-powered endpoints (interview, concierge) require **both** authentication headers:
+```
+Authorization: Bearer <jwt-token>
+X-User-ID: <user-id>
+```
+
+**Critical Implementation Notes:**
+- AI endpoints will return `401 User ID required` if `X-User-ID` header is missing
+- User ID must match the authenticated user in the JWT token
+- All mobile app screens using AI features must include both headers in API calls
+- Use the centralized `buildApiUrl()` function and include both headers consistently
+
 ### API Routes
 
 #### Authentication Routes
@@ -204,6 +217,24 @@ GET  /api/businesses/nearby           // Location-based business discovery
 GET  /api/businesses/:id              // Get specific business details
 POST /api/businesses                  // Create new business (admin only)
 PUT  /api/businesses/:id              // Update business (owner/admin only)
+```
+
+#### AI Interview & Profile Routes
+```javascript
+GET  /api/interview/session           // Get or create interview session
+POST /api/interview/message           // Send message to AI interviewer
+POST /api/interview/complete          // Complete interview session
+POST /api/interview/generate-dossier  // Generate personal dossier from interview
+GET  /api/interview/dossier           // Get user's personal dossier
+PUT  /api/interview/dossier           // Update personal dossier
+```
+
+#### AI Concierge Routes  
+```javascript
+GET  /api/concierge/eligibility       // Check user eligibility for recommendations
+GET  /api/concierge/recommendations   // Get existing recommendations
+POST /api/concierge/recommendations/generate  // Generate new recommendations
+PATCH /api/concierge/recommendations/:id/dismiss  // Dismiss recommendation
 ```
 
 #### Chain Routes
@@ -349,12 +380,51 @@ export const config = {
 ```typescript
 // wrangler.toml
 [env.development.vars]
-FIREBASE_PROJECT_ID = "lfa-dev"
-GOOGLE_MAPS_API_KEY = "development-key"
+NODE_ENV = "development"
+CORS_ORIGIN = "http://localhost:3000"
 
 [env.production.vars]
-FIREBASE_PROJECT_ID = "lfa-prod"
-GOOGLE_MAPS_API_KEY = "production-key"
+NODE_ENV = "production"
+```
+
+#### Cloudflare Workers Secrets Management
+**Critical:** Use `wrangler secret put` for sensitive values like API keys:
+
+```bash
+# Set secrets in production (not in wrangler.toml)
+wrangler secret put OPENAI_API_KEY --name localfirst-api-production
+wrangler secret put JWT_SECRET --name localfirst-api-production
+```
+
+**Environment Variable Access in Workers:**
+```javascript
+// ❌ BAD: process.env doesn't work in Cloudflare Workers
+const apiKey = process.env.OPENAI_API_KEY;
+
+// ✅ GOOD: Use context environment in Workers
+function createOpenAIClient(env) {
+  if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.length > 0) {
+    return new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  }
+  return null;
+}
+
+// Usage in route handlers
+app.post('/api/example', async (c) => {
+  const openai = createOpenAIClient(c.env);
+  // ...
+});
+```
+
+**Environment Variable Validation:**
+```javascript
+// ✅ GOOD: Check existence AND non-empty content
+if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.length > 0) {
+  // Proceed with valid API key
+} else {
+  console.warn('OPENAI_API_KEY not found or empty');
+  return null;
+}
 ```
 
 ## Multi-Agent Development Workflow
