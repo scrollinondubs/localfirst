@@ -27,6 +27,16 @@ function formatDistance(distanceKm) {
   return `${distanceMiles.toFixed(1)} mi`;
 }
 
+// Format category names by replacing underscores with spaces and capitalizing
+function formatCategoryName(categoryName) {
+  if (!categoryName) return '';
+  
+  return categoryName
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export default function FavoritesScreen() {
   const navigation = useNavigation();
   const { isAuthenticated, getAuthHeaders } = useAuth();
@@ -139,7 +149,7 @@ export default function FavoritesScreen() {
           
           <View style={styles.favoriteFooter}>
             <Text style={[styles.category, item.lfa_member && styles.lfaMember]}>
-              {item.lfa_member ? 'LFA Member • ' : ''}{item.category}
+              {item.lfa_member ? 'LFA Member • ' : ''}{formatCategoryName(item.primaryCategory)}{item.subcategory ? ` > ${formatCategoryName(item.subcategory)}` : ''}
             </Text>
             <Text style={styles.distance}>{formatDistance(item.distance)}</Text>
           </View>

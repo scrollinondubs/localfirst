@@ -17,12 +17,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import WebMapView from '../components/WebMapView';
 import { useAuth } from '../components/AuthContext';
+import { useRecommendationsEligibility } from '../components/RecommendationsEligibilityContext';
 import { buildApiUrl } from '../config/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function NotificationPreferencesScreen({ navigation }) {
   const { currentUser, token } = useAuth();
+  const { refresh: refreshEligibility } = useRecommendationsEligibility();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -157,17 +159,83 @@ export default function NotificationPreferencesScreen({ navigation }) {
     try {
       setSaving(true);
       
+      // Check if location has coordinates - if not, try to geocode the address
+      let locationToSave = preferences.location;
+      
+      if (!locationToSave.lat || !locationToSave.lng) {
+        if (locationToSave.address && locationToSave.address.trim()) {
+          try {
+            console.log('[PREFS] Location missing coordinates, attempting to geocode:', locationToSave.address);
+            
+            // Use the same geocoding logic as the geocodeAddress function
+            const encodedAddress = encodeURIComponent(locationToSave.address.trim());
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              
+              if (data.length > 0) {
+                const result = data[0];
+                locationToSave = {
+                  lat: parseFloat(result.lat),
+                  lng: parseFloat(result.lon),
+                  address: result.display_name || locationToSave.address.trim()
+                };
+                console.log('[PREFS] Successfully geocoded location:', locationToSave);
+                
+                // Update local state with geocoded location
+                setPreferences(prev => ({
+                  ...prev,
+                  location: locationToSave
+                }));
+                
+                setMapRegion(prev => ({
+                  ...prev,
+                  latitude: locationToSave.lat,
+                  longitude: locationToSave.lng
+                }));
+              } else {
+                throw new Error('Address not found');
+              }
+            } else {
+              throw new Error('Geocoding service unavailable');
+            }
+          } catch (geocodeError) {
+            console.error('[PREFS] Failed to geocode address:', geocodeError);
+            Alert.alert(
+              'Location Error', 
+              `Unable to find coordinates for "${locationToSave.address}". Please use the map to select your location or try a different address.`
+            );
+            setSaving(false);
+            return;
+          }
+        } else {
+          Alert.alert('Location Required', 'Please select a location on the map or enter an address.');
+          setSaving(false);
+          return;
+        }
+      }
+      
+      // Validate that we now have valid coordinates
+      if (!locationToSave.lat || !locationToSave.lng || isNaN(locationToSave.lat) || isNaN(locationToSave.lng)) {
+        Alert.alert('Location Error', 'Invalid location coordinates. Please select a location on the map.');
+        setSaving(false);
+        return;
+      }
+      
+      console.log('[PREFS] Saving location with coordinates:', locationToSave);
+      
       const requestBody = {
-        locationSettings: JSON.stringify({
-          lat: preferences.location.lat,
-          lng: preferences.location.lng,
-          address: preferences.location.address
-        }),
+        locationSettings: {
+          lat: locationToSave.lat,
+          lng: locationToSave.lng,
+          address: locationToSave.address
+        },
         searchRadius: preferences.searchRadius,
-        notificationChannels: JSON.stringify({
+        notificationChannels: {
           email: preferences.notificationChannels.email,
           in_app: preferences.notificationChannels.inApp
-        }),
+        },
         notificationFrequency: preferences.notificationFrequency,
         resultsPerNotification: preferences.resultsPerNotification
       };
@@ -185,6 +253,10 @@ export default function NotificationPreferencesScreen({ navigation }) {
       if (response.ok) {
         setShowSaveSuccess(true);
         setTimeout(() => setShowSaveSuccess(false), 3000); // Hide after 3 seconds
+        
+        // Refresh recommendations eligibility since preferences were updated
+        console.log('[PREFS] Preferences saved successfully, refreshing eligibility');
+        refreshEligibility();
       } else {
         throw new Error('Failed to save preferences');
       }

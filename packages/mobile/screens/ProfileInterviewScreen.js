@@ -13,11 +13,13 @@ import {
   Platform
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
+import { useRecommendationsEligibility } from '../components/RecommendationsEligibilityContext';
 import voiceService from '../services/VoiceService';
 import { buildApiUrl } from '../config/api';
 
 export default function ProfileInterviewScreen({ navigation }) {
   const { currentUser, token } = useAuth();
+  const { refresh: refreshEligibility } = useRecommendationsEligibility();
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -292,6 +294,10 @@ export default function ProfileInterviewScreen({ navigation }) {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Refresh recommendations eligibility since dossier was generated
+        console.log('[INTERVIEW] Dossier generated successfully, refreshing eligibility');
+        refreshEligibility();
         
         // Navigate directly to ViewDossier
         navigation.navigate('ViewDossier');

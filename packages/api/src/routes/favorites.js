@@ -51,6 +51,8 @@ favorites.get('/', async (c) => {
         phone: businesses.phone,
         website: businesses.website,
         category: businesses.category,
+        primaryCategory: businesses.primaryCategory,
+        subcategory: businesses.subcategory,
         lfaMember: businesses.lfaMember,
         verified: businesses.verified,
         favorited_at: userFavorites.createdAt

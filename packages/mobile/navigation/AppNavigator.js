@@ -19,7 +19,7 @@ import NotificationPreferencesScreen from '../screens/NotificationPreferencesScr
 import ForceLogoutScreen from '../screens/ForceLogoutScreen';
 import RecommendationsScreen from '../screens/RecommendationsScreen';
 import ViewDossierScreen from '../screens/ViewDossierScreen';
-import { useRecommendationsEligibility } from '../hooks/useRecommendationsEligibility';
+import { useRecommendationsEligibility } from '../components/RecommendationsEligibilityContext';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();

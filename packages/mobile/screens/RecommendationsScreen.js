@@ -60,9 +60,20 @@ export default function RecommendationsScreen({ navigation }) {
       setGenerating(true);
       
       const url = buildApiUrl('/api/concierge/recommendations/generate');
-      console.log('[RECOMMENDATIONS] API URL:', url);
-      console.log('[RECOMMENDATIONS] User ID:', currentUser?.id);
-      console.log('[RECOMMENDATIONS] Token exists:', !!token);
+      await proceedWithGeneration(url);
+    } catch (error) {
+      console.error('[RECOMMENDATIONS] Exception during setup:', error);
+      setGenerating(false);
+    }
+  };
+
+  const proceedWithGeneration = async (url) => {
+    try {
+      console.log('[RECOMMENDATIONS] Starting fetch request...');
+      
+      // Add timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
       const response = await fetch(url, {
         method: 'POST',
@@ -70,30 +81,25 @@ export default function RecommendationsScreen({ navigation }) {
           'Authorization': `Bearer ${token}`,
           'X-User-ID': currentUser?.id,
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
 
-      console.log('[RECOMMENDATIONS] Response status:', response.status);
+      clearTimeout(timeoutId);
+      console.log('[RECOMMENDATIONS] Response received - status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
         console.log('[RECOMMENDATIONS] Success response:', data);
-        Alert.alert(
-          'Success!',
-          `Generated ${data.count} new recommendations for you.`,
-          [{ text: 'OK', onPress: () => fetchRecommendations() }]
-        );
+        
+        // Fetch updated recommendations
+        setTimeout(() => fetchRecommendations(), 1000);
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('[RECOMMENDATIONS] Error response:', errorData);
-        Alert.alert(
-          'Error', 
-          errorData.details || errorData.error || 'Failed to generate new recommendations. Please try again.'
-        );
+        const errorText = await response.text();
+        console.error('[RECOMMENDATIONS] Error response:', errorText);
       }
     } catch (error) {
       console.error('[RECOMMENDATIONS] Exception during generation:', error);
-      Alert.alert('Error', 'Failed to generate new recommendations. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -115,11 +121,10 @@ export default function RecommendationsScreen({ navigation }) {
         // Remove from UI immediately
         setRecommendations(prev => prev.filter(r => r.id !== recommendationId));
       } else {
-        Alert.alert('Error', 'Failed to dismiss recommendation. Please try again.');
+        console.error('Failed to dismiss recommendation');
       }
     } catch (error) {
       console.error('Error dismissing recommendation:', error);
-      Alert.alert('Error', 'Failed to dismiss recommendation. Please try again.');
     }
   };
 

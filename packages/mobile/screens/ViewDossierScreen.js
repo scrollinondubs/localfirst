@@ -11,10 +11,12 @@ import {
   Alert
 } from 'react-native';
 import { useAuth } from '../components/AuthContext';
+import { useRecommendationsEligibility } from '../components/RecommendationsEligibilityContext';
 import { buildApiUrl } from '../config/api';
 
 export default function ViewDossierScreen({ navigation }) {
   const { currentUser, token } = useAuth();
+  const { eligibilityData } = useRecommendationsEligibility();
   const [dossier, setDossier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -185,6 +187,21 @@ export default function ViewDossierScreen({ navigation }) {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Notification Preferences Check */}
+      {eligibilityData && !eligibilityData.hasPreferences && (
+        <View style={styles.notificationBanner}>
+          <Text style={styles.bannerText}>
+            📍 Complete your setup by setting notification preferences
+          </Text>
+          <TouchableOpacity
+            style={styles.bannerButton}
+            onPress={() => navigation.navigate('NotificationPreferences')}
+          >
+            <Text style={styles.bannerButtonText}>Set Notification Preferences</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Summary */}
@@ -561,6 +578,37 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  notificationBanner: {
+    backgroundColor: '#fef5e7',
+    borderColor: '#f6ad55',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#9c4221',
+    fontWeight: '500',
+    marginRight: 12,
+  },
+  bannerButton: {
+    backgroundColor: '#ed8936',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  bannerButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

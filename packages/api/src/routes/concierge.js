@@ -565,8 +565,14 @@ concierge.get('/recommendations', async (c) => {
  */
 concierge.post('/recommendations/generate', async (c) => {
   try {
+    console.log('🎯 [RECS-GENERATE] POST /api/concierge/recommendations/generate received');
+    console.log('🎯 [RECS-GENERATE] Headers:', Object.fromEntries(c.req.raw.headers.entries()));
+    
     const userId = c.req.header('X-User-ID');
+    console.log('🎯 [RECS-GENERATE] User ID:', userId);
+    
     if (!userId) {
+      console.log('🎯 [RECS-GENERATE] ERROR: No user ID provided');
       return c.json({ error: 'User ID required' }, 401);
     }
 

@@ -72,31 +72,57 @@ Create a seamless, web-accessible experience that strengthens local economies by
    - Google Maps integration showing business markers
    - LFA member prioritization in search results
 
-2. **Interactive Mapping**
+2. **AI Concierge & Personalized Recommendations** ⭐ *New*
+   - Intelligent user profile interviewing system
+   - Personal dossier generation from conversation data
+   - OpenAI-powered business matching and rationale generation
+   - Personalized business recommendations with compelling explanations
+   - User interest and preference extraction from natural conversation
+   - Advanced matching engine with fallback profile data handling
+   - Real-time recommendation generation (5 suggestions per user)
+
+3. **Business Intelligence & Enrichment** ⭐ *New*
+   - Automated business website content extraction
+   - AI-generated business descriptions and service catalogues
+   - Enhanced business profile data with products/services details
+   - Intelligent categorization and feature detection
+   - Business offering synopsis for improved matching accuracy
+
+4. **Interactive Mapping**
    - Google Maps with business location markers
    - User location detection and display
    - Different pin colors for LFA members vs non-members
    - Manual location input fallback
    - Map controls (zoom, compass, scale)
 
-3. **Public Access Model**
+5. **Adaptive User Profiling** ⭐ *New*
+   - Conversational user interviews for preference discovery
+   - Personal dossier compilation with interests, lifestyle, shopping patterns
+   - Interview insights structured as JSON data for matching
+   - Profile completeness tracking and recommendation quality optimization
+   - Multiple data source fallbacks (interview insights → personal dossier)
+
+6. **Public Access Model**
    - No login required for basic functionality
    - Complete business search and discovery without account
-   - Optional account creation for future personalization
-   - Profile screen explaining benefits of account creation
+   - Optional account creation for advanced personalization features
+   - Profile screen explaining benefits of AI-powered recommendations
 
-4. **Business Information**
+7. **Enhanced Business Information**
    - Business name, address, phone, website
    - Category classification and LFA membership status
    - Distance calculation from user location
+   - AI-generated business descriptions and service offerings
+   - Enriched product/service catalogs from website analysis
    - Mock ratings (ready for future enhancement)
 
 ### Future Features (Not Yet Implemented)
-1. **Enhanced Personalization**
-   - User preference learning and storage
-   - Personalized business recommendations
+1. **Enhanced Personalization** *(Partially Complete)*
+   - ✅ User preference learning and storage (via interview system)
+   - ✅ Personalized business recommendations (via AI Concierge)
    - Search history and favorites
    - Custom notification preferences
+   - Recommendation refinement based on user feedback
 
 2. **Business Management**
    - Business claiming and verification system
@@ -108,16 +134,19 @@ Create a seamless, web-accessible experience that strengthens local economies by
    - Push notifications for deals and updates
    - Social sharing capabilities
    - Multi-city expansion tools
+   - Performance optimization for recommendation generation
+   - Batch OpenAI processing and caching strategies
 
 ## Roadmap
 
-### Version 1 (MVP)
-- Voice-first business discovery with speech-to-text interface
-- AI-powered personalization and recommendation engine
-- Core business discovery and mapping
-- User profiles with preference learning
-- Business claiming system
-- Smart push notifications
+### Version 1 (MVP) *(Current Status: 85% Complete)*
+- ✅ Voice-first business discovery with speech-to-text interface
+- ✅ AI-powered personalization and recommendation engine (OpenAI-based)
+- ✅ Core business discovery and mapping
+- ✅ User profiles with preference learning (conversational interviews)
+- ✅ Business enrichment with AI-generated descriptions
+- 🔄 Business claiming system (in progress)
+- 🔄 Smart push notifications (planned)
 
 ### Version 2 (Future)
 - **Gamification Layer**
@@ -141,15 +170,17 @@ Create a seamless, web-accessible experience that strengthens local economies by
 
 ## Key User Flows
 
-### Consumer User Flow
-1. Download app and create profile
+### Consumer User Flow *(Updated for AI Concierge)*
+1. Access web app (no download required) and optionally create profile
 2. Allow location and microphone permissions
 3. **Voice Search:** Tap "Push to Record" button and speak query naturally
 4. Review speech-to-text transcription and confirm search
 5. Browse voice-generated results on map with AI recommendations
-6. Filter by category/preferences or use traditional text search
-7. View business details with personalized suggestions
-8. Get directions or contact business (voice-activated options available)
+6. **AI Concierge Interview:** Engage in conversational profiling to build preferences
+7. **Personal Recommendations:** Receive personalized business suggestions with AI-generated rationale
+8. View business details with tailored explanations of why each match fits user's interests
+9. Filter by category/preferences or use traditional text search
+10. Get directions or contact business (voice-activated options available)
 
 ### Business Owner User Flow
 1. Download app and create business account
