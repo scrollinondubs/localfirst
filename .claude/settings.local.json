@@ -330,7 +330,8 @@
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api ls -la ../../local.db)",
       "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" sqlite3 /Users/aiden/NodeJSprojs/localfirst/local.db \"SELECT id, name, address, latitude, longitude, status, lfa_member FROM businesses WHERE name LIKE ''%Cowtown%'' OR name LIKE ''%Skate%'';\")",
       "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" node dev-server.js)",
-      "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" node dev-server.js)"
+      "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" node dev-server.js)",
+      "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" sqlite3 /Users/aiden/NodeJSprojs/localfirst/local.db \"SELECT name FROM businesses WHERE name LIKE ''%grocery%'' OR name LIKE ''%market%'' OR name LIKE ''%food%'' LIMIT 5;\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -25,6 +25,7 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
   const query = fullQuery.toLowerCase();
   let score = 0;
   let matchReasons = [];
+  let hasContentMatch = false; // Track if there's any actual content match
   
   // Business name matching (highest priority - enhanced for literal matching)
   const name = business.name.toLowerCase();
@@ -34,6 +35,7 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
   if (name.includes(query)) {
     score += 200;
     matchReasons.push(`Exact match in business name`);
+    hasContentMatch = true;
   } 
   // Individual search term matching in name
   else {
@@ -41,6 +43,7 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
     if (nameMatches > 0) {
       score += nameMatches * 40; // Increased from 20 to 40
       matchReasons.push(`${nameMatches} term(s) matched in business name`);
+      hasContentMatch = true;
     }
   }
   
@@ -53,6 +56,7 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
         if (word.includes(term) && !name.includes(term)) {
           score += 30;
           matchReasons.push(`Partial word match "${term}" in business name`);
+          hasContentMatch = true;
           break; // Only count once per search term
         }
       }
@@ -66,11 +70,13 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
     if (categoryText.includes(query)) {
       score += 80;
       matchReasons.push(`Category match: ${business.primaryCategory} > ${business.subcategory}`);
+      hasContentMatch = true;
     } else {
       const categoryMatches = searchTerms.filter(term => categoryText.includes(term)).length;
       if (categoryMatches > 0) {
         score += categoryMatches * 15;
         matchReasons.push(`${categoryMatches} term(s) matched in category`);
+        hasContentMatch = true;
       }
     }
   }
@@ -81,11 +87,13 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
     if (description.includes(query)) {
       score += 60;
       matchReasons.push(`Match found in business description`);
+      hasContentMatch = true;
     } else {
       const descriptionMatches = searchTerms.filter(term => description.includes(term)).length;
       if (descriptionMatches > 0) {
         score += descriptionMatches * 8;
         matchReasons.push(`${descriptionMatches} term(s) matched in description`);
+        hasContentMatch = true;
       }
     }
   }
@@ -96,11 +104,13 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
     if (keywords.includes(query)) {
       score += 50;
       matchReasons.push(`Match found in business keywords`);
+      hasContentMatch = true;
     } else {
       const keywordMatches = searchTerms.filter(term => keywords.includes(term)).length;
       if (keywordMatches > 0) {
         score += keywordMatches * 10;
         matchReasons.push(`${keywordMatches} term(s) matched in keywords`);
+        hasContentMatch = true;
       }
     }
   }
@@ -114,11 +124,13 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
       if (servicesText.includes(query)) {
         score += 40;
         matchReasons.push(`Match found in products/services`);
+        hasContentMatch = true;
       } else {
         const serviceMatches = searchTerms.filter(term => servicesText.includes(term)).length;
         if (serviceMatches > 0) {
           score += serviceMatches * 6;
           matchReasons.push(`${serviceMatches} term(s) matched in products/services`);
+          hasContentMatch = true;
         }
       }
     } catch (e) {
@@ -126,34 +138,46 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
     }
   }
   
-  // Business attributes bonus (new enhancement!)
+  // Business attributes bonus (only if query is relevant)
   if (business.businessAttributes) {
     try {
       const attributes = JSON.parse(business.businessAttributes);
-      if (attributes.locally_owned) score += 5;
-      if (attributes.woman_owned && (query.includes('woman') || query.includes('female'))) score += 15;
-      if (attributes.veteran_owned && (query.includes('veteran') || query.includes('military'))) score += 15;
-      if (attributes.family_owned && (query.includes('family') || query.includes('local'))) score += 10;
+      if (attributes.woman_owned && (query.includes('woman') || query.includes('female'))) {
+        score += 15;
+        hasContentMatch = true;
+      }
+      if (attributes.veteran_owned && (query.includes('veteran') || query.includes('military'))) {
+        score += 15;
+        hasContentMatch = true;
+      }
+      if (attributes.family_owned && (query.includes('family') || query.includes('local'))) {
+        score += 10;
+        hasContentMatch = true;
+      }
     } catch (e) {
       // Ignore JSON parsing errors
     }
   }
   
-  // Verified business bonus
-  if (business.verified) {
-    score += 5;
-    matchReasons.push('Verified business');
-  }
-  
-  // Enriched business bonus (has quality data)
-  if (business.primaryCategory && business.businessDescription) {
-    score += 3;
-    matchReasons.push('Enhanced business profile');
+  // Only award verification and enrichment bonuses if there's actual content match
+  if (hasContentMatch) {
+    // Verified business bonus
+    if (business.verified) {
+      score += 5;
+      matchReasons.push('Verified business');
+    }
+    
+    // Enriched business bonus (has quality data)
+    if (business.primaryCategory && business.businessDescription) {
+      score += 3;
+      matchReasons.push('Enhanced business profile');
+    }
   }
   
   return {
     score: Math.min(score, 150), // Cap at 150
-    matchReasons: matchReasons
+    matchReasons: matchReasons,
+    hasContentMatch: hasContentMatch
   };
 }
 
@@ -292,11 +316,15 @@ router.get('/', async (c) => {
         };
       })
       .filter(business => {
-        // Don't filter out businesses with title matches, even if relevance score is low
+        // Only include businesses that have actual content matches
+        // This prevents random results for nonsensical queries like "asdf"
         const hasNameMatch = business.matchReasons.some(reason => 
           reason.includes('business name') || reason.includes('Partial word match')
         );
-        return business.relevanceScore > 5 || hasNameMatch;
+        const hasContentMatch = business.matchReasons.some(reason => 
+          !reason.includes('Verified business') && !reason.includes('Enhanced business profile')
+        );
+        return hasContentMatch || hasNameMatch;
       })
       .sort((a, b) => b.combinedScore - a.combinedScore)
       .slice(0, limit);
