@@ -324,7 +324,13 @@
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --command \"SELECT COUNT(*) as business_count FROM businesses;\" --remote)",
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --file /Users/aiden/NodeJSprojs/localfirst/packages/api/exports/insert-businesses.sql --remote)",
       "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --command \"SELECT COUNT(*) as total, COUNT(CASE WHEN primary_category IS NOT NULL THEN 1 END) as with_categories FROM businesses;\" --remote)",
-      "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --command \"SELECT name, primary_category, subcategory FROM businesses WHERE primary_category IS NOT NULL LIMIT 3;\" --remote)"
+      "Bash(CLOUDFLARE_API_TOKEN=\"9rCPpnObMmTauniHdFSd2DgaXRB4AyuMH3Tk3Kpi\" CLOUDFLARE_ACCOUNT_ID=\"ab3bb21c390d75125de9b92dd9eccacf\" wrangler d1 execute localfirst-prod --command \"SELECT name, primary_category, subcategory FROM businesses WHERE primary_category IS NOT NULL LIMIT 3;\" --remote)",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api ps aux)",
+      "Bash(DATABASE_URL=\"file:../../local.db\" sqlite3 ../../local.db \"SELECT id, name, address, latitude, longitude, status, lfa_member FROM businesses WHERE name LIKE ''%Cowtown%'' OR name LIKE ''%Skate%'';\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api ls -la ../../local.db)",
+      "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" sqlite3 /Users/aiden/NodeJSprojs/localfirst/local.db \"SELECT id, name, address, latitude, longitude, status, lfa_member FROM businesses WHERE name LIKE ''%Cowtown%'' OR name LIKE ''%Skate%'';\")",
+      "Bash(WORKING_DIR=/Users/aiden/NodeJSprojs/localfirst/packages/api DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" node dev-server.js)",
+      "Bash(DATABASE_URL=\"file:/Users/aiden/NodeJSprojs/localfirst/local.db\" node dev-server.js)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
