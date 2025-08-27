@@ -61,7 +61,7 @@ export default function ProfileInterviewScreen({ navigation }) {
     if (userMessageCount >= USER_MESSAGE_THRESHOLD) {
       console.log('DEBUG: Returning SHOW BUTTON');
       return {
-        text: "📝 Generate Personal Dossier",
+        text: "📝 Generate Personal Profile",
         color: "#805ad5",
         backgroundColor: "#e9d8fd",
         showButton: true
@@ -343,7 +343,7 @@ export default function ProfileInterviewScreen({ navigation }) {
                 
                 Alert.alert(
                   'Interview Complete!',
-                  `Thanks for sharing! Your profile is now ${data.profileCompleteness}% complete. You'll start receiving personalized business recommendations.`,
+                  `Thanks for sharing! Your profile strength is now ${data.profileCompleteness}%. You'll start receiving personalized business recommendations.`,
                   [{ 
                     text: 'OK', 
                     onPress: () => navigation.navigate('ProfileMain')

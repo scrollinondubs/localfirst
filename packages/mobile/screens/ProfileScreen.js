@@ -102,18 +102,6 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.sectionTitle}>My Settings</Text>
             <TouchableOpacity 
               style={styles.optionButton}
-              onPress={() => navigation.navigate('ViewDossier')}
-            >
-              <View style={styles.optionContent}>
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>View My Dossier</Text>
-                  <Text style={styles.optionSubtext}>Review and edit your personal profile</Text>
-                </View>
-                {hasDossier && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.optionButton}
               onPress={() => navigation.navigate('ProfileInterview')}
             >
               <View style={styles.optionContent}>
@@ -122,6 +110,18 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.optionSubtext}>Get personalized business recommendations</Text>
                 </View>
                 {hasCompletedInterview && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.optionButton}
+              onPress={() => navigation.navigate('ViewDossier')}
+            >
+              <View style={styles.optionContent}>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionText}>View My Profile</Text>
+                  <Text style={styles.optionSubtext}>Review and edit your personal profile</Text>
+                </View>
+                {hasDossier && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </TouchableOpacity>
             <TouchableOpacity 
