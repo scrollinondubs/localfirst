@@ -275,7 +275,7 @@ export default function ProfileDossierScreen({ navigation }) {
           >
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Your Profile Dossier</Text>
+          <Text style={styles.title}>Your Personal Profile</Text>
         </View>
 
         <View style={styles.emptyContainer}>
@@ -315,7 +315,7 @@ export default function ProfileDossierScreen({ navigation }) {
         {/* Profile Completeness */}
         <View style={styles.completenessContainer}>
           <View style={styles.completenessHeader}>
-            <Text style={styles.completenessTitle}>Profile Completeness</Text>
+            <Text style={styles.completenessTitle}>Profile Strength</Text>
             <Text style={styles.completenessPercentage}>{profile.profileCompleteness || 0}%</Text>
           </View>
           <View style={styles.progressBar}>

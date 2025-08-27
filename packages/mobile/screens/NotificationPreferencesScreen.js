@@ -309,16 +309,52 @@ export default function NotificationPreferencesScreen({ navigation }) {
       return;
     }
 
+    console.log('[GEOCODING] Starting geocode for address:', manualAddress.trim());
+
     try {
       // Using OpenStreetMap's Nominatim service for geocoding (free, no API key required)
       const encodedAddress = encodeURIComponent(manualAddress.trim());
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=us`;
+      
+      console.log('[GEOCODING] Requesting:', nominatimUrl);
+      
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'LocalFirstArizona/1.0'
+        }
+      });
+      
+      console.log('[GEOCODING] Response status:', response.status, response.statusText);
       
       if (!response.ok) {
-        throw new Error('Geocoding service unavailable');
+        throw new Error(`Geocoding service error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('[GEOCODING] Response data:', data);
+      
+      if (data.length === 0) {
+        console.log('[GEOCODING] No results found, trying backup method');
+        
+        // Try backup geocoding with more specific search
+        const backupUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}, Arizona, USA&limit=1`;
+        console.log('[GEOCODING] Backup request:', backupUrl);
+        
+        const backupResponse = await fetch(backupUrl, {
+          headers: {
+            'User-Agent': 'LocalFirstArizona/1.0'
+          }
+        });
+        
+        if (backupResponse.ok) {
+          const backupData = await backupResponse.json();
+          console.log('[GEOCODING] Backup response data:', backupData);
+          
+          if (backupData.length > 0) {
+            data.push(backupData[0]);
+          }
+        }
+      }
       
       if (data.length === 0) {
         Alert.alert('Address Not Found', 'Could not find the specified address. Please try a different address or select a location on the map.');
@@ -329,6 +365,12 @@ export default function NotificationPreferencesScreen({ navigation }) {
       const latitude = parseFloat(result.lat);
       const longitude = parseFloat(result.lon);
       
+      console.log('[GEOCODING] Parsed coordinates:', { latitude, longitude });
+      
+      if (isNaN(latitude) || isNaN(longitude)) {
+        throw new Error('Invalid coordinates received from geocoding service');
+      }
+      
       // Update preferences with the geocoded address
       const newLocation = {
         lat: latitude,
@@ -336,22 +378,27 @@ export default function NotificationPreferencesScreen({ navigation }) {
         address: result.display_name || manualAddress.trim()
       };
 
+      console.log('[GEOCODING] Setting new location:', newLocation);
+
       setPreferences(prev => ({
         ...prev,
         location: newLocation
       }));
 
-      setMapRegion(prev => ({
-        ...prev,
+      setMapRegion({
         latitude: latitude,
-        longitude: longitude
-      }));
+        longitude: longitude,
+        latitudeDelta: 0.01,  // Set appropriate zoom level
+        longitudeDelta: 0.01
+      });
       
       setManualAddress(''); // Clear the input after successful geocoding
       
+      console.log('[GEOCODING] Successfully geocoded and updated location');
+      
     } catch (error) {
-      console.error('Geocoding error:', error);
-      Alert.alert('Geocoding Error', 'Unable to find the address. Please try selecting a location on the map instead.');
+      console.error('[GEOCODING] Error:', error);
+      Alert.alert('Geocoding Error', `Unable to find the address: ${error.message}. Please try selecting a location on the map instead.`);
     }
   };
 

@@ -172,7 +172,7 @@ export default function ViewDossierScreen({ navigation }) {
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal Dossier</Text>
+        <Text style={styles.headerTitle}>Personal Profile</Text>
         <TouchableOpacity 
           style={styles.editButton}
           onPress={() => isEditing ? saveDossier() : setIsEditing(true)}
