@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -110,6 +110,9 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
+  
+  // Ref for the business results list to enable scrolling
+  const businessListRef = useRef(null);
   
   // Location-related state
   const [userLocation, setUserLocation] = useState(null);
@@ -657,6 +660,17 @@ export default function SearchScreen() {
 
   const handleMapMarkerPress = (business) => {
     setSelectedBusiness(business);
+    
+    // Find the business index in search results and scroll to it
+    const businessIndex = searchResults.findIndex(item => item.id === business.id);
+    if (businessIndex !== -1 && businessListRef.current) {
+      // Scroll to the selected business with some offset
+      businessListRef.current.scrollToIndex({
+        index: businessIndex,
+        animated: true,
+        viewPosition: 0.3, // Position the item 30% from the top of the visible area
+      });
+    }
   };
 
   const renderSearchResult = ({ item }) => {
@@ -670,6 +684,7 @@ export default function SearchScreen() {
       <EnhancedBusinessCard
         business={businessWithDistance}
         onPress={() => handleBusinessSelect(item)}
+        isSelected={selectedBusiness && selectedBusiness.id === item.id}
       />
     );
   };
@@ -735,6 +750,7 @@ export default function SearchScreen() {
               description={`${business.category} • ${business.distance || 'Distance unknown'}`}
               pinColor={business.lfa_member ? '#3182ce' : '#ef4444'}
               businessData={business}
+              onPress={() => handleMapMarkerPress(business)}
             />
           ))}
         </WebMapView>
@@ -823,11 +839,22 @@ export default function SearchScreen() {
           </View>
         ) : (
           <FlatList
+            ref={businessListRef}
             data={searchResults}
             renderItem={renderSearchResult}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.resultsList}
+            onScrollToIndexFailed={(error) => {
+              // Fallback if scrollToIndex fails
+              console.log('ScrollToIndex failed:', error);
+              // Try scrolling to offset instead
+              if (businessListRef.current) {
+                const itemHeight = 180; // Approximate item height
+                const offset = error.index * itemHeight;
+                businessListRef.current.scrollToOffset({ offset, animated: true });
+              }
+            }}
           />
         )}
       </View>
