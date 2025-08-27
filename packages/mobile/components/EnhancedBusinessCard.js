@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import FavoriteButton from './FavoriteButton';
 
-const EnhancedBusinessCard = ({ business, onPress, style }) => {
+const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) => {
   const handleWebsitePress = (website) => {
     if (website) {
       const url = website.startsWith('http') ? website : `https://${website}`;
@@ -92,7 +92,7 @@ const EnhancedBusinessCard = ({ business, onPress, style }) => {
 
   return (
     <TouchableOpacity
-      style={[styles.card, style]}
+      style={[styles.card, isSelected && styles.selectedCard, style]}
       onPress={() => onPress && onPress(business)}
       activeOpacity={0.7}
     >
@@ -339,6 +339,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
     marginBottom: 2,
+  },
+  
+  selectedCard: {
+    borderWidth: 2,
+    borderColor: '#3182ce',
+    backgroundColor: '#f0f8ff',
+    shadowColor: '#3182ce',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
   },
 });
 
