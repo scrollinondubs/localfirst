@@ -26,16 +26,36 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
   let score = 0;
   let matchReasons = [];
   
-  // Business name matching (highest priority)
+  // Business name matching (highest priority - enhanced for literal matching)
   const name = business.name.toLowerCase();
+  
+  
+  // Exact query match in name (highest score)
   if (name.includes(query)) {
-    score += 100;
+    score += 200;
     matchReasons.push(`Exact match in business name`);
-  } else {
+  } 
+  // Individual search term matching in name
+  else {
     const nameMatches = searchTerms.filter(term => name.includes(term)).length;
     if (nameMatches > 0) {
-      score += nameMatches * 20;
+      score += nameMatches * 40; // Increased from 20 to 40
       matchReasons.push(`${nameMatches} term(s) matched in business name`);
+    }
+  }
+  
+  // Additional fuzzy matching for partial word matches in name
+  // This catches cases where search term is part of a word in the name
+  for (const term of searchTerms) {
+    if (term.length >= 3) { // Only for terms 3+ characters
+      const words = name.split(/\s+/);
+      for (const word of words) {
+        if (word.includes(term) && !name.includes(term)) {
+          score += 30;
+          matchReasons.push(`Partial word match "${term}" in business name`);
+          break; // Only count once per search term
+        }
+      }
     }
   }
   
@@ -137,6 +157,7 @@ function calculateEnhancedRelevanceScore(business, searchTerms, fullQuery) {
   };
 }
 
+
 /**
  * GET /api/enhanced-search
  * Enhanced semantic search using enriched business data
@@ -151,7 +172,7 @@ router.get('/', async (c) => {
     const radius = parseFloat(c.req.query('radius') || '15'); // Default 15 miles
     const limit = parseInt(c.req.query('limit') || '20'); // Default 20 results
     const categoryFilter = c.req.query('category_filter'); // Optional category filter
-    const includeUnenriched = c.req.query('include_unenriched') === 'true'; // Default false
+    const includeUnenriched = c.req.query('include_unenriched') !== 'false'; // Default true
 
     // Validate required parameters
     if (!query || query.length === 0) {
@@ -176,28 +197,9 @@ router.get('/', async (c) => {
     const latDelta = radius / 69; // ~69 miles per degree latitude
     const lngDelta = radius / (69 * Math.cos(lat * Math.PI / 180));
     
-    // Build where conditions
-    let whereConditions = [
-      eq(businesses.status, 'active'),
-      eq(businesses.lfaMember, true),
-      gte(businesses.latitude, lat - latDelta),
-      lte(businesses.latitude, lat + latDelta),
-      gte(businesses.longitude, lng - lngDelta),
-      lte(businesses.longitude, lng + lngDelta)
-    ];
     
-    // Add enrichment filter (prioritize enriched businesses)
-    if (!includeUnenriched) {
-      whereConditions.push(isNotNull(businesses.primaryCategory));
-    }
-    
-    // Add category filter if specified
-    if (categoryFilter) {
-      whereConditions.push(eq(businesses.primaryCategory, categoryFilter));
-    }
-
-    // Query businesses with all enriched fields
-    const nearbyBusinesses = await db.select({
+    // Query businesses directly with explicit conditions (avoiding array issues)
+    let baseQuery = db.select({
       id: businesses.id,
       name: businesses.name,
       address: businesses.address,
@@ -217,10 +219,32 @@ router.get('/', async (c) => {
       enrichmentStatus: businesses.enrichmentStatus,
       enrichmentDate: businesses.enrichmentDate
     })
-    .from(businesses)
-    .where(and(...whereConditions));
+    .from(businesses);
+
+    // Build all WHERE conditions in one array like the test query
+    let whereConditions = [
+      eq(businesses.status, 'active'),
+      eq(businesses.lfaMember, 1),
+      gte(businesses.latitude, lat - latDelta),
+      lte(businesses.latitude, lat + latDelta),
+      gte(businesses.longitude, lng - lngDelta),
+      lte(businesses.longitude, lng + lngDelta)
+    ];
+    
+    // Add enrichment filter only if explicitly requested
+    if (includeUnenriched === false) {
+      whereConditions.push(isNotNull(businesses.primaryCategory));
+    }
+    
+    // Add category filter if specified
+    if (categoryFilter) {
+      whereConditions.push(eq(businesses.primaryCategory, categoryFilter));
+    }
+    
+    const nearbyBusinesses = await baseQuery.where(and(...whereConditions));
 
     console.log(`[ENHANCED-SEARCH] Found ${nearbyBusinesses.length} businesses in area`);
+    
 
     // Apply enhanced semantic relevance scoring
     const searchTerms = query.toLowerCase()
@@ -267,7 +291,13 @@ router.get('/', async (c) => {
           isEnriched: !!business.primaryCategory
         };
       })
-      .filter(business => business.relevanceScore > 5) // Lower threshold for enriched data
+      .filter(business => {
+        // Don't filter out businesses with title matches, even if relevance score is low
+        const hasNameMatch = business.matchReasons.some(reason => 
+          reason.includes('business name') || reason.includes('Partial word match')
+        );
+        return business.relevanceScore > 5 || hasNameMatch;
+      })
       .sort((a, b) => b.combinedScore - a.combinedScore)
       .slice(0, limit);
 
@@ -278,15 +308,6 @@ router.get('/', async (c) => {
       categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1;
     });
 
-    console.log(`[ENHANCED-SEARCH] Returning ${scoredBusinesses.length} scored results`);
-    console.log(`[ENHANCED-SEARCH] Top result:`, scoredBusinesses[0] ? {
-      name: scoredBusinesses[0].name,
-      category: scoredBusinesses[0].category,
-      subcategory: scoredBusinesses[0].subcategory,
-      relevanceScore: scoredBusinesses[0].relevanceScore,
-      combinedScore: scoredBusinesses[0].combinedScore,
-      matchReasons: scoredBusinesses[0].matchReasons
-    } : 'None');
 
     return c.json({
       businesses: scoredBusinesses,
