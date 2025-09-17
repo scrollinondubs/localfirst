@@ -19,6 +19,7 @@ import WebMapView from '../components/WebMapView';
 import { useAuth } from '../components/AuthContext';
 import { useRecommendationsEligibility } from '../components/RecommendationsEligibilityContext';
 import { buildApiUrl } from '../config/api';
+import locationService from '../services/LocationService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,6 +47,7 @@ export default function NotificationPreferencesScreen({ navigation }) {
   });
 
   const [manualAddress, setManualAddress] = useState('');
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState('undetermined');
   const sliderRef = useRef(null);
   const sliderWidth = screenWidth - 48;
 
@@ -89,7 +91,17 @@ export default function NotificationPreferencesScreen({ navigation }) {
 
   useEffect(() => {
     loadPreferences();
+    checkLocationPermissionStatus();
   }, []);
+
+  const checkLocationPermissionStatus = async () => {
+    try {
+      const status = await locationService.getPermissionStatus();
+      setLocationPermissionStatus(status);
+    } catch (error) {
+      console.error('Error checking location permission status:', error);
+    }
+  };
 
   const loadPreferences = async () => {
     try {
@@ -287,20 +299,81 @@ export default function NotificationPreferencesScreen({ navigation }) {
     }));
   };
 
-  const useCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          handleMapPress({ latitude, longitude });
-        },
-        (error) => {
-          Alert.alert('Location Error', 'Unable to get your current location. Please select manually on the map or enter an address below.');
+  const useCurrentLocation = async () => {
+    try {
+      // Check permission status first
+      const status = await locationService.getPermissionStatus();
+
+      if (status !== 'granted') {
+        // Request permission
+        const result = await locationService.requestLocationPermission();
+        if (!result.success) {
+          Alert.alert('Location Permission', result.message || 'Unable to access location. Please enable location permissions in your device settings or select manually on the map.');
+          return;
         }
-      );
-    } else {
-      Alert.alert('Location Error', 'Geolocation is not supported by this device.');
+      }
+
+      // Get current location using location service
+      const result = await locationService.getCurrentLocation();
+      if (result.success) {
+        const lat = result.location?.coords?.latitude || result.location?.latitude;
+        const lng = result.location?.coords?.longitude || result.location?.longitude;
+
+        if (lat && lng) {
+          handleMapPress({ latitude: lat, longitude: lng });
+          setLocationPermissionStatus('granted');
+        }
+      } else {
+        Alert.alert('Location Error', 'Unable to get your current location. Please select manually on the map or enter an address below.');
+      }
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      Alert.alert('Location Error', 'Unable to access location services.');
     }
+  };
+
+  const revokeLocationConsent = async () => {
+    Alert.alert(
+      'Revoke Location Access',
+      'This will clear your saved location data and disable location-based features. You can re-enable location access at any time.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke Access',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear cached location data
+              await locationService.clearCachedLocation();
+
+              // Reset location preferences to default
+              setPreferences(prev => ({
+                ...prev,
+                location: {
+                  lat: 33.4484, // Default to Phoenix
+                  lng: -112.074,
+                  address: 'Phoenix, AZ (Default)'
+                }
+              }));
+
+              setMapRegion({
+                latitude: 33.4484,
+                longitude: -112.074,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421
+              });
+
+              setLocationPermissionStatus('revoked');
+
+              Alert.alert('Location Access Revoked', 'Your location data has been cleared. Location-based features are now disabled.');
+            } catch (error) {
+              console.error('Error revoking location consent:', error);
+              Alert.alert('Error', 'Failed to revoke location access. Please try again.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const geocodeAddress = async () => {
@@ -402,6 +475,58 @@ export default function NotificationPreferencesScreen({ navigation }) {
     }
   };
 
+  const getPermissionStatusText = () => {
+    switch (locationPermissionStatus) {
+      case 'granted':
+        return 'Granted';
+      case 'denied':
+        return 'Denied';
+      case 'revoked':
+        return 'Revoked';
+      default:
+        return 'Not Requested';
+    }
+  };
+
+  const getPermissionStatusIcon = () => {
+    switch (locationPermissionStatus) {
+      case 'granted':
+        return 'checkmark-circle';
+      case 'denied':
+        return 'close-circle';
+      case 'revoked':
+        return 'ban';
+      default:
+        return 'help-circle';
+    }
+  };
+
+  const getPermissionStatusColor = () => {
+    switch (locationPermissionStatus) {
+      case 'granted':
+        return '#38a169';
+      case 'denied':
+        return '#ef4444';
+      case 'revoked':
+        return '#f56500';
+      default:
+        return '#718096';
+    }
+  };
+
+  const getPermissionStatusStyle = () => {
+    switch (locationPermissionStatus) {
+      case 'granted':
+        return { backgroundColor: '#f0fff4', borderColor: '#38a169' };
+      case 'denied':
+        return { backgroundColor: '#fef2f2', borderColor: '#ef4444' };
+      case 'revoked':
+        return { backgroundColor: '#fffbf0', borderColor: '#f56500' };
+      default:
+        return { backgroundColor: '#f7fafc', borderColor: '#718096' };
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -451,13 +576,38 @@ export default function NotificationPreferencesScreen({ navigation }) {
           </View>
 
           <View style={styles.locationControls}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.locationButton, { flex: 1, marginRight: 8 }]}
               onPress={useCurrentLocation}
             >
               <Ionicons name="locate" size={20} color="#3182ce" />
               <Text style={styles.locationButtonText}>Use Current Location</Text>
             </TouchableOpacity>
+
+            {locationPermissionStatus === 'granted' && (
+              <TouchableOpacity
+                style={[styles.locationButton, styles.revokeButton]}
+                onPress={revokeLocationConsent}
+              >
+                <Ionicons name="ban" size={20} color="#ef4444" />
+                <Text style={[styles.locationButtonText, styles.revokeButtonText]}>Revoke Access</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Location Permission Status */}
+          <View style={styles.permissionStatusContainer}>
+            <Text style={styles.permissionStatusLabel}>Location Permission Status:</Text>
+            <View style={[styles.permissionStatusBadge, getPermissionStatusStyle()]}>
+              <Ionicons
+                name={getPermissionStatusIcon()}
+                size={16}
+                color={getPermissionStatusColor()}
+              />
+              <Text style={[styles.permissionStatusText, { color: getPermissionStatusColor() }]}>
+                {getPermissionStatusText()}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.manualAddressContainer}>
@@ -782,6 +932,36 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: '#3182ce',
+    fontWeight: '600',
+  },
+  revokeButton: {
+    borderColor: '#ef4444',
+    flex: 0.6,
+  },
+  revokeButtonText: {
+    color: '#ef4444',
+  },
+  permissionStatusContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  permissionStatusLabel: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  permissionStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  permissionStatusText: {
+    marginLeft: 6,
+    fontSize: 14,
     fontWeight: '600',
   },
   manualAddressContainer: {

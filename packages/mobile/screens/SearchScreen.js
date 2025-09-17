@@ -196,12 +196,12 @@ export default function SearchScreen() {
       } else {
         // Permission not determined, show modal if first time (but skip for web)
         setLocationStatus('unavailable');
-        if (!hasAskedBefore && Platform.OS !== 'web') {
+        if (!hasAskedBefore) {
           setTimeout(() => {
             setShowPermissionModal(true);
           }, 1000); // Show after a short delay
         } else {
-          // For web or if asked before, skip modal and load cached location
+          // If asked before, skip modal and load cached location
           await loadCachedLocation();
         }
       }
@@ -222,13 +222,18 @@ export default function SearchScreen() {
         setLocationError(null);
         
         // Update map region to center on user location
-        if (result.location && result.location.latitude && result.location.longitude) {
+        // Handle both direct coordinates and coords object format
+        const lat = result.location?.coords?.latitude || result.location?.latitude;
+        const lng = result.location?.coords?.longitude || result.location?.longitude;
+
+        if (lat && lng) {
           setMapRegion({
-            latitude: result.location.latitude,
-            longitude: result.location.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.05, // Closer zoom for better user experience
+            longitudeDelta: 0.05,
           });
+          console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
         }
         
         if (result.fromCache) {
@@ -261,15 +266,20 @@ export default function SearchScreen() {
     setUserLocation(location);
     setLocationStatus('granted');
     setLocationError(null);
-    
+
     // Update map region to center on user location
-    if (location && location.latitude && location.longitude) {
+    // Handle both direct coordinates and coords object format
+    const lat = location?.coords?.latitude || location?.latitude;
+    const lng = location?.coords?.longitude || location?.longitude;
+
+    if (lat && lng) {
       setMapRegion({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.05, // Closer zoom for better user experience
+        longitudeDelta: 0.05,
       });
+      console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
     }
   };
 
@@ -474,21 +484,27 @@ export default function SearchScreen() {
         console.log(`[MOBILE-SEARCH] Using parsed city coordinates: ${searchLat}, ${searchLng} for ${cityCoords.city}`);
       } else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
         // User wants results near their current location
-        if (userLocation && userLocation.coords) {
-          const lat = userLocation.coords.latitude;
-          const lng = userLocation.coords.longitude;
-          
+        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+
+        if (lat && lng) {
           // Arizona rough bounds: lat 31-37, lng -115 to -109
           if (lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
             searchLat = lat;
             searchLng = lng;
             locationSource = `user location (near me)`;
             console.log(`[MOBILE-SEARCH] Using user location for "near me": ${lat}, ${lng}`);
+
+            // Use smaller radius for "near me" searches for more relevant results
+            params.set('radius', '10'); // 10 miles instead of 25
           } else {
             console.log(`[MOBILE-SEARCH] User location outside Arizona bounds (${lat}, ${lng}), using Phoenix fallback`);
           }
         } else {
           console.log(`[MOBILE-SEARCH] "Near me" requested but no user location available, using Phoenix fallback`);
+
+          // Show a helpful message to user
+          setLocationError('To search "near me", please enable location access in settings or use a specific city name.');
         }
       } else {
         console.log(`[MOBILE-SEARCH] No city detected in query "${query}", using Phoenix fallback`);
@@ -726,17 +742,25 @@ export default function SearchScreen() {
           ]}
         >
           {/* User location marker */}
-          {userLocation && (
-            <WebMarker
-              coordinate={{
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-              }}
-              title="Your Location"
-              description={locationStatus === 'granted' ? 'Current location' : 'Manual location'}
-              pinColor="blue"
-            />
-          )}
+          {userLocation && (() => {
+            const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+            const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+
+            if (lat && lng) {
+              return (
+                <WebMarker
+                  coordinate={{
+                    latitude: lat,
+                    longitude: lng,
+                  }}
+                  title="Your Location"
+                  description={locationStatus === 'granted' ? 'Current location' : 'Manual location'}
+                  pinColor="blue"
+                />
+              );
+            }
+            return null;
+          })()}
           
           {/* Search result markers */}
           {searchResults.map((business, index) => (
