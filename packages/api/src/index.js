@@ -36,6 +36,7 @@ app.use(
       'https://44c80b94.localfirst-mobile.pages.dev', // Previous Pages deployment
       'https://9e2e3c87.localfirst-mobile.pages.dev', // Previous Pages deployment
       'https://63e40d0a.localfirst-mobile.pages.dev', // Current Pages deployment
+      'file://',  // For local file testing
     ],
     credentials: true,
   })
