@@ -11,7 +11,7 @@ const port = 8787;
 const mockEnv = {
   NODE_ENV: 'development',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  DATABASE_URL: process.env.DATABASE_URL || 'file:/Users/aiden/NodeJSprojs/localfirst/local.db',
+  DATABASE_URL: process.env.DATABASE_URL || 'file:./local.db',
   DB: null // Local SQLite database
 };
 
