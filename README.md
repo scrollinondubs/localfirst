@@ -9,7 +9,7 @@ This monorepo contains both applications that share a unified backend:
 - **Mobile App**: React Native/Expo app for iOS and Android
 - **Shared Backend API**: Stateless web service for business data and analytics
 - **Admin Dashboard**: Management interface for LFA staff (coming soon)
-
+  
 ## 🏗️ Architecture
 
 ```
