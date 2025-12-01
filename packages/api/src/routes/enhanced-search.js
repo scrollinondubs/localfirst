@@ -193,14 +193,15 @@ router.get('/', async (c) => {
     const query = c.req.query('query')?.trim();
     const lat = parseFloat(c.req.query('lat'));
     const lng = parseFloat(c.req.query('lng'));
-    const radius = parseFloat(c.req.query('radius') || '15'); // Default 15 miles
-    const limit = parseInt(c.req.query('limit') || '20'); // Default 20 results
+    const radius = parseFloat(c.req.query('radius') || '25'); // Default 25 miles
+    const limit = parseInt(c.req.query('limit') || '50'); // Default 50 results
     const categoryFilter = c.req.query('category_filter'); // Optional category filter
     const includeUnenriched = c.req.query('include_unenriched') !== 'false'; // Default true
 
     // Validate required parameters
-    if (!query || query.length === 0) {
-      return c.json({ error: 'Query parameter is required' }, 400);
+    // Allow empty query if category filter is specified (for browsing by category)
+    if ((!query || query.length === 0) && !categoryFilter) {
+      return c.json({ error: 'Query parameter or category_filter is required' }, 400);
     }
     
     if (isNaN(lat) || isNaN(lng)) {
@@ -217,7 +218,10 @@ router.get('/', async (c) => {
 
     console.log(`[ENHANCED-SEARCH] Query: "${query}" near ${lat},${lng} within ${radius} miles`);
     
-    // Calculate bounding box for geographic filtering
+    // When browsing by category (no search query), skip distance filtering
+    const isBrowsingByCategory = (!query || query.length === 0) && categoryFilter;
+    
+    // Calculate bounding box for geographic filtering (only when searching or no category filter)
     const latDelta = radius / 69; // ~69 miles per degree latitude
     const lngDelta = radius / (69 * Math.cos(lat * Math.PI / 180));
     
@@ -248,12 +252,21 @@ router.get('/', async (c) => {
     // Build all WHERE conditions in one array like the test query
     let whereConditions = [
       eq(businesses.status, 'active'),
-      eq(businesses.lfaMember, 1),
-      gte(businesses.latitude, lat - latDelta),
-      lte(businesses.latitude, lat + latDelta),
-      gte(businesses.longitude, lng - lngDelta),
-      lte(businesses.longitude, lng + lngDelta)
+      eq(businesses.lfaMember, 1)
     ];
+    
+    // Only add distance filtering if NOT browsing by category
+    if (!isBrowsingByCategory) {
+      whereConditions.push(
+        gte(businesses.latitude, lat - latDelta),
+        lte(businesses.latitude, lat + latDelta),
+        gte(businesses.longitude, lng - lngDelta),
+        lte(businesses.longitude, lng + lngDelta)
+      );
+      console.log(`[ENHANCED-SEARCH] Applying distance filter: radius=${radius} miles`);
+    } else {
+      console.log(`[ENHANCED-SEARCH] Category browsing mode - NO distance filter, showing ALL businesses in category`);
+    }
     
     // Add enrichment filter only if explicitly requested
     if (includeUnenriched === false) {
@@ -269,8 +282,65 @@ router.get('/', async (c) => {
 
     console.log(`[ENHANCED-SEARCH] Found ${nearbyBusinesses.length} businesses in area`);
     
+    // Handle browsing mode (no search query)
+    if (!query || query.length === 0) {
+      const browseMode = categoryFilter ? `category: ${categoryFilter}` : 'all nearby businesses';
+      console.log(`[ENHANCED-SEARCH] Browse mode - ${browseMode}, found ${nearbyBusinesses.length} total businesses`);
+      
+      const browseResults = nearbyBusinesses
+        .map(business => {
+          const distance = calculateDistance(lat, lng, business.latitude, business.longitude);
+          
+          return {
+            id: business.id,
+            name: business.name,
+            address: business.address,
+            latitude: business.latitude,
+            longitude: business.longitude,
+            phone: business.phone,
+            website: business.website,
+            category: business.primaryCategory || business.category,
+            subcategory: business.subcategory,
+            businessDescription: business.businessDescription,
+            keywords: business.keywords ? business.keywords.split(', ') : [],
+            productsServices: business.productsServices ? JSON.parse(business.productsServices) : null,
+            businessAttributes: business.businessAttributes ? JSON.parse(business.businessAttributes) : {},
+            lfaMember: business.lfaMember,
+            verified: business.verified,
+            enrichmentStatus: business.enrichmentStatus,
+            distance: Math.round(distance * 100) / 100,
+            relevanceScore: 0,
+            combinedScore: -distance, // Sort by distance (closest first)
+            matchReasons: [categoryFilter ? `Browsing ${categoryFilter}` : 'Browsing all categories'],
+            isEnriched: !!business.primaryCategory
+          };
+        })
+        .sort((a, b) => a.distance - b.distance); // Sort by distance ascending (closest first)
+        // NO .slice(0, limit) - return ALL businesses when browsing by category
 
-    // Apply enhanced semantic relevance scoring
+      const categoryBreakdown = {};
+      browseResults.forEach(business => {
+        const cat = business.category || 'other';
+        categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1;
+      });
+
+      return c.json({
+        businesses: browseResults,
+        total: browseResults.length,
+        query: categoryFilter || 'all',
+        searchTerms: [],
+        center: { lat, lng },
+        radius,
+        categoryBreakdown,
+        searchMetadata: {
+          mode: categoryFilter ? 'category_browse' : 'browse_all',
+          categoryFilter: categoryFilter || null,
+          averageDistance: browseResults.reduce((sum, b) => sum + b.distance, 0) / browseResults.length || 0
+        }
+      });
+    }
+
+    // Apply enhanced semantic relevance scoring (for search queries)
     const searchTerms = query.toLowerCase()
       .split(/\s+/)
       .filter(term => term.length > 2)
