@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -111,6 +111,13 @@ export default function SearchScreen() {
   const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
   
+  // Infinite scroll state
+  const [allBusinesses, setAllBusinesses] = useState([]); // Store all fetched businesses
+  const [displayedBusinesses, setDisplayedBusinesses] = useState([]); // Paginated display
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 50; // Load 50 businesses at a time
+  
   // Ref for the business results list to enable scrolling
   const businessListRef = useRef(null);
   
@@ -173,6 +180,42 @@ export default function SearchScreen() {
       setVoiceButtonMinimized(true);
     }
   }, [searchResults.length, isRecording]);
+
+  // Centralized search effect - triggers when category, query, or location changes
+  useEffect(() => {
+    // Don't search if no location
+    if (!userLocation || locationStatus === 'checking') {
+      console.log('[SEARCH-EFFECT] Waiting for location...');
+      return;
+    }
+
+    // Debounce text searches, immediate for category-only
+    const hasTextQuery = searchQuery.trim().length > 0;
+    const debounceDelay = hasTextQuery ? 500 : 0; // 500ms for typing, instant for category
+    
+    console.log(`[SEARCH-EFFECT] Triggered - query: "${searchQuery}", category: ${selectedCategory}, delay: ${debounceDelay}ms`);
+    
+    const timer = setTimeout(() => {
+      // Only search if we have either a query or a category
+      if (hasTextQuery || selectedCategory) {
+        console.log(`[SEARCH-EFFECT] ✅ Executing search - query: "${searchQuery}", category: ${selectedCategory}`);
+        performSearch(searchQuery);
+      } else {
+        // Clear results if no query and no category
+        console.log('[SEARCH-EFFECT] Clearing results (no query, no category)');
+        setSearchResults([]);
+        setAllBusinesses([]);
+        setDisplayedBusinesses([]);
+        setCurrentPage(1);
+      }
+    }, debounceDelay);
+
+    // Cleanup: cancel timer if user keeps typing
+    return () => {
+      clearTimeout(timer);
+      console.log('[SEARCH-EFFECT] Cleanup - timer cancelled');
+    };
+  }, [selectedCategory, searchQuery, userLocation, locationStatus]);
 
   const initializeLocation = async () => {
     try {
@@ -355,13 +398,17 @@ export default function SearchScreen() {
       const finalTranscription = results[0];
       setTranscription(finalTranscription);
       setPartialTranscription('');
-      setSearchQuery(finalTranscription);
       
-      // Process the voice query and perform search
+      // Process the voice query
       const processedQuery = voiceService.processVoiceSearchQuery(finalTranscription);
-      if (processedQuery && processedQuery.processedQuery) {
-        performSearch(processedQuery.processedQuery);
-      }
+      const queryToUse = processedQuery?.processedQuery || finalTranscription;
+      
+      // Set query (useEffect will trigger search automatically)
+      setSearchQuery(queryToUse);
+      
+      // For voice, we want immediate results, so also call performSearch directly
+      console.log('[VOICE-SEARCH] Processing voice query:', queryToUse);
+      performSearch(queryToUse);
     }
   };
 
@@ -448,8 +495,9 @@ export default function SearchScreen() {
   const performSearch = async (query) => {
     console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
     
-    if (!query.trim()) {
-      console.log(`[MOBILE-SEARCH] Empty query, clearing results`);
+    // Allow empty query if category is selected (category browsing)
+    if (!query.trim() && !selectedCategory) {
+      console.log(`[MOBILE-SEARCH] Empty query and no category, clearing results`);
       setSearchResults([]);
       return;
     }
@@ -575,26 +623,32 @@ export default function SearchScreen() {
       }
 
       // Handle response format from enhanced search API
+      let businesses = [];
       if (data && data.businesses && Array.isArray(data.businesses)) {
         console.log(`[MOBILE-SEARCH] Found ${data.businesses.length} businesses in data.businesses`);
-        console.log(`[MOBILE-SEARCH] Setting searchResults with businesses:`, data.businesses.slice(0, 3));
-        setSearchResults(data.businesses);
-        
+        businesses = data.businesses;
         // Store enhanced search metadata
         setSearchMetadata(data.searchMetadata || null);
       } else if (data && Array.isArray(data)) {
         console.log(`[MOBILE-SEARCH] Found ${data.length} businesses in data array`);
-        console.log(`[MOBILE-SEARCH] Setting searchResults with direct array:`, data.slice(0, 3));
-        setSearchResults(data);
+        businesses = data;
       } else if (data.results && Array.isArray(data.results)) {
         console.log(`[MOBILE-SEARCH] Found ${data.results.length} businesses in data.results`);
-        console.log(`[MOBILE-SEARCH] Setting searchResults with results:`, data.results.slice(0, 3));
-        setSearchResults(data.results);
+        businesses = data.results;
       } else {
         console.error(`[MOBILE-SEARCH] No businesses found in response, data structure:`, Object.keys(data));
         console.error(`[MOBILE-SEARCH] Full response data:`, data);
-        setSearchResults([]);
+        businesses = [];
       }
+      
+      // Store all businesses and show first page
+      setAllBusinesses(businesses);
+      setCurrentPage(1);
+      const firstPage = businesses.slice(0, PAGE_SIZE);
+      setSearchResults(firstPage);
+      setDisplayedBusinesses(firstPage);
+      console.log(`[MOBILE-SEARCH] Showing ${firstPage.length} of ${businesses.length} total businesses (page 1)`);
+
     } catch (error) {
       console.error('[MOBILE-SEARCH] Search error:', error);
       setSearchResults([]);
@@ -604,6 +658,30 @@ export default function SearchScreen() {
     }
   };
 
+
+  // Load more businesses for infinite scroll
+  const loadMoreBusinesses = () => {
+    if (loadingMore || loading) return; // Prevent multiple loads
+    if (displayedBusinesses.length >= allBusinesses.length) return; // All loaded
+    
+    console.log(`[INFINITE-SCROLL] Loading page ${currentPage + 1}...`);
+    setLoadingMore(true);
+    
+    setTimeout(() => {
+      const nextPage = currentPage + 1;
+      const start = currentPage * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const newBusinesses = allBusinesses.slice(start, end);
+      
+      const updatedDisplayed = [...displayedBusinesses, ...newBusinesses];
+      setDisplayedBusinesses(updatedDisplayed);
+      setSearchResults(updatedDisplayed);
+      setCurrentPage(nextPage);
+      setLoadingMore(false);
+      
+      console.log(`[INFINITE-SCROLL] Loaded ${newBusinesses.length} businesses. Total: ${updatedDisplayed.length}/${allBusinesses.length}`);
+    }, 300); // Small delay for smooth UX
+  };
 
   const getLocationDisplayText = () => {
     if (locationStatus === 'checking') {
@@ -653,8 +731,10 @@ export default function SearchScreen() {
     }
   };
 
+  // Manual search (bypasses debounce for immediate results)
   const handleTextSearch = () => {
-    if (searchQuery.trim()) {
+    console.log('[MANUAL-SEARCH] User pressed Enter or clicked search button');
+    if (searchQuery.trim() || selectedCategory) {
       performSearch(searchQuery);
     }
   };
@@ -711,6 +791,20 @@ export default function SearchScreen() {
     console.log(`[MOBILE-SEARCH] First search result:`, searchResults[0]);
   }
 
+  // Memoize markers array to prevent infinite loop
+  const mapMarkers = useMemo(() => {
+    return searchResults.map(business => ({
+      coordinate: {
+        latitude: business.latitude,
+        longitude: business.longitude,
+      },
+      title: business.name,
+      description: `${business.category} • ${formatDistance(business.distance)}`,
+      pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
+      businessData: business
+    }));
+  }, [searchResults]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Map Container */}
@@ -718,7 +812,7 @@ export default function SearchScreen() {
         <WebMapView
           style={styles.map}
           region={mapRegion}
-          onRegionChangeComplete={setMapRegion}
+          onRegionChangeComplete={null}
           showsUserLocation={true}
           showsMyLocationButton={true}
           showsCompass={true}
@@ -726,20 +820,8 @@ export default function SearchScreen() {
           onMarkerPress={handleMapMarkerPress}
           selectedBusiness={selectedBusiness}
           autoFitMarkers={false}
-          markers={[
-            // User location marker (temporarily disabled for debugging)
-            // Business markers
-            ...searchResults.map(business => ({
-              coordinate: {
-                latitude: business.latitude,
-                longitude: business.longitude,
-              },
-              title: business.name,
-              description: `${business.category} • ${formatDistance(business.distance)}`,
-              pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
-              businessData: business
-            }))
-          ]}
+          enableClustering={false}
+          markers={mapMarkers}
         >
           {/* User location marker */}
           {userLocation && (() => {
@@ -811,10 +893,9 @@ export default function SearchScreen() {
       <CategoryFilter
         selectedCategory={selectedCategory}
         onCategoryChange={(category) => {
+          console.log('[CATEGORY-CHANGE] Category changed to:', category);
+          // Just update state - useEffect will trigger search automatically
           setSelectedCategory(category);
-          if (searchQuery.trim()) {
-            performSearch(searchQuery);
-          }
         }}
       />
 
@@ -869,6 +950,30 @@ export default function SearchScreen() {
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.resultsList}
+            onEndReached={loadMoreBusinesses}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={() => {
+              if (loadingMore) {
+                return (
+                  <View style={styles.loadMoreContainer}>
+                    <ActivityIndicator size="small" color="#3182ce" />
+                    <Text style={styles.loadMoreText}>
+                      Loading more... ({displayedBusinesses.length}/{allBusinesses.length})
+                    </Text>
+                  </View>
+                );
+              }
+              if (allBusinesses.length > 0 && displayedBusinesses.length >= allBusinesses.length) {
+                return (
+                  <View style={styles.loadMoreContainer}>
+                    <Text style={styles.allLoadedText}>
+                      ✓ All {allBusinesses.length} businesses loaded
+                    </Text>
+                  </View>
+                );
+              }
+              return null;
+            }}
             onScrollToIndexFailed={(error) => {
               // Fallback if scrollToIndex fails
               console.log('ScrollToIndex failed:', error);
@@ -1091,6 +1196,21 @@ const styles = StyleSheet.create({
   },
   resultsList: {
     paddingBottom: 20,
+  },
+  loadMoreContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#718096',
+  },
+  allLoadedText: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '500',
   },
   voiceSection: {
     position: 'absolute',

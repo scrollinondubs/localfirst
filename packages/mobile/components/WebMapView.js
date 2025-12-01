@@ -13,12 +13,15 @@ const WebMapView = ({
   onMarkerPress,
   selectedBusiness,
   markers = [], // Add direct marker data prop as backup
-  autoFitMarkers = true // New prop to control auto-fitting
+  autoFitMarkers = true, // New prop to control auto-fitting
+  enableClustering = true // Enable marker clustering by default
 }) => {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markersRef = useRef([]);
   const lastMarkersRef = useRef([]);
+  const markerClustererRef = useRef(null); // For clustering
+  const updateCountRef = useRef(0); // Safety counter to prevent infinite loops
 
   useEffect(() => {
     if (Platform.OS === 'web' && window.google && window.google.maps) {
@@ -179,38 +182,43 @@ const WebMapView = ({
     }
   };
 
-  const updateMarkers = () => {
-    console.log('updateMarkers called', { 
-      hasMap: !!googleMapRef.current, 
-      hasGoogle: !!(window.google && window.google.maps),
-      markersLength: markers ? markers.length : 0,
-      childrenLength: children ? (Array.isArray(children) ? children.length : 1) : 0
-    });
-    
-    if (!googleMapRef.current) {
-      console.log('No google map ref, skipping marker update');
+  const updateMarkers = async () => {
+    // Safety check: prevent infinite loops
+    updateCountRef.current++;
+    if (updateCountRef.current > 5) {
+      console.error('[MAP] ❌ Too many marker updates, stopping to prevent infinite loop');
       return;
     }
-
-    if (!window.google || !window.google.maps) {
-      console.log('Google Maps API not loaded, skipping marker update');
+    
+    // Reset counter after 1 second of no updates
+    setTimeout(() => { updateCountRef.current = 0; }, 1000);
+    
+    // Reduced logging for better console readability
+    if (markers && markers.length > 0) {
+      console.log(`[MAP] Updating ${markers.length} markers (clustering: ${enableClustering}, update #${updateCountRef.current})`);
+    }
+    
+    if (!googleMapRef.current || !window.google || !window.google.maps) {
       return;
     }
 
     // Check if markers have actually changed to prevent unnecessary updates
-    const currentMarkersData = JSON.stringify({
-      markers: markers,
-      selectedBusinessId: selectedBusiness?.id
-    });
+    // Use lightweight comparison instead of stringifying entire array
+    const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
     
-    if (lastMarkersRef.current === currentMarkersData) {
-      console.log('Markers unchanged, skipping update');
-      return;
+    if (lastMarkersRef.current === currentMarkersKey) {
+      console.log('[MAP] Markers unchanged, skipping update');
+      return; // Exit early - markers haven't changed
     }
     
-    lastMarkersRef.current = currentMarkersData;
+    console.log(`[MAP] Markers changed: ${lastMarkersRef.current} → ${currentMarkersKey}`);
+    lastMarkersRef.current = currentMarkersKey;
 
-    // Clear existing markers
+    // Clear existing markers and clusterer
+    if (markerClustererRef.current) {
+      markerClustererRef.current.clearMarkers();
+      markerClustererRef.current = null;
+    }
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
@@ -240,7 +248,7 @@ const WebMapView = ({
               lat: markerData.coordinate.latitude,
               lng: markerData.coordinate.longitude,
             },
-            map: googleMapRef.current,
+            map: enableClustering ? null : googleMapRef.current, // Don't set map yet if clustering
             title: markerData.title || '',
             icon: {
               path: window.google.maps.SymbolPath.CIRCLE,
@@ -289,6 +297,52 @@ const WebMapView = ({
           console.log('Created marker:', index + 1, 'of', markers.length);
         }
       });
+      
+      // Initialize clustering if enabled and we have markers
+      if (enableClustering && markersRef.current.length > 0) {
+        console.log(`[CLUSTERING] Initializing for ${markersRef.current.length} markers`);
+        
+        try {
+          // Try to use the clustering library if available
+          if (typeof window !== 'undefined' && window.markerClusterer) {
+            // Library already loaded globally
+            const { MarkerClusterer } = window.markerClusterer;
+            markerClustererRef.current = new MarkerClusterer({
+              map: googleMapRef.current,
+              markers: markersRef.current,
+              algorithm: new window.markerClusterer.SuperClusterAlgorithm({
+                maxZoom: 15,
+                radius: 60,
+              }),
+            });
+            console.log('[CLUSTERING] ✅ Initialized successfully');
+          } else {
+            // Dynamic import fallback
+            import('@googlemaps/markerclusterer').then(({ MarkerClusterer, SuperClusterAlgorithm }) => {
+              markerClustererRef.current = new MarkerClusterer({
+                map: googleMapRef.current,
+                markers: markersRef.current,
+                algorithm: new SuperClusterAlgorithm({
+                  maxZoom: 15,
+                  radius: 60,
+                }),
+              });
+              console.log('[CLUSTERING] ✅ Loaded dynamically and initialized');
+            }).catch(error => {
+              console.error('[CLUSTERING] ❌ Failed to load:', error);
+              // Fall back to showing all markers without clustering
+              markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+            });
+          }
+        } catch (error) {
+          console.error('[CLUSTERING] ❌ Error:', error);
+          // Fall back to showing all markers without clustering  
+          markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+        }
+      } else if (!enableClustering && markersRef.current.length > 0) {
+        // No clustering - show markers directly
+        markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+      }
     }
     
     console.log('Total markers created:', markersRef.current.length);
