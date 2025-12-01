@@ -42,7 +42,7 @@ const WebMapView = ({
     if (googleMapRef.current) {
       updateMarkers();
     }
-  }, [children, selectedBusiness, markers]);
+  }, [selectedBusiness, markers]);
 
   const loadGoogleMapsAPI = () => {
     if (window.google && window.google.maps) {
@@ -183,35 +183,30 @@ const WebMapView = ({
   };
 
   const updateMarkers = async () => {
+    // Check if markers have actually changed FIRST (before safety counter)
+    const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
+    
+    if (lastMarkersRef.current === currentMarkersKey) {
+      // Markers unchanged, exit early without incrementing counter
+      return;
+    }
+    
     // Safety check: prevent infinite loops
     updateCountRef.current++;
-    if (updateCountRef.current > 5) {
+    if (updateCountRef.current > 10) {
       console.error('[MAP] ❌ Too many marker updates, stopping to prevent infinite loop');
       return;
     }
     
-    // Reset counter after 1 second of no updates
-    setTimeout(() => { updateCountRef.current = 0; }, 1000);
+    // Reset counter after 2 seconds of no updates
+    setTimeout(() => { updateCountRef.current = 0; }, 2000);
     
-    // Reduced logging for better console readability
-    if (markers && markers.length > 0) {
-      console.log(`[MAP] Updating ${markers.length} markers (clustering: ${enableClustering}, update #${updateCountRef.current})`);
-    }
+    console.log(`[MAP] Updating ${markers.length} markers (update #${updateCountRef.current})`);
     
     if (!googleMapRef.current || !window.google || !window.google.maps) {
       return;
     }
 
-    // Check if markers have actually changed to prevent unnecessary updates
-    // Use lightweight comparison instead of stringifying entire array
-    const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
-    
-    if (lastMarkersRef.current === currentMarkersKey) {
-      console.log('[MAP] Markers unchanged, skipping update');
-      return; // Exit early - markers haven't changed
-    }
-    
-    console.log(`[MAP] Markers changed: ${lastMarkersRef.current} → ${currentMarkersKey}`);
     lastMarkersRef.current = currentMarkersKey;
 
     // Clear existing markers and clusterer

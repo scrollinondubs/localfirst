@@ -199,10 +199,7 @@ router.get('/', async (c) => {
     const includeUnenriched = c.req.query('include_unenriched') !== 'false'; // Default true
 
     // Validate required parameters
-    // Allow empty query if category filter is specified (for browsing by category)
-    if ((!query || query.length === 0) && !categoryFilter) {
-      return c.json({ error: 'Query parameter or category_filter is required' }, 400);
-    }
+    // Allow empty query (will show all nearby businesses)
     
     if (isNaN(lat) || isNaN(lng)) {
       return c.json({ error: 'Invalid latitude or longitude' }, 400);
@@ -218,8 +215,8 @@ router.get('/', async (c) => {
 
     console.log(`[ENHANCED-SEARCH] Query: "${query}" near ${lat},${lng} within ${radius} miles`);
     
-    // When browsing by category (no search query), skip distance filtering
-    const isBrowsingByCategory = (!query || query.length === 0) && categoryFilter;
+    // When browsing (no search query), apply distance filtering but return all results
+    const isBrowsingMode = !query || query.length === 0;
     
     // Calculate bounding box for geographic filtering (only when searching or no category filter)
     const latDelta = radius / 69; // ~69 miles per degree latitude
@@ -255,18 +252,14 @@ router.get('/', async (c) => {
       eq(businesses.lfaMember, 1)
     ];
     
-    // Only add distance filtering if NOT browsing by category
-    if (!isBrowsingByCategory) {
-      whereConditions.push(
-        gte(businesses.latitude, lat - latDelta),
-        lte(businesses.latitude, lat + latDelta),
-        gte(businesses.longitude, lng - lngDelta),
-        lte(businesses.longitude, lng + lngDelta)
-      );
-      console.log(`[ENHANCED-SEARCH] Applying distance filter: radius=${radius} miles`);
-    } else {
-      console.log(`[ENHANCED-SEARCH] Category browsing mode - NO distance filter, showing ALL businesses in category`);
-    }
+    // Always add distance filtering to keep results within reasonable radius
+    whereConditions.push(
+      gte(businesses.latitude, lat - latDelta),
+      lte(businesses.latitude, lat + latDelta),
+      gte(businesses.longitude, lng - lngDelta),
+      lte(businesses.longitude, lng + lngDelta)
+    );
+    console.log(`[ENHANCED-SEARCH] Applying distance filter: radius=${radius} miles`);
     
     // Add enrichment filter only if explicitly requested
     if (includeUnenriched === false) {

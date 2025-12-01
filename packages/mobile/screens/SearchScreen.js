@@ -181,11 +181,25 @@ export default function SearchScreen() {
     }
   }, [searchResults.length, isRecording]);
 
-  // Centralized search effect - triggers when category, query, or location changes
+  // Initial load - show all nearby businesses when location is ready
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
+  const initialLoadRef = useRef(false); // Track if we've done initial load
+  
   useEffect(() => {
-    // Don't search if no location
-    if (!userLocation || locationStatus === 'checking') {
-      console.log('[SEARCH-EFFECT] Waiting for location...');
+    if (!userLocation || locationStatus === 'checking' || initialLoadRef.current) {
+      return;
+    }
+    
+    console.log('[INITIAL-LOAD] Location ready, loading all nearby businesses');
+    initialLoadRef.current = true;
+    setHasLoadedInitial(true);
+    performSearch(''); // Empty query, no category = all nearby businesses
+  }, [userLocation, locationStatus]);
+
+  // Centralized search effect - triggers when category or query changes
+  useEffect(() => {
+    // Skip if no location or haven't done initial load yet
+    if (!userLocation || locationStatus === 'checking' || !hasLoadedInitial) {
       return;
     }
 
@@ -196,26 +210,22 @@ export default function SearchScreen() {
     console.log(`[SEARCH-EFFECT] Triggered - query: "${searchQuery}", category: ${selectedCategory}, delay: ${debounceDelay}ms`);
     
     const timer = setTimeout(() => {
-      // Only search if we have either a query or a category
+      // Search if we have a query or category
       if (hasTextQuery || selectedCategory) {
         console.log(`[SEARCH-EFFECT] ✅ Executing search - query: "${searchQuery}", category: ${selectedCategory}`);
         performSearch(searchQuery);
       } else {
-        // Clear results if no query and no category
-        console.log('[SEARCH-EFFECT] Clearing results (no query, no category)');
-        setSearchResults([]);
-        setAllBusinesses([]);
-        setDisplayedBusinesses([]);
-        setCurrentPage(1);
+        // If user clears everything, reload all nearby businesses
+        console.log('[SEARCH-EFFECT] Reloading all nearby businesses');
+        performSearch('');
       }
     }, debounceDelay);
 
     // Cleanup: cancel timer if user keeps typing
     return () => {
       clearTimeout(timer);
-      console.log('[SEARCH-EFFECT] Cleanup - timer cancelled');
     };
-  }, [selectedCategory, searchQuery, userLocation, locationStatus]);
+  }, [selectedCategory, searchQuery, hasLoadedInitial]);
 
   const initializeLocation = async () => {
     try {
@@ -495,13 +505,7 @@ export default function SearchScreen() {
   const performSearch = async (query) => {
     console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
     
-    // Allow empty query if category is selected (category browsing)
-    if (!query.trim() && !selectedCategory) {
-      console.log(`[MOBILE-SEARCH] Empty query and no category, clearing results`);
-      setSearchResults([]);
-      return;
-    }
-
+    // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
     setSearchError(null); // Clear any previous errors
     
@@ -819,7 +823,7 @@ export default function SearchScreen() {
           showsScale={true}
           onMarkerPress={handleMapMarkerPress}
           selectedBusiness={selectedBusiness}
-          autoFitMarkers={false}
+          autoFitMarkers={true}
           enableClustering={false}
           markers={mapMarkers}
         >
