@@ -136,6 +136,7 @@ export default function SearchScreen() {
   useEffect(() => {
     initializeLocation();
     initializeVoiceService();
+    loadInitialBusinesses(); // Load businesses on app start
     return () => {
       // Cleanup services when component unmounts
       locationService.cleanup();
@@ -442,6 +443,70 @@ export default function SearchScreen() {
       setIsRecording(false);
       setIsListening(false);
       setPartialTranscription('');
+    }
+  };
+
+  const loadInitialBusinesses = async () => {
+    console.log('[MOBILE-SEARCH] Loading initial businesses on app start');
+    
+    try {
+      setLoading(true);
+      
+      // Default to Phoenix coordinates for initial load
+      let searchLat = 33.4484;
+      let searchLng = -112.0740;
+      let locationSource = 'Phoenix default';
+      
+      // If user location is available and in Arizona, use it instead
+      const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+      const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+      
+      if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+        searchLat = lat;
+        searchLng = lng;
+        locationSource = 'user location';
+        console.log(`[MOBILE-SEARCH] Using user location: ${lat}, ${lng}`);
+      }
+      
+      // Build API request - get businesses within 50 miles radius
+      const params = new URLSearchParams();
+      params.append('lat', searchLat);
+      params.append('lng', searchLng);
+      params.append('radius', '50'); // 50 mile radius to get plenty of businesses
+      params.append('limit', '500'); // Limit to 500 businesses for performance
+      
+      const endpoint = `/api/businesses/nearby?${params}`;
+      console.log(`[MOBILE-SEARCH] Initial load endpoint: ${endpoint}`);
+      
+      const response = await apiRequest(endpoint, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        console.error('[MOBILE-SEARCH] Initial load failed:', response.status, response.statusText);
+        setLoading(false);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log(`[MOBILE-SEARCH] Loaded ${data.businesses?.length || 0} initial businesses`);
+      
+      if (data.businesses && data.businesses.length > 0) {
+        setSearchResults(data.businesses);
+        
+        // Update map region to show loaded businesses
+        setMapRegion({
+          latitude: searchLat,
+          longitude: searchLng,
+          latitudeDelta: 0.5, // Wider view to show more businesses
+          longitudeDelta: 0.5,
+        });
+      }
+      
+    } catch (error) {
+      console.error('[MOBILE-SEARCH] Error loading initial businesses:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
