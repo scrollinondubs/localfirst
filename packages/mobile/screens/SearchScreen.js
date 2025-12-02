@@ -148,8 +148,12 @@ export default function SearchScreen() {
   useEffect(() => {
     initializeLocation();
     initializeVoiceService();
-    loadInitialBusinesses(); // Load businesses on app start
+    // Load businesses after a short delay to ensure everything is initialized
+    const timer = setTimeout(() => {
+      loadInitialBusinesses(); // Load businesses on app start
+    }, 1000);
     return () => {
+      clearTimeout(timer);
       // Cleanup services when component unmounts
       locationService.cleanup();
       voiceService.destroy();
