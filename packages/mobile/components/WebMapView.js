@@ -252,19 +252,14 @@ const WebMapView = ({
             },
           });
 
-          // Handle marker click
-          marker.addListener('click', () => {
-            console.log('Direct marker clicked:', markerData.title);
-            if (markerData.businessData && onMarkerPress) {
-              onMarkerPress(markerData.businessData);
-            }
-            
+          // Create InfoWindow content function for reuse
+          const createInfoWindow = () => {
             if (markerData.description || markerData.businessData) {
               const businessData = markerData.businessData;
               const address = businessData?.address || markerData.title;
               const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
               
-              const infoWindow = new window.google.maps.InfoWindow({
+              return new window.google.maps.InfoWindow({
                 content: `
                   <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <strong style="font-size: 14px; color: #1a1a1a;">${markerData.title}</strong>
@@ -281,9 +276,31 @@ const WebMapView = ({
                   </div>
                 `,
               });
+            }
+            return null;
+          };
+
+          // Handle marker click
+          marker.addListener('click', () => {
+            console.log('Direct marker clicked:', markerData.title);
+            if (markerData.businessData && onMarkerPress) {
+              onMarkerPress(markerData.businessData);
+            }
+            
+            const infoWindow = createInfoWindow();
+            if (infoWindow) {
               infoWindow.open(googleMapRef.current, marker);
             }
           });
+
+          // Auto-open InfoWindow if this marker is selected
+          if (isSelected) {
+            console.log('Auto-opening InfoWindow for selected business:', markerData.title);
+            const infoWindow = createInfoWindow();
+            if (infoWindow) {
+              infoWindow.open(googleMapRef.current, marker);
+            }
+          }
 
           markersRef.current.push(marker);
           console.log('Created marker:', index + 1, 'of', markers.length);
