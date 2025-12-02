@@ -137,6 +137,11 @@ export default function SearchScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  
+  // Viewport-based search state
+  const [viewportBounds, setViewportBounds] = useState(null);
+  const boundsDebounceRef = useRef(null);
+  const lastSearchBoundsRef = useRef(null);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
 
   // Initialize location and voice services when component mounts
@@ -181,50 +186,35 @@ export default function SearchScreen() {
     }
   }, [searchResults.length, isRecording]);
 
-  // Initial load - show all nearby businesses when location is ready
+  // Initial load tracking
   const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
   const initialLoadRef = useRef(false); // Track if we've done initial load
   
-  useEffect(() => {
-    if (!userLocation || locationStatus === 'checking' || initialLoadRef.current) {
-      return;
-    }
-    
-    console.log('[INITIAL-LOAD] Location ready, loading all nearby businesses');
-    initialLoadRef.current = true;
-    setHasLoadedInitial(true);
-    performSearch(''); // Empty query, no category = all nearby businesses
-  }, [userLocation, locationStatus]);
+  // No longer need separate initial load effect - handled by handleMapBoundsChange
 
-  // Centralized search effect - triggers when category or query changes
+  // Search effect for text query and category changes (not map movement)
   useEffect(() => {
-    // Skip if no location or haven't done initial load yet
+    // Skip if no location or haven't loaded initial viewport
     if (!userLocation || locationStatus === 'checking' || !hasLoadedInitial) {
       return;
     }
 
-    // Debounce text searches, immediate for category-only
+    // Only trigger on category/query changes, NOT on initial load
+    // (initial load handled by map bounds change)
     const hasTextQuery = searchQuery.trim().length > 0;
+    
+    // Don't search if this is just initial state (no query, no category)
+    if (!hasTextQuery && !selectedCategory) {
+      return;
+    }
+    
     const debounceDelay = hasTextQuery ? 500 : 0; // 500ms for typing, instant for category
-    
-    console.log(`[SEARCH-EFFECT] Triggered - query: "${searchQuery}", category: ${selectedCategory}, delay: ${debounceDelay}ms`);
-    
     const timer = setTimeout(() => {
-      // Search if we have a query or category
-      if (hasTextQuery || selectedCategory) {
-        console.log(`[SEARCH-EFFECT] ✅ Executing search - query: "${searchQuery}", category: ${selectedCategory}`);
-        performSearch(searchQuery);
-      } else {
-        // If user clears everything, reload all nearby businesses
-        console.log('[SEARCH-EFFECT] Reloading all nearby businesses');
-        performSearch('');
-      }
+      // Use current viewport bounds from state
+      performSearch(searchQuery, null); // null means use viewportBounds from state
     }, debounceDelay);
 
-    // Cleanup: cancel timer if user keeps typing
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery, hasLoadedInitial]);
 
   const initializeLocation = async () => {
@@ -417,8 +407,7 @@ export default function SearchScreen() {
       setSearchQuery(queryToUse);
       
       // For voice, we want immediate results, so also call performSearch directly
-      console.log('[VOICE-SEARCH] Processing voice query:', queryToUse);
-      performSearch(queryToUse);
+      performSearch(queryToUse, null); // Use current viewport bounds from state
     }
   };
 
@@ -502,8 +491,9 @@ export default function SearchScreen() {
     }
   };
 
-  const performSearch = async (query) => {
-    console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
+  const performSearch = async (query, explicitBounds = null) => {
+    // Use explicitly passed bounds or fall back to state
+    const boundsToUse = explicitBounds || viewportBounds;
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -513,13 +503,22 @@ export default function SearchScreen() {
       // Build query parameters for enhanced search API
       const params = new URLSearchParams({
         query: query,
-        limit: 50,
-        radius: 25 // Limit to 25 miles from user location
+        limit: 5000 // Increase limit to get all businesses in viewport
       });
 
       // Add category filter if selected
       if (selectedCategory) {
         params.append('category_filter', selectedCategory);
+      }
+      
+      // Add viewport bounds if available (for viewport-based search)
+      if (boundsToUse) {
+        params.append('ne_lat', boundsToUse.northeast.lat);
+        params.append('ne_lng', boundsToUse.northeast.lng);
+        params.append('sw_lat', boundsToUse.southwest.lat);
+        params.append('sw_lng', boundsToUse.southwest.lng);
+      } else {
+        params.append('radius', '25');
       }
 
       // Intelligent location detection from search query
@@ -527,14 +526,21 @@ export default function SearchScreen() {
       let searchLng = -112.0740; // Phoenix, AZ longitude (default)
       let locationSource = 'fallback (Phoenix, AZ)';
       
-      // Parse query for city names or location indicators
-      const cityCoords = parseLocationFromQuery(query);
-      if (cityCoords) {
+      // PRIORITY 1: Use viewport center if available (viewport-based search)
+      if (boundsToUse && boundsToUse.center) {
+        searchLat = boundsToUse.center.lat;
+        searchLng = boundsToUse.center.lng;
+        locationSource = `viewport center (map area)`;
+      }
+      // PRIORITY 2: Parse query for city names or location indicators
+      else if (parseLocationFromQuery(query)) {
+        const cityCoords = parseLocationFromQuery(query);
         searchLat = cityCoords.lat;
         searchLng = cityCoords.lng;
         locationSource = `parsed city (${cityCoords.city})`;
-        console.log(`[MOBILE-SEARCH] Using parsed city coordinates: ${searchLat}, ${searchLng} for ${cityCoords.city}`);
-      } else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
+      } 
+      // PRIORITY 3: "Near me" searches
+      else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
         // User wants results near their current location
         const lat = userLocation?.coords?.latitude || userLocation?.latitude;
         const lng = userLocation?.coords?.longitude || userLocation?.longitude;
@@ -558,31 +564,25 @@ export default function SearchScreen() {
           // Show a helpful message to user
           setLocationError('To search "near me", please enable location access in settings or use a specific city name.');
         }
-      } else {
-        console.log(`[MOBILE-SEARCH] No city detected in query "${query}", using Phoenix fallback`);
+      } 
+      // PRIORITY 4: User location (if available)
+      else if (userLocation) {
+        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+        if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+          searchLat = lat;
+          searchLng = lng;
+          locationSource = `user location`;
+        }
       }
       
-      console.log(`[MOBILE-SEARCH] Search coordinates: ${searchLat}, ${searchLng} (${locationSource})`);
       params.append('lat', searchLat);
       params.append('lng', searchLng);
 
       const searchEndpoint = `${API_CONFIG.ENDPOINTS.BUSINESSES_SEARCH}?${params}`;
-      console.log(`[MOBILE-SEARCH] API Endpoint: ${searchEndpoint}`);
-      console.log(`[MOBILE-SEARCH] Full URL will be: ${API_CONFIG.BASE_URL}${searchEndpoint}`);
-      console.log(`[MOBILE-SEARCH] API Config:`, API_CONFIG);
 
-      // Use the shared semantic search API endpoint - pass only the endpoint path, not full URL
-      console.log(`[MOBILE-SEARCH] About to make API request to endpoint: ${searchEndpoint}`);
-      
+      // Use the shared semantic search API endpoint
       const response = await apiRequest(searchEndpoint);
-      console.log(`[MOBILE-SEARCH] API Response received:`, {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        type: response.type,
-        url: response.url,
-        headers: Object.fromEntries(response.headers.entries())
-      });
 
       if (!response.ok) {
         console.error(`[MOBILE-SEARCH] Response not OK:`, {
@@ -609,35 +609,23 @@ export default function SearchScreen() {
         throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log(`[MOBILE-SEARCH] About to parse response as JSON`);
       let data;
       try {
         data = await response.json();
-        console.log(`[MOBILE-SEARCH] Successfully parsed JSON response:`, {
-          dataType: typeof data,
-          isArray: Array.isArray(data),
-          keys: typeof data === 'object' ? Object.keys(data) : 'N/A',
-          sampleData: data
-        });
       } catch (jsonError) {
-        console.error(`[MOBILE-SEARCH] Failed to parse JSON response:`, jsonError);
-        const responseText = await response.text();
-        console.error(`[MOBILE-SEARCH] Raw response text:`, responseText);
+        console.error('Failed to parse API response:', jsonError);
         throw new Error('Invalid JSON response from server');
       }
 
       // Handle response format from enhanced search API
       let businesses = [];
       if (data && data.businesses && Array.isArray(data.businesses)) {
-        console.log(`[MOBILE-SEARCH] Found ${data.businesses.length} businesses in data.businesses`);
-        businesses = data.businesses;
+          businesses = data.businesses;
         // Store enhanced search metadata
         setSearchMetadata(data.searchMetadata || null);
       } else if (data && Array.isArray(data)) {
-        console.log(`[MOBILE-SEARCH] Found ${data.length} businesses in data array`);
         businesses = data;
       } else if (data.results && Array.isArray(data.results)) {
-        console.log(`[MOBILE-SEARCH] Found ${data.results.length} businesses in data.results`);
         businesses = data.results;
       } else {
         console.error(`[MOBILE-SEARCH] No businesses found in response, data structure:`, Object.keys(data));
@@ -651,7 +639,6 @@ export default function SearchScreen() {
       const firstPage = businesses.slice(0, PAGE_SIZE);
       setSearchResults(firstPage);
       setDisplayedBusinesses(firstPage);
-      console.log(`[MOBILE-SEARCH] Showing ${firstPage.length} of ${businesses.length} total businesses (page 1)`);
 
     } catch (error) {
       console.error('[MOBILE-SEARCH] Search error:', error);
@@ -668,7 +655,6 @@ export default function SearchScreen() {
     if (loadingMore || loading) return; // Prevent multiple loads
     if (displayedBusinesses.length >= allBusinesses.length) return; // All loaded
     
-    console.log(`[INFINITE-SCROLL] Loading page ${currentPage + 1}...`);
     setLoadingMore(true);
     
     setTimeout(() => {
@@ -683,7 +669,6 @@ export default function SearchScreen() {
       setCurrentPage(nextPage);
       setLoadingMore(false);
       
-      console.log(`[INFINITE-SCROLL] Loaded ${newBusinesses.length} businesses. Total: ${updatedDisplayed.length}/${allBusinesses.length}`);
     }, 300); // Small delay for smooth UX
   };
 
@@ -737,9 +722,8 @@ export default function SearchScreen() {
 
   // Manual search (bypasses debounce for immediate results)
   const handleTextSearch = () => {
-    console.log('[MANUAL-SEARCH] User pressed Enter or clicked search button');
     if (searchQuery.trim() || selectedCategory) {
-      performSearch(searchQuery);
+      performSearch(searchQuery, null); // Use current viewport bounds from state
     }
   };
 
@@ -758,6 +742,39 @@ export default function SearchScreen() {
     });
   };
 
+  // Handle map viewport changes for viewport-based search
+  const handleMapBoundsChange = useCallback((bounds) => {
+    // Update viewport bounds state
+    setViewportBounds(bounds);
+    
+    // Mark as loaded on first bounds update
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true;
+      setHasLoadedInitial(true);
+    }
+    
+    // Clear any existing debounce timer
+    if (boundsDebounceRef.current) {
+      clearTimeout(boundsDebounceRef.current);
+    }
+    
+    // Debounce: only search after user stops moving map for 1 second
+    boundsDebounceRef.current = setTimeout(() => {
+      lastSearchBoundsRef.current = bounds;
+      // CRITICAL: Pass bounds directly to avoid React state timing issues
+      performSearch(searchQuery, bounds);
+    }, 1000); // 1 second debounce
+  }, [searchQuery]);
+  
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (boundsDebounceRef.current) {
+        clearTimeout(boundsDebounceRef.current);
+      }
+    };
+  }, []);
+  
   const handleMapMarkerPress = (business) => {
     setSelectedBusiness(business);
     
@@ -790,14 +807,11 @@ export default function SearchScreen() {
   };
 
   // Debug logging for render
-  console.log(`[MOBILE-SEARCH] Rendering with searchResults.length: ${searchResults.length}`);
-  if (searchResults.length > 0) {
-    console.log(`[MOBILE-SEARCH] First search result:`, searchResults[0]);
-  }
 
   // Memoize markers array to prevent infinite loop
+  // Use allBusinesses for map (show all markers), not searchResults (paginated list)
   const mapMarkers = useMemo(() => {
-    return searchResults.map(business => ({
+    return allBusinesses.map(business => ({
       coordinate: {
         latitude: business.latitude,
         longitude: business.longitude,
@@ -807,7 +821,7 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-  }, [searchResults]);
+  }, [allBusinesses]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -817,14 +831,15 @@ export default function SearchScreen() {
           style={styles.map}
           region={mapRegion}
           onRegionChangeComplete={null}
+          onBoundsChange={handleMapBoundsChange}
           showsUserLocation={true}
           showsMyLocationButton={true}
           showsCompass={true}
           showsScale={true}
           onMarkerPress={handleMapMarkerPress}
           selectedBusiness={selectedBusiness}
-          autoFitMarkers={true}
-          enableClustering={false}
+          autoFitMarkers={false}
+          enableClustering={true}
           markers={mapMarkers}
         >
           {/* User location marker */}
@@ -873,6 +888,16 @@ export default function SearchScreen() {
             </Text>
           </View>
         )}
+        
+        {/* Loading indicator for viewport-based search */}
+        {loading && hasLoadedInitial && (
+          <View style={styles.searchAreaButtonContainer}>
+            <View style={styles.searchAreaButton}>
+              <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 6 }} />
+              <Text style={styles.searchAreaButtonText}>Searching area...</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Search Input */}
@@ -897,7 +922,6 @@ export default function SearchScreen() {
       <CategoryFilter
         selectedCategory={selectedCategory}
         onCategoryChange={(category) => {
-          console.log('[CATEGORY-CHANGE] Category changed to:', category);
           // Just update state - useEffect will trigger search automatically
           setSelectedCategory(category);
         }}
@@ -1098,6 +1122,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3182ce',
     fontWeight: '500',
+  },
+  searchAreaButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: '50%',
+    transform: [{ translateX: -75 }], // Center the button (half of button width)
+    zIndex: 10,
+  },
+  searchAreaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3182ce',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  searchAreaButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',

@@ -197,6 +197,13 @@ router.get('/', async (c) => {
     const limit = parseInt(c.req.query('limit') || '50'); // Default 50 results
     const categoryFilter = c.req.query('category_filter'); // Optional category filter
     const includeUnenriched = c.req.query('include_unenriched') !== 'false'; // Default true
+    
+    // Viewport-based search parameters (optional)
+    const ne_lat = parseFloat(c.req.query('ne_lat'));
+    const ne_lng = parseFloat(c.req.query('ne_lng'));
+    const sw_lat = parseFloat(c.req.query('sw_lat'));
+    const sw_lng = parseFloat(c.req.query('sw_lng'));
+    const useViewportBounds = !isNaN(ne_lat) && !isNaN(ne_lng) && !isNaN(sw_lat) && !isNaN(sw_lng);
 
     // Validate required parameters
     // Allow empty query (will show all nearby businesses)
@@ -209,18 +216,33 @@ router.get('/', async (c) => {
       return c.json({ error: 'Latitude/longitude out of range' }, 400);
     }
 
-    if (radius <= 0 || radius > 100) {
+    if (!useViewportBounds && (radius <= 0 || radius > 100)) {
       return c.json({ error: 'Radius must be between 0 and 100 miles' }, 400);
     }
 
-    console.log(`[ENHANCED-SEARCH] Query: "${query}" near ${lat},${lng} within ${radius} miles`);
     
     // When browsing (no search query), apply distance filtering but return all results
     const isBrowsingMode = !query || query.length === 0;
     
-    // Calculate bounding box for geographic filtering (only when searching or no category filter)
-    const latDelta = radius / 69; // ~69 miles per degree latitude
-    const lngDelta = radius / (69 * Math.cos(lat * Math.PI / 180));
+    // Calculate bounding box for geographic filtering
+    let latDelta, lngDelta, minLat, maxLat, minLng, maxLng;
+    
+    if (useViewportBounds) {
+      // Use provided viewport bounds
+      minLat = sw_lat;
+      maxLat = ne_lat;
+      // For longitude, ensure min < max (handle negative Western hemisphere values)
+      minLng = Math.min(sw_lng, ne_lng);
+      maxLng = Math.max(sw_lng, ne_lng);
+    } else {
+      // Use radius to calculate bounds
+      latDelta = radius / 69; // ~69 miles per degree latitude
+      lngDelta = radius / (69 * Math.cos(lat * Math.PI / 180));
+      minLat = lat - latDelta;
+      maxLat = lat + latDelta;
+      minLng = lng - lngDelta;
+      maxLng = lng + lngDelta;
+    }
     
     
     // Query businesses directly with explicit conditions (avoiding array issues)
@@ -252,14 +274,13 @@ router.get('/', async (c) => {
       eq(businesses.lfaMember, 1)
     ];
     
-    // Always add distance filtering to keep results within reasonable radius
+    // Always add geographic filtering (viewport or radius-based)
     whereConditions.push(
-      gte(businesses.latitude, lat - latDelta),
-      lte(businesses.latitude, lat + latDelta),
-      gte(businesses.longitude, lng - lngDelta),
-      lte(businesses.longitude, lng + lngDelta)
+      gte(businesses.latitude, minLat),
+      lte(businesses.latitude, maxLat),
+      gte(businesses.longitude, minLng),
+      lte(businesses.longitude, maxLng)
     );
-    console.log(`[ENHANCED-SEARCH] Applying distance filter: radius=${radius} miles`);
     
     // Add enrichment filter only if explicitly requested
     if (includeUnenriched === false) {
@@ -272,13 +293,9 @@ router.get('/', async (c) => {
     }
     
     const nearbyBusinesses = await baseQuery.where(and(...whereConditions));
-
-    console.log(`[ENHANCED-SEARCH] Found ${nearbyBusinesses.length} businesses in area`);
     
     // Handle browsing mode (no search query)
     if (!query || query.length === 0) {
-      const browseMode = categoryFilter ? `category: ${categoryFilter}` : 'all nearby businesses';
-      console.log(`[ENHANCED-SEARCH] Browse mode - ${browseMode}, found ${nearbyBusinesses.length} total businesses`);
       
       const browseResults = nearbyBusinesses
         .map(business => {
@@ -338,8 +355,6 @@ router.get('/', async (c) => {
       .split(/\s+/)
       .filter(term => term.length > 2)
       .map(term => term.replace(/[^a-z0-9]/g, ''));
-    
-    console.log(`[ENHANCED-SEARCH] Search terms:`, searchTerms);
     
     const scoredBusinesses = nearbyBusinesses
       .map(business => {
