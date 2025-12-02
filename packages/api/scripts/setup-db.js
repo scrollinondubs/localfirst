@@ -6,6 +6,10 @@ import { migrate } from 'drizzle-orm/libsql/migrator';
 import * as schema from '../src/db/schema.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const setupDatabase = async () => {
   console.log('Setting up Local First Arizona database...');
@@ -27,85 +31,48 @@ const setupDatabase = async () => {
 
     console.log('✅ Database connection established');
     
-    // Create all tables by running the schema directly
-    await client.batch([
-      // Businesses table
-      `CREATE TABLE IF NOT EXISTS businesses (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        address TEXT NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        phone TEXT,
-        website TEXT,
-        category TEXT NOT NULL,
-        lfa_member INTEGER DEFAULT 0,
-        member_since TEXT,
-        verified INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'active',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
+    // Instead of hardcoding, run migrations from the migrations folder
+    console.log('📂 Running migrations from migration files...');
+    
+    const migrationsFolder = path.join(__dirname, '..', 'migrations');
+    console.log('📂 Migrations folder:', migrationsFolder);
+    
+    // Get all migration files in order
+    const migrationFiles = fs.readdirSync(migrationsFolder)
+      .filter(file => file.endsWith('.sql'))
+      .sort();
+    
+    console.log(`📋 Found ${migrationFiles.length} migration files`);
+    
+    // Execute each migration file
+    for (const file of migrationFiles) {
+      console.log(`⚙️  Running migration: ${file}`);
+      const migrationPath = path.join(migrationsFolder, file);
+      const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
       
-      // Chain businesses table
-      `CREATE TABLE IF NOT EXISTS chain_businesses (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        patterns TEXT,
-        category TEXT,
-        parent_company TEXT,
-        confidence_score INTEGER DEFAULT 100,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
+      // Split the SQL into individual statements (handling multi-line statements)
+      const statements = migrationSQL
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
       
-      // Analytics events table
-      `CREATE TABLE IF NOT EXISTS analytics_events (
-        id TEXT PRIMARY KEY,
-        extension_id TEXT,
-        event_type TEXT NOT NULL,
-        business_id TEXT,
-        metadata TEXT,
-        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
+      // Execute each statement
+      for (const statement of statements) {
+        try {
+          await client.execute(statement + ';');
+        } catch (error) {
+          // Ignore errors for statements that are trying to add/create things that already exist
+          if (!error.message.includes('already exists') && 
+              !error.message.includes('duplicate column')) {
+            console.warn(`⚠️  Warning in ${file}:`, error.message);
+          }
+        }
+      }
       
-      // User sessions table
-      `CREATE TABLE IF NOT EXISTS user_sessions (
-        id TEXT PRIMARY KEY,
-        extension_id TEXT NOT NULL,
-        session_start TEXT DEFAULT CURRENT_TIMESTAMP,
-        session_end TEXT,
-        total_interactions INTEGER DEFAULT 0,
-        businesses_viewed INTEGER DEFAULT 0,
-        filters_toggled INTEGER DEFAULT 0
-      )`,
-      
-      // Sync logs table
-      `CREATE TABLE IF NOT EXISTS sync_logs (
-        id TEXT PRIMARY KEY,
-        sync_type TEXT NOT NULL,
-        status TEXT NOT NULL,
-        records_processed INTEGER,
-        records_updated INTEGER,
-        records_added INTEGER,
-        error_details TEXT,
-        started_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        completed_at TEXT
-      )`
-    ]);
+      console.log(`✅ Completed migration: ${file}`);
+    }
 
-    // Create performance indexes
-    await client.batch([
-      `CREATE INDEX IF NOT EXISTS idx_businesses_location ON businesses(latitude, longitude)`,
-      `CREATE INDEX IF NOT EXISTS idx_businesses_category ON businesses(category)`,
-      `CREATE INDEX IF NOT EXISTS idx_businesses_lfa_member ON businesses(lfa_member)`,
-      `CREATE INDEX IF NOT EXISTS idx_businesses_name ON businesses(name)`,
-      `CREATE INDEX IF NOT EXISTS idx_chain_businesses_name ON chain_businesses(name)`,
-      `CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp)`,
-      `CREATE INDEX IF NOT EXISTS idx_analytics_events_business ON analytics_events(business_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(event_type)`
-    ]);
-
-    console.log('✅ Database tables and indexes created successfully');
+    console.log('✅ All migrations completed successfully');
     console.log('📊 Database ready for data import');
     
     client.close();

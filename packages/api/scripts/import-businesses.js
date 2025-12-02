@@ -6,6 +6,8 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { businesses } from '../src/db/schema.js';
 import { v4 as uuidv4 } from 'uuid';
+// Added for local dev by Divya
+import path from 'path'; 
 
 // Simple geocoding function (in production, you'd use a real geocoding service)
 const geocodeAddress = async (address, city, zip) => {
@@ -66,8 +68,10 @@ const categorizeDirectory = (businessName) => {
 const importBusinesses = async () => {
   console.log('🚀 Starting business directory import...');
   
-  const csvPath = '/Users/sean/NodeJSprojs/localfirst/temp/Local First - All Directory Businesses.csv';
-  
+  //const csvPath = '/Users/sean/NodeJSprojs/localfirst/temp/Local First - All Directory Businesses.csv';
+  // Newly added for local development by Divya
+  const csvPath = path.join(process.cwd(), '..', '..', 'temp', 'Local First - All Directory Businesses.csv');
+
   if (!fs.existsSync(csvPath)) {
     console.error('❌ CSV file not found at:', csvPath);
     process.exit(1);

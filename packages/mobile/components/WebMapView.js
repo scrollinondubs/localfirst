@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 const WebMapView = ({ 
   region, 
-  onRegionChangeComplete, 
+  onRegionChangeComplete,
+  onBoundsChange, // Callback when map viewport changes (for viewport-based loading)
   showsUserLocation = true,
   showsMyLocationButton = true,
   showsCompass = true,
@@ -13,12 +15,15 @@ const WebMapView = ({
   onMarkerPress,
   selectedBusiness,
   markers = [], // Add direct marker data prop as backup
-  autoFitMarkers = true // New prop to control auto-fitting
+  autoFitMarkers = true, // New prop to control auto-fitting
+  enableClustering = true // Enable marker clustering by default
 }) => {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markersRef = useRef([]);
   const lastMarkersRef = useRef([]);
+  const markerClustererRef = useRef(null); // For clustering
+  const updateCountRef = useRef(0); // Safety counter to prevent infinite loops
 
   useEffect(() => {
     if (Platform.OS === 'web' && window.google && window.google.maps) {
@@ -39,7 +44,7 @@ const WebMapView = ({
     if (googleMapRef.current) {
       updateMarkers();
     }
-  }, [children, selectedBusiness, markers]);
+  }, [selectedBusiness, markers]);
 
   const loadGoogleMapsAPI = () => {
     if (window.google && window.google.maps) {
@@ -108,12 +113,24 @@ const WebMapView = ({
 
     // Listen for map bounds changes
     googleMapRef.current.addListener('bounds_changed', () => {
+      const bounds = googleMapRef.current.getBounds();
+      if (!bounds) return;
+      
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const center = googleMapRef.current.getCenter();
+      
+      // Call the new onBoundsChange callback for viewport-based loading
+      if (onBoundsChange) {
+        onBoundsChange({
+          northeast: { lat: ne.lat(), lng: ne.lng() },
+          southwest: { lat: sw.lat(), lng: sw.lng() },
+          center: { lat: center.lat(), lng: center.lng() }
+        });
+      }
+      
+      // Keep the old callback for backward compatibility
       if (onRegionChangeComplete) {
-        const center = googleMapRef.current.getCenter();
-        const bounds = googleMapRef.current.getBounds();
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        
         onRegionChangeComplete({
           latitude: center.lat(),
           longitude: center.lng(),
@@ -179,44 +196,41 @@ const WebMapView = ({
     }
   };
 
-  const updateMarkers = () => {
-    console.log('updateMarkers called', { 
-      hasMap: !!googleMapRef.current, 
-      hasGoogle: !!(window.google && window.google.maps),
-      markersLength: markers ? markers.length : 0,
-      childrenLength: children ? (Array.isArray(children) ? children.length : 1) : 0
-    });
+  const updateMarkers = async () => {
+    // Check if markers have actually changed FIRST (before safety counter)
+    const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
     
-    if (!googleMapRef.current) {
-      console.log('No google map ref, skipping marker update');
-      return;
-    }
-
-    if (!window.google || !window.google.maps) {
-      console.log('Google Maps API not loaded, skipping marker update');
-      return;
-    }
-
-    // Check if markers have actually changed to prevent unnecessary updates
-    const currentMarkersData = JSON.stringify({
-      markers: markers,
-      selectedBusinessId: selectedBusiness?.id
-    });
-    
-    if (lastMarkersRef.current === currentMarkersData) {
-      console.log('Markers unchanged, skipping update');
+    if (lastMarkersRef.current === currentMarkersKey) {
+      // Markers unchanged, exit early without incrementing counter
       return;
     }
     
-    lastMarkersRef.current = currentMarkersData;
+    // Safety check: prevent infinite loops
+    updateCountRef.current++;
+    if (updateCountRef.current > 10) {
+      console.error('[MAP] ❌ Too many marker updates, stopping to prevent infinite loop');
+      return;
+    }
+    
+    // Reset counter after 2 seconds of no updates
+    setTimeout(() => { updateCountRef.current = 0; }, 2000);
+    
+    if (!googleMapRef.current || !window.google || !window.google.maps) {
+      return;
+    }
 
-    // Clear existing markers
+    lastMarkersRef.current = currentMarkersKey;
+
+    // Clear existing markers and clusterer
+    if (markerClustererRef.current) {
+      markerClustererRef.current.clearMarkers();
+      markerClustererRef.current = null;
+    }
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
     // Process markers from direct markers prop (preferred method)
     if (markers && markers.length > 0) {
-      console.log('Processing direct markers:', markers.length);
       
       markers.forEach((markerData, index) => {
         if (markerData && markerData.coordinate) {
@@ -240,7 +254,7 @@ const WebMapView = ({
               lat: markerData.coordinate.latitude,
               lng: markerData.coordinate.longitude,
             },
-            map: googleMapRef.current,
+            map: enableClustering ? null : googleMapRef.current, // Don't set map yet if clustering
             title: markerData.title || '',
             icon: {
               path: window.google.maps.SymbolPath.CIRCLE,
@@ -303,12 +317,52 @@ const WebMapView = ({
           }
 
           markersRef.current.push(marker);
-          console.log('Created marker:', index + 1, 'of', markers.length);
         }
       });
+      
+      // Initialize clustering if enabled and we have markers
+      if (enableClustering && markersRef.current.length > 0) {
+        try {
+          // Clean solid red clusters
+          const renderer = {
+            render: ({ count, position }) => {
+              return new google.maps.Marker({
+                position,
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: '#ef4444',
+                  fillOpacity: 1,
+                  strokeColor: '#ef4444',
+                  strokeWeight: 0,
+                  scale: count < 10 ? 12 : count < 100 ? 16 : 20,
+                },
+                label: {
+                  text: String(count),
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                },
+                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+              });
+            },
+          };
+
+          markerClustererRef.current = new MarkerClusterer({
+            map: googleMapRef.current,
+            markers: markersRef.current,
+            renderer: renderer,
+          });
+        } catch (error) {
+          console.error('Clustering error:', error);
+          // Fall back to showing all markers without clustering  
+          markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+        }
+      } else if (!enableClustering && markersRef.current.length > 0) {
+        // No clustering - show markers directly
+        markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+      }
     }
     
-    console.log('Total markers created:', markersRef.current.length);
     
 
     // Auto-fit map to show all markers (only if autoFitMarkers is true and no specific region is set)
