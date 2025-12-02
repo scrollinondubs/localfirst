@@ -37,6 +37,19 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
     }
   };
 
+  const handleDirectionsPress = () => {
+    const address = business.address || business.name;
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    
+    Linking.canOpenURL(googleMapsUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(googleMapsUrl);
+      } else {
+        console.log("Don't know how to open URI: " + googleMapsUrl);
+      }
+    });
+  };
+
   // Format category display
   const getCategoryDisplay = () => {
     if (business.subcategory && business.category) {
@@ -178,6 +191,18 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
           )}
         </View>
       </View>
+
+      {/* Open in Google Maps button - shown when selected */}
+      {isSelected && (
+        <TouchableOpacity
+          style={styles.mapsButton}
+          onPress={handleDirectionsPress}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="navigate" size={18} color="#FFFFFF" />
+          <Text style={styles.mapsButtonText}>Open in Google Maps</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Search metadata (for debugging) */}
       {business.relevanceScore && __DEV__ && (
@@ -353,6 +378,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 8,
+  },
+
+  mapsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4285f4',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+
+  mapsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 
