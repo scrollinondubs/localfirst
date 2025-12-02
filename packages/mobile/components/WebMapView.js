@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 const WebMapView = ({ 
   region, 
-  onRegionChangeComplete, 
+  onRegionChangeComplete,
+  onBoundsChange, // Callback when map viewport changes (for viewport-based loading)
   showsUserLocation = true,
   showsMyLocationButton = true,
   showsCompass = true,
@@ -111,12 +113,24 @@ const WebMapView = ({
 
     // Listen for map bounds changes
     googleMapRef.current.addListener('bounds_changed', () => {
+      const bounds = googleMapRef.current.getBounds();
+      if (!bounds) return;
+      
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const center = googleMapRef.current.getCenter();
+      
+      // Call the new onBoundsChange callback for viewport-based loading
+      if (onBoundsChange) {
+        onBoundsChange({
+          northeast: { lat: ne.lat(), lng: ne.lng() },
+          southwest: { lat: sw.lat(), lng: sw.lng() },
+          center: { lat: center.lat(), lng: center.lng() }
+        });
+      }
+      
+      // Keep the old callback for backward compatibility
       if (onRegionChangeComplete) {
-        const center = googleMapRef.current.getCenter();
-        const bounds = googleMapRef.current.getBounds();
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        
         onRegionChangeComplete({
           latitude: center.lat(),
           longitude: center.lng(),
@@ -201,8 +215,6 @@ const WebMapView = ({
     // Reset counter after 2 seconds of no updates
     setTimeout(() => { updateCountRef.current = 0; }, 2000);
     
-    console.log(`[MAP] Updating ${markers.length} markers (update #${updateCountRef.current})`);
-    
     if (!googleMapRef.current || !window.google || !window.google.maps) {
       return;
     }
@@ -219,7 +231,6 @@ const WebMapView = ({
 
     // Process markers from direct markers prop (preferred method)
     if (markers && markers.length > 0) {
-      console.log('Processing direct markers:', markers.length);
       
       markers.forEach((markerData, index) => {
         if (markerData && markerData.coordinate) {
@@ -289,48 +300,43 @@ const WebMapView = ({
           });
 
           markersRef.current.push(marker);
-          console.log('Created marker:', index + 1, 'of', markers.length);
         }
       });
       
       // Initialize clustering if enabled and we have markers
       if (enableClustering && markersRef.current.length > 0) {
-        console.log(`[CLUSTERING] Initializing for ${markersRef.current.length} markers`);
-        
         try {
-          // Try to use the clustering library if available
-          if (typeof window !== 'undefined' && window.markerClusterer) {
-            // Library already loaded globally
-            const { MarkerClusterer } = window.markerClusterer;
-            markerClustererRef.current = new MarkerClusterer({
-              map: googleMapRef.current,
-              markers: markersRef.current,
-              algorithm: new window.markerClusterer.SuperClusterAlgorithm({
-                maxZoom: 15,
-                radius: 60,
-              }),
-            });
-            console.log('[CLUSTERING] ✅ Initialized successfully');
-          } else {
-            // Dynamic import fallback
-            import('@googlemaps/markerclusterer').then(({ MarkerClusterer, SuperClusterAlgorithm }) => {
-              markerClustererRef.current = new MarkerClusterer({
-                map: googleMapRef.current,
-                markers: markersRef.current,
-                algorithm: new SuperClusterAlgorithm({
-                  maxZoom: 15,
-                  radius: 60,
-                }),
+          // Clean solid red clusters
+          const renderer = {
+            render: ({ count, position }) => {
+              return new google.maps.Marker({
+                position,
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: '#ef4444',
+                  fillOpacity: 1,
+                  strokeColor: '#ef4444',
+                  strokeWeight: 0,
+                  scale: count < 10 ? 12 : count < 100 ? 16 : 20,
+                },
+                label: {
+                  text: String(count),
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                },
+                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
               });
-              console.log('[CLUSTERING] ✅ Loaded dynamically and initialized');
-            }).catch(error => {
-              console.error('[CLUSTERING] ❌ Failed to load:', error);
-              // Fall back to showing all markers without clustering
-              markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
-            });
-          }
+            },
+          };
+
+          markerClustererRef.current = new MarkerClusterer({
+            map: googleMapRef.current,
+            markers: markersRef.current,
+            renderer: renderer,
+          });
         } catch (error) {
-          console.error('[CLUSTERING] ❌ Error:', error);
+          console.error('Clustering error:', error);
           // Fall back to showing all markers without clustering  
           markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
         }
@@ -340,7 +346,6 @@ const WebMapView = ({
       }
     }
     
-    console.log('Total markers created:', markersRef.current.length);
     
 
     // Auto-fit map to show all markers (only if autoFitMarkers is true and no specific region is set)
