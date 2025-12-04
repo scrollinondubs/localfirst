@@ -127,7 +127,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && (
+          {business.distance && parseFloat(business.distance) > 0 && (
             <Text style={styles.distance}>{business.distance} mi</Text>
           )}
         </View>
@@ -172,6 +172,16 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
+          {/* Google Maps button - always show if address exists */}
+          {business.address && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleDirectionsPress}
+            >
+              <Ionicons name="navigate" size={16} color="#007AFF" />
+            </TouchableOpacity>
+          )}
+          
           {business.phone && (
             <TouchableOpacity
               style={styles.actionButton}
@@ -191,18 +201,6 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
           )}
         </View>
       </View>
-
-      {/* Open in Google Maps button - shown when selected */}
-      {isSelected && (
-        <TouchableOpacity
-          style={styles.mapsButton}
-          onPress={handleDirectionsPress}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="navigate" size={18} color="#FFFFFF" />
-          <Text style={styles.mapsButtonText}>Open in Google Maps</Text>
-        </TouchableOpacity>
-      )}
 
       {/* Search metadata (for debugging) */}
       {business.relevanceScore && __DEV__ && (
@@ -378,24 +376,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 8,
-  },
-
-  mapsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4285f4',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-
-  mapsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
   },
 });
 
