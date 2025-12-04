@@ -127,7 +127,10 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && parseFloat(business.distance) > 0 && (
+          {business.distance && 
+           String(business.distance) !== '0' && 
+           String(business.distance) !== '0.0' && 
+           parseFloat(business.distance) > 0 && (
             <Text style={styles.distance}>{business.distance} mi</Text>
           )}
         </View>

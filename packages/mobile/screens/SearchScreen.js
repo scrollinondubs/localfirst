@@ -862,9 +862,14 @@ export default function SearchScreen() {
 
   const renderSearchResult = ({ item }) => {
     // Add distance formatting for enhanced business card
+    // Only include distance if it's greater than 0
+    const distanceValue = item.distance && parseFloat(item.distance) > 0 
+      ? formatDistance(item.distance).replace(' mi', '') 
+      : null;
+    
     const businessWithDistance = {
       ...item,
-      distance: item.distance ? formatDistance(item.distance).replace(' mi', '') : null
+      distance: distanceValue
     };
     
     return (
