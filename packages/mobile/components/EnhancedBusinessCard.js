@@ -127,12 +127,16 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && 
-           String(business.distance) !== '0' && 
-           String(business.distance) !== '0.0' && 
-           parseFloat(business.distance) > 0 && (
-            <Text style={styles.distance}>{business.distance} mi</Text>
-          )}
+          {(() => {
+            // Strict check to prevent any "0" from displaying
+            const dist = business.distance;
+            if (!dist) return null;
+            const distNum = parseFloat(dist);
+            if (isNaN(distNum) || distNum <= 0) return null;
+            const distStr = String(dist).trim();
+            if (distStr === '0' || distStr === '0.0' || distStr === '0.00') return null;
+            return <Text style={styles.distance}>{dist} mi</Text>;
+          })()}
         </View>
       </View>
 
@@ -175,8 +179,8 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
-          {/* Google Maps button - show when card is selected */}
-          {isSelected && business.address && (
+          {/* Google Maps button - always show if address exists */}
+          {business.address && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleDirectionsPress}
