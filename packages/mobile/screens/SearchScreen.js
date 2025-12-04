@@ -552,7 +552,12 @@ export default function SearchScreen() {
       console.log(`[MOBILE-SEARCH] Loaded ${data.businesses?.length || 0} initial businesses`);
       
       if (data.businesses && data.businesses.length > 0) {
-        setSearchResults(data.businesses);
+        // Set both allBusinesses (for map markers) and searchResults (for list)
+        setAllBusinesses(data.businesses);
+        setCurrentPage(1);
+        const firstPage = data.businesses.slice(0, PAGE_SIZE);
+        setSearchResults(firstPage);
+        setDisplayedBusinesses(firstPage);
         
         // Update map region to show loaded businesses
         setMapRegion({

@@ -315,15 +315,16 @@ const WebMapView = ({
       });
       
       // Initialize clustering if enabled and we have markers
-      if (enableClustering && markersRef.current.length > 0) {
+      if (enableClustering && markersRef.current.length > 0 && window.google && window.google.maps) {
         try {
+          console.log(`[MAP] Initializing clustering for ${markersRef.current.length} markers`);
           // Clean solid red clusters
           const renderer = {
             render: ({ count, position }) => {
-              return new google.maps.Marker({
+              return new window.google.maps.Marker({
                 position,
                 icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
+                  path: window.google.maps.SymbolPath.CIRCLE,
                   fillColor: '#ef4444',
                   fillOpacity: 1,
                   strokeColor: '#ef4444',
@@ -336,7 +337,7 @@ const WebMapView = ({
                   fontSize: '11px',
                   fontWeight: 'bold',
                 },
-                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+                zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + count,
               });
             },
           };
@@ -346,8 +347,9 @@ const WebMapView = ({
             markers: markersRef.current,
             renderer: renderer,
           });
+          console.log('[MAP] ✅ Clustering initialized successfully');
         } catch (error) {
-          console.error('Clustering error:', error);
+          console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  
           markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
         }
