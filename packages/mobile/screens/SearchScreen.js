@@ -862,14 +862,20 @@ export default function SearchScreen() {
 
   const renderSearchResult = ({ item }) => {
     // Add distance formatting for enhanced business card
-    // Only include distance if it's greater than 0
-    const distanceValue = item.distance && parseFloat(item.distance) > 0 
-      ? formatDistance(item.distance).replace(' mi', '') 
-      : null;
+    // Strictly filter out any zero distances
+    let distanceValue = null;
+    if (item.distance) {
+      const distNum = parseFloat(item.distance);
+      const distStr = String(item.distance).trim();
+      // Only include if it's a valid number greater than 0 and not "0", "0.0", etc.
+      if (!isNaN(distNum) && distNum > 0 && distStr !== '0' && distStr !== '0.0' && distStr !== '0.00') {
+        distanceValue = formatDistance(item.distance).replace(' mi', '');
+      }
+    }
     
     const businessWithDistance = {
       ...item,
-      distance: distanceValue
+      distance: distanceValue // Will be null if distance is 0 or invalid
     };
     
     return (
