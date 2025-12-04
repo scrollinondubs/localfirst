@@ -46,6 +46,73 @@ const WebMapView = ({
     }
   }, [selectedBusiness, markers]);
 
+  // Open popup for selected business after map zoom completes
+  useEffect(() => {
+    if (!selectedBusiness || !googleMapRef.current || !window.google || !window.google.maps) return;
+    
+    let idleListener = null;
+    let timer = null;
+    
+    const openPopupForSelected = () => {
+      // Find the marker for the selected business
+      const marker = markersRef.current.find(m => {
+        return m.businessData?.id === selectedBusiness.id;
+      });
+      
+      if (marker) {
+        // Create and open InfoWindow
+        const businessData = marker.businessData || selectedBusiness;
+        const address = businessData.address || selectedBusiness.address || selectedBusiness.name;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        const category = businessData.category || selectedBusiness.category || businessData.subcategory || '';
+        const distance = businessData.distance || selectedBusiness.distance;
+        const description = `${category}${distance ? ' • ' + distance + ' mi' : ''}`;
+        
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+              <strong style="font-size: 14px; color: #1a1a1a;">${selectedBusiness.name}</strong>
+              <br/>
+              <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${description}</span>
+              ${address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${address}</div>` : ''}
+              <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+                 style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                        background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                        font-size: 12px; font-weight: 500; transition: background 0.2s;">
+                <span style="margin-right: 4px;">🗺️</span>
+                Open in Google Maps
+              </a>
+            </div>
+          `,
+        });
+        infoWindow.open(googleMapRef.current, marker);
+        console.log('[MAP] ✅ Opened popup for selected business:', selectedBusiness.name);
+      } else {
+        // If marker not found, try again after a short delay (clustering might still be updating)
+        timer = setTimeout(openPopupForSelected, 300);
+      }
+    };
+    
+    // Listen for map 'idle' event (fires when map finishes moving/zooming)
+    idleListener = window.google.maps.event.addListenerOnce(
+      googleMapRef.current,
+      'idle',
+      () => {
+        // Wait a bit more for clustering to update after map becomes idle
+        timer = setTimeout(openPopupForSelected, 200);
+      }
+    );
+    
+    return () => {
+      if (idleListener) {
+        window.google.maps.event.removeListener(idleListener);
+      }
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [selectedBusiness, region]);
+
   const loadGoogleMapsAPI = () => {
     if (window.google && window.google.maps) {
       initializeMap();
@@ -259,6 +326,9 @@ const WebMapView = ({
               scale: isSelected ? 12 : 8,
             },
           });
+          
+          // Store business data on marker for easy lookup
+          marker.businessData = markerData.businessData;
 
           // Create InfoWindow content function for reuse
           const createInfoWindow = () => {

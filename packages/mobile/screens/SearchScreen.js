@@ -819,12 +819,12 @@ export default function SearchScreen() {
 
   const handleBusinessSelect = (business) => {
     setSelectedBusiness(business);
-    // Center map on selected business
+    // Center map on selected business with close zoom to show individual marker
     setMapRegion({
       latitude: business.latitude,
       longitude: business.longitude,
-      latitudeDelta: 0.01, // Zoom in closer
-      longitudeDelta: 0.01,
+      latitudeDelta: 0.005, // Much closer zoom to break clusters and show individual marker
+      longitudeDelta: 0.005,
     });
   };
 
