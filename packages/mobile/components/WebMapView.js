@@ -68,23 +68,37 @@ const WebMapView = ({
         const distance = businessData.distance || selectedBusiness.distance;
         const description = `${category}${distance ? ' • ' + distance + ' mi' : ''}`;
         
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-              <strong style="font-size: 14px; color: #1a1a1a;">${selectedBusiness.name}</strong>
-              <br/>
-              <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${description}</span>
-              ${address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${address}</div>` : ''}
-              <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
-                 style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
-                        background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
-                        font-size: 12px; font-weight: 500; transition: background 0.2s;">
-                <span style="margin-right: 4px;">🗺️</span>
-                Open in Google Maps
-              </a>
+        // Create InfoWindow with close button on same line as title
+        const infoWindow = new window.google.maps.InfoWindow();
+        const closeFuncName = `closeInfoWindow_${selectedBusiness.id || 'selected'}`;
+        
+        const content = `
+          <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+              <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${selectedBusiness.name}</strong>
+              <button onclick="window.${closeFuncName}();" 
+                      style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
+                      title="Close">×</button>
             </div>
-          `,
-        });
+            <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${description}</span>
+            ${address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${address}</div>` : ''}
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+               style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                      background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                      font-size: 12px; font-weight: 500; transition: background 0.2s;">
+              <span style="margin-right: 4px;">🗺️</span>
+              Open in Google Maps
+            </a>
+          </div>
+        `;
+        
+        // Store close function on window object
+        window[closeFuncName] = () => {
+          infoWindow.close();
+          delete window[closeFuncName];
+        };
+        
+        infoWindow.setContent(content);
         infoWindow.open(googleMapRef.current, marker);
         console.log('[MAP] ✅ Opened popup for selected business:', selectedBusiness.name);
       } else {
@@ -160,9 +174,22 @@ const WebMapView = ({
     console.log('Creating Google Map with options:', mapOptions);
     googleMapRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
     console.log('Google Map created successfully');
+    
+    // Add CSS to hide Google Maps default InfoWindow close button (we use our own)
+    if (!document.getElementById('hide-gm-close-button')) {
+      const style = document.createElement('style');
+      style.id = 'hide-gm-close-button';
+      style.textContent = `
+        .gm-style-iw-c button[aria-label="Close"],
+        .gm-style-iw-d button[aria-label="Close"] {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Wait for map to be fully loaded before adding markers
-    google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
+    window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
       console.log('Map is idle and ready for markers');
       
       // Add location control if requested
@@ -337,23 +364,39 @@ const WebMapView = ({
               const address = businessData?.address || markerData.title;
               const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
               
-              return new window.google.maps.InfoWindow({
-                content: `
-                  <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                    <strong style="font-size: 14px; color: #1a1a1a;">${markerData.title}</strong>
-                    <br/>
-                    <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${markerData.description || ''}</span>
-                    ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
-                    <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
-                       style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
-                              background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
-                              font-size: 12px; font-weight: 500; transition: background 0.2s;">
-                      <span style="margin-right: 4px;">🗺️</span>
-                      Open in Google Maps
-                    </a>
+              // Create InfoWindow first
+              const infoWindow = new window.google.maps.InfoWindow();
+              
+              // Generate content with close button on same line as title
+              const content = `
+                <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${markerData.title}</strong>
+                    <button onclick="window.closeInfoWindow_${markerData.businessData?.id || 'default'}();" 
+                            style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
+                            title="Close">×</button>
                   </div>
-                `,
-              });
+                  <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${markerData.description || ''}</span>
+                  ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
+                  <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+                     style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                            background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                            font-size: 12px; font-weight: 500; transition: background 0.2s;">
+                    <span style="margin-right: 4px;">🗺️</span>
+                    Open in Google Maps
+                  </a>
+                </div>
+              `;
+              
+              // Store close function on window object
+              const closeFuncName = `closeInfoWindow_${markerData.businessData?.id || 'default'}`;
+              window[closeFuncName] = () => {
+                infoWindow.close();
+                delete window[closeFuncName];
+              };
+              
+              infoWindow.setContent(content);
+              return infoWindow;
             }
             return null;
           };
