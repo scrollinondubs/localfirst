@@ -127,16 +127,9 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {(() => {
-            // Strict check to prevent any "0" from displaying
-            const dist = business.distance;
-            if (!dist) return null;
-            const distNum = parseFloat(dist);
-            if (isNaN(distNum) || distNum <= 0) return null;
-            const distStr = String(dist).trim();
-            if (distStr === '0' || distStr === '0.0' || distStr === '0.00') return null;
-            return <Text style={styles.distance}>{dist} mi</Text>;
-          })()}
+          {business.distance && business.distance !== '0' && business.distance !== '0.0' && business.distance !== '0.00' && parseFloat(business.distance) > 0 && (
+            <Text style={styles.distance}>{business.distance} mi</Text>
+          )}
         </View>
       </View>
 
