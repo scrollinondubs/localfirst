@@ -127,7 +127,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && business.distance !== '0' && business.distance !== '0.0' && business.distance !== '0.00' && parseFloat(business.distance) > 0 && (
+          {business.distance && business.distance !== '0' && business.distance !== '0.0' && parseFloat(business.distance) > 0 && (
             <Text style={styles.distance}>{business.distance} mi</Text>
           )}
         </View>
@@ -172,15 +172,12 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
-          {/* Google Maps button - always show if address exists */}
-          {business.address && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleDirectionsPress}
-            >
-              <Ionicons name="navigate" size={16} color="#007AFF" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleDirectionsPress}
+          >
+            <Ionicons name="navigate" size={16} color="#007AFF" />
+          </TouchableOpacity>
           
           {business.phone && (
             <TouchableOpacity
