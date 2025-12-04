@@ -65,7 +65,9 @@ const WebMapView = ({
         const address = businessData.address || selectedBusiness.address || selectedBusiness.name;
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
         const category = businessData.category || selectedBusiness.category || businessData.subcategory || '';
-        const distance = businessData.distance || selectedBusiness.distance;
+        const distanceRaw = businessData.distance || selectedBusiness.distance;
+        // Format distance to one decimal place
+        const distance = distanceRaw ? parseFloat(distanceRaw).toFixed(1) : null;
         const description = `${category}${distance ? ' • ' + distance + ' mi' : ''}`;
         
         // Create InfoWindow with close button on same line as title
@@ -364,6 +366,14 @@ const WebMapView = ({
               const address = businessData?.address || markerData.title;
               const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
               
+              // Format description - round distance to 1 decimal place
+              let formattedDescription = markerData.description || '';
+              // Match distance pattern like "0.13960964145761826 mi" and format to 1 decimal
+              formattedDescription = formattedDescription.replace(/(\d+\.\d+)\s*mi/g, (match, num) => {
+                const val = parseFloat(num);
+                return isNaN(val) ? match : `${val.toFixed(1)} mi`;
+              });
+              
               // Create InfoWindow first
               const infoWindow = new window.google.maps.InfoWindow();
               
@@ -376,7 +386,7 @@ const WebMapView = ({
                             style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
                             title="Close">×</button>
                   </div>
-                  <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${markerData.description || ''}</span>
+                  ${formattedDescription ? `<span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${formattedDescription}</span>` : ''}
                   ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
                   <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
                      style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
