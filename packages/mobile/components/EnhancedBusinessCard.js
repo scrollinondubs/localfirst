@@ -175,8 +175,8 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
-          {/* Google Maps button - always show if address exists */}
-          {business.address && (
+          {/* Google Maps button - show when card is selected */}
+          {isSelected && business.address && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleDirectionsPress}
