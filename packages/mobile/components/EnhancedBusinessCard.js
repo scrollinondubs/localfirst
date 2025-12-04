@@ -37,6 +37,19 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
     }
   };
 
+  const handleDirectionsPress = () => {
+    const address = business.address || business.name;
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    
+    Linking.canOpenURL(googleMapsUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(googleMapsUrl);
+      } else {
+        console.log("Don't know how to open URI: " + googleMapsUrl);
+      }
+    });
+  };
+
   // Format category display
   const getCategoryDisplay = () => {
     if (business.subcategory && business.category) {
@@ -114,7 +127,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && (
+          {business.distance && business.distance !== '0' && business.distance !== '0.0' && parseFloat(business.distance) > 0 && (
             <Text style={styles.distance}>{business.distance} mi</Text>
           )}
         </View>
@@ -159,6 +172,13 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleDirectionsPress}
+          >
+            <Ionicons name="navigate" size={16} color="#007AFF" />
+          </TouchableOpacity>
+          
           {business.phone && (
             <TouchableOpacity
               style={styles.actionButton}
