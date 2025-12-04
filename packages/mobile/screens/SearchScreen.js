@@ -148,7 +148,12 @@ export default function SearchScreen() {
   useEffect(() => {
     initializeLocation();
     initializeVoiceService();
+    // Load businesses after a short delay to ensure everything is initialized
+    const timer = setTimeout(() => {
+      loadInitialBusinesses(); // Load businesses on app start
+    }, 1000);
     return () => {
+      clearTimeout(timer);
       // Cleanup services when component unmounts
       locationService.cleanup();
       voiceService.destroy();
@@ -491,9 +496,90 @@ export default function SearchScreen() {
     }
   };
 
+  const initialLoadDoneRef = useRef(false);
+  
+  const loadInitialBusinesses = async () => {
+    // Prevent multiple calls
+    if (initialLoadDoneRef.current) {
+      console.log('[MOBILE-SEARCH] Initial load already done, skipping');
+      return;
+    }
+    
+    console.log('[MOBILE-SEARCH] Loading initial businesses on app start');
+    initialLoadDoneRef.current = true;
+    
+    try {
+      setLoading(true);
+      
+      // Default to Phoenix coordinates for initial load
+      let searchLat = 33.4484;
+      let searchLng = -112.0740;
+      let locationSource = 'Phoenix default';
+      
+      // If user location is available and in Arizona, use it instead
+      const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+      const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+      
+      if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+        searchLat = lat;
+        searchLng = lng;
+        locationSource = 'user location';
+        console.log(`[MOBILE-SEARCH] Using user location: ${lat}, ${lng}`);
+      }
+      
+      // Build API request - get businesses within 25 miles radius (reduced for performance)
+      const params = new URLSearchParams();
+      params.append('lat', searchLat);
+      params.append('lng', searchLng);
+      params.append('radius', '25'); // Reduced from 50 to 25 miles
+      params.append('limit', '200'); // Reduced from 500 to 200 for better performance
+      
+      const endpoint = `/api/businesses/nearby?${params}`;
+      console.log(`[MOBILE-SEARCH] Initial load endpoint: ${endpoint}`);
+      
+      const response = await apiRequest(endpoint, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        console.error('[MOBILE-SEARCH] Initial load failed:', response.status, response.statusText);
+        setLoading(false);
+        initialLoadDoneRef.current = false; // Allow retry on error
+        return;
+      }
+      
+      const data = await response.json();
+      console.log(`[MOBILE-SEARCH] Loaded ${data.businesses?.length || 0} initial businesses`);
+      
+      if (data.businesses && data.businesses.length > 0) {
+        // Set both allBusinesses (for map markers) and searchResults (for list)
+        setAllBusinesses(data.businesses);
+        setCurrentPage(1);
+        const firstPage = data.businesses.slice(0, PAGE_SIZE);
+        setSearchResults(firstPage);
+        setDisplayedBusinesses(firstPage);
+        
+        // Update map region to show loaded businesses
+        setMapRegion({
+          latitude: searchLat,
+          longitude: searchLng,
+          latitudeDelta: 0.3, // Reduced from 0.5 for better initial view
+          longitudeDelta: 0.3,
+        });
+      }
+      
+    } catch (error) {
+      console.error('[MOBILE-SEARCH] Error loading initial businesses:', error);
+      initialLoadDoneRef.current = false; // Allow retry on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const performSearch = async (query, explicitBounds = null) => {
     // Use explicitly passed bounds or fall back to state
     const boundsToUse = explicitBounds || viewportBounds;
+    console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -503,7 +589,7 @@ export default function SearchScreen() {
       // Build query parameters for enhanced search API
       const params = new URLSearchParams({
         query: query,
-        limit: 5000 // Increase limit to get all businesses in viewport
+        limit: 500 // Reduced from 5000 to 500 for better performance
       });
 
       // Add category filter if selected
@@ -733,12 +819,12 @@ export default function SearchScreen() {
 
   const handleBusinessSelect = (business) => {
     setSelectedBusiness(business);
-    // Center map on selected business
+    // Center map on selected business with close zoom to show individual marker
     setMapRegion({
       latitude: business.latitude,
       longitude: business.longitude,
-      latitudeDelta: 0.01, // Zoom in closer
-      longitudeDelta: 0.01,
+      latitudeDelta: 0.005, // Much closer zoom to break clusters and show individual marker
+      longitudeDelta: 0.005,
     });
   };
 
@@ -751,6 +837,7 @@ export default function SearchScreen() {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
+      return; // Don't search on initial load, let loadInitialBusinesses handle it
     }
     
     // Clear any existing debounce timer
@@ -758,12 +845,15 @@ export default function SearchScreen() {
       clearTimeout(boundsDebounceRef.current);
     }
     
-    // Debounce: only search after user stops moving map for 1 second
+    // Debounce: only search after user stops moving map for 1.5 seconds (increased for better performance)
     boundsDebounceRef.current = setTimeout(() => {
-      lastSearchBoundsRef.current = bounds;
-      // CRITICAL: Pass bounds directly to avoid React state timing issues
-      performSearch(searchQuery, bounds);
-    }, 1000); // 1 second debounce
+      // Only search if there's a query or category filter
+      if (searchQuery.trim() || selectedCategory) {
+        lastSearchBoundsRef.current = bounds;
+        // CRITICAL: Pass bounds directly to avoid React state timing issues
+        performSearch(searchQuery, bounds);
+      }
+    }, 1500); // 1.5 second debounce for better performance
   }, [searchQuery]);
   
   // Cleanup debounce timer on unmount

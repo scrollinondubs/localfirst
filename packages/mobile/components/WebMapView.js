@@ -46,6 +46,89 @@ const WebMapView = ({
     }
   }, [selectedBusiness, markers]);
 
+  // Open popup for selected business after map zoom completes
+  useEffect(() => {
+    if (!selectedBusiness || !googleMapRef.current || !window.google || !window.google.maps) return;
+    
+    let idleListener = null;
+    let timer = null;
+    
+    const openPopupForSelected = () => {
+      // Find the marker for the selected business
+      const marker = markersRef.current.find(m => {
+        return m.businessData?.id === selectedBusiness.id;
+      });
+      
+      if (marker) {
+        // Create and open InfoWindow
+        const businessData = marker.businessData || selectedBusiness;
+        const address = businessData.address || selectedBusiness.address || selectedBusiness.name;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        const category = businessData.category || selectedBusiness.category || businessData.subcategory || '';
+        const distanceRaw = businessData.distance || selectedBusiness.distance;
+        // Format distance to one decimal place
+        const distance = distanceRaw ? parseFloat(distanceRaw).toFixed(1) : null;
+        const description = `${category}${distance ? ' • ' + distance + ' mi' : ''}`;
+        
+        // Create InfoWindow with close button on same line as title
+        const infoWindow = new window.google.maps.InfoWindow();
+        const closeFuncName = `closeInfoWindow_${selectedBusiness.id || 'selected'}`;
+        
+        const content = `
+          <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+              <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${selectedBusiness.name}</strong>
+              <button onclick="window.${closeFuncName}();" 
+                      style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
+                      title="Close">×</button>
+            </div>
+            <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${description}</span>
+            ${address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${address}</div>` : ''}
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+               style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                      background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                      font-size: 12px; font-weight: 500; transition: background 0.2s;">
+              <span style="margin-right: 4px;">🗺️</span>
+              Open in Google Maps
+            </a>
+          </div>
+        `;
+        
+        // Store close function on window object
+        window[closeFuncName] = () => {
+          infoWindow.close();
+          delete window[closeFuncName];
+        };
+        
+        infoWindow.setContent(content);
+        infoWindow.open(googleMapRef.current, marker);
+        console.log('[MAP] ✅ Opened popup for selected business:', selectedBusiness.name);
+      } else {
+        // If marker not found, try again after a short delay (clustering might still be updating)
+        timer = setTimeout(openPopupForSelected, 300);
+      }
+    };
+    
+    // Listen for map 'idle' event (fires when map finishes moving/zooming)
+    idleListener = window.google.maps.event.addListenerOnce(
+      googleMapRef.current,
+      'idle',
+      () => {
+        // Wait a bit more for clustering to update after map becomes idle
+        timer = setTimeout(openPopupForSelected, 200);
+      }
+    );
+    
+    return () => {
+      if (idleListener) {
+        window.google.maps.event.removeListener(idleListener);
+      }
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [selectedBusiness, region]);
+
   const loadGoogleMapsAPI = () => {
     if (window.google && window.google.maps) {
       initializeMap();
@@ -93,9 +176,22 @@ const WebMapView = ({
     console.log('Creating Google Map with options:', mapOptions);
     googleMapRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
     console.log('Google Map created successfully');
+    
+    // Add CSS to hide Google Maps default InfoWindow close button (we use our own)
+    if (!document.getElementById('hide-gm-close-button')) {
+      const style = document.createElement('style');
+      style.id = 'hide-gm-close-button';
+      style.textContent = `
+        .gm-style-iw-c button[aria-label="Close"],
+        .gm-style-iw-d button[aria-label="Close"] {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // Wait for map to be fully loaded before adding markers
-    google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
+    window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
       console.log('Map is idle and ready for markers');
       
       // Add location control if requested
@@ -238,16 +334,10 @@ const WebMapView = ({
             markerData.businessData && 
             markerData.businessData.id === selectedBusiness.id;
           
-          console.log('Creating direct marker for:', {
-            title: markerData.title,
-            coordinate: markerData.coordinate,
-            exactLatLng: {
-              lat: markerData.coordinate.latitude,
-              lng: markerData.coordinate.longitude
-            },
-            pinColor: markerData.pinColor,
-            isSelected
-          });
+          // Only log in development mode and limit frequency
+          if (__DEV__ && index < 5) {
+            console.log('Creating marker:', markerData.title);
+          }
           
           const marker = new window.google.maps.Marker({
             position: {
@@ -265,6 +355,61 @@ const WebMapView = ({
               scale: isSelected ? 12 : 8,
             },
           });
+          
+          // Store business data on marker for easy lookup
+          marker.businessData = markerData.businessData;
+
+          // Create InfoWindow content function for reuse
+          const createInfoWindow = () => {
+            if (markerData.description || markerData.businessData) {
+              const businessData = markerData.businessData;
+              const address = businessData?.address || markerData.title;
+              const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+              
+              // Format description - round distance to 1 decimal place
+              let formattedDescription = markerData.description || '';
+              // Match distance pattern like "0.13960964145761826 mi" and format to 1 decimal
+              formattedDescription = formattedDescription.replace(/(\d+\.\d+)\s*mi/g, (match, num) => {
+                const val = parseFloat(num);
+                return isNaN(val) ? match : `${val.toFixed(1)} mi`;
+              });
+              
+              // Create InfoWindow first
+              const infoWindow = new window.google.maps.InfoWindow();
+              
+              // Generate content with close button on same line as title
+              const content = `
+                <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${markerData.title}</strong>
+                    <button onclick="window.closeInfoWindow_${markerData.businessData?.id || 'default'}();" 
+                            style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
+                            title="Close">×</button>
+                  </div>
+                  ${formattedDescription ? `<span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${formattedDescription}</span>` : ''}
+                  ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
+                  <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
+                     style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
+                            background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
+                            font-size: 12px; font-weight: 500; transition: background 0.2s;">
+                    <span style="margin-right: 4px;">🗺️</span>
+                    Open in Google Maps
+                  </a>
+                </div>
+              `;
+              
+              // Store close function on window object
+              const closeFuncName = `closeInfoWindow_${markerData.businessData?.id || 'default'}`;
+              window[closeFuncName] = () => {
+                infoWindow.close();
+                delete window[closeFuncName];
+              };
+              
+              infoWindow.setContent(content);
+              return infoWindow;
+            }
+            return null;
+          };
 
           // Handle marker click
           marker.addListener('click', () => {
@@ -273,46 +418,36 @@ const WebMapView = ({
               onMarkerPress(markerData.businessData);
             }
             
-            if (markerData.description || markerData.businessData) {
-              const businessData = markerData.businessData;
-              const address = businessData?.address || markerData.title;
-              const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-              
-              const infoWindow = new window.google.maps.InfoWindow({
-                content: `
-                  <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                    <strong style="font-size: 14px; color: #1a1a1a;">${markerData.title}</strong>
-                    <br/>
-                    <span style="font-size: 12px; color: #666; margin-top: 4px; display: block;">${markerData.description || ''}</span>
-                    ${businessData?.address ? `<div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">${businessData.address}</div>` : ''}
-                    <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" 
-                       style="display: inline-flex; align-items: center; margin-top: 8px; padding: 6px 10px; 
-                              background: #4285f4; color: white; text-decoration: none; border-radius: 4px; 
-                              font-size: 12px; font-weight: 500; transition: background 0.2s;">
-                      <span style="margin-right: 4px;">🗺️</span>
-                      Open in Google Maps
-                    </a>
-                  </div>
-                `,
-              });
+            const infoWindow = createInfoWindow();
+            if (infoWindow) {
               infoWindow.open(googleMapRef.current, marker);
             }
           });
+
+          // Auto-open InfoWindow if this marker is selected
+          if (isSelected) {
+            console.log('Auto-opening InfoWindow for selected business:', markerData.title);
+            const infoWindow = createInfoWindow();
+            if (infoWindow) {
+              infoWindow.open(googleMapRef.current, marker);
+            }
+          }
 
           markersRef.current.push(marker);
         }
       });
       
       // Initialize clustering if enabled and we have markers
-      if (enableClustering && markersRef.current.length > 0) {
+      if (enableClustering && markersRef.current.length > 0 && window.google && window.google.maps) {
         try {
+          console.log(`[MAP] Initializing clustering for ${markersRef.current.length} markers`);
           // Clean solid red clusters
           const renderer = {
             render: ({ count, position }) => {
-              return new google.maps.Marker({
+              return new window.google.maps.Marker({
                 position,
                 icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
+                  path: window.google.maps.SymbolPath.CIRCLE,
                   fillColor: '#ef4444',
                   fillOpacity: 1,
                   strokeColor: '#ef4444',
@@ -325,7 +460,7 @@ const WebMapView = ({
                   fontSize: '11px',
                   fontWeight: 'bold',
                 },
-                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+                zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + count,
               });
             },
           };
@@ -335,8 +470,9 @@ const WebMapView = ({
             markers: markersRef.current,
             renderer: renderer,
           });
+          console.log('[MAP] ✅ Clustering initialized successfully');
         } catch (error) {
-          console.error('Clustering error:', error);
+          console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  
           markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
         }
