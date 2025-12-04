@@ -238,16 +238,10 @@ const WebMapView = ({
             markerData.businessData && 
             markerData.businessData.id === selectedBusiness.id;
           
-          console.log('Creating direct marker for:', {
-            title: markerData.title,
-            coordinate: markerData.coordinate,
-            exactLatLng: {
-              lat: markerData.coordinate.latitude,
-              lng: markerData.coordinate.longitude
-            },
-            pinColor: markerData.pinColor,
-            isSelected
-          });
+          // Only log in development mode and limit frequency
+          if (__DEV__ && index < 5) {
+            console.log('Creating marker:', markerData.title);
+          }
           
           const marker = new window.google.maps.Marker({
             position: {
