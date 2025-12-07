@@ -50,3 +50,6 @@ local.db-*
 
 # Certificates (if any are generated)
 *.pem
+
+# Local development context (AI assistant reference)
+DEVELOPMENT-CONTEXT.md
