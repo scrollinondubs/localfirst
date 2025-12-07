@@ -222,7 +222,12 @@ class LocationService {
   // Stop watching location changes
   stopLocationWatch() {
     if (this.watchSubscription) {
-      this.watchSubscription.remove();
+      try {
+        this.watchSubscription.remove();
+      } catch (error) {
+        // On web, the remove() method may fail due to missing LocationEventEmitter.removeSubscription
+        console.warn('Error removing location subscription (this is expected on web):', error.message);
+      }
       this.watchSubscription = null;
     }
     this.isWatching = false;
