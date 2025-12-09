@@ -137,6 +137,12 @@ export default function SearchScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  // Track user map interactions to avoid recentering after user pans/zooms
+  const hasUserPannedRef = useRef(false);
+  const hasCenteredOnLocationRef = useRef(false);
+  // Limit how many markers/clusters we render for performance
+  const MAX_MARKERS = 1200;
+  const VIEWPORT_PADDING_FACTOR = 1.5; // render only markers within ~1.5x current viewport
   
   // Viewport-based search state
   const [viewportBounds, setViewportBounds] = useState(null);
@@ -321,12 +327,16 @@ export default function SearchScreen() {
     const lng = location?.coords?.longitude || location?.longitude;
 
     if (lat && lng) {
-      setMapRegion({
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.05, // Closer zoom for better user experience
-        longitudeDelta: 0.05,
-      });
+      // Only center on location once (or until user manually pans)
+      if (!hasCenteredOnLocationRef.current && !hasUserPannedRef.current) {
+        setMapRegion({
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.05, // Closer zoom for better user experience
+          longitudeDelta: 0.05,
+        });
+        hasCenteredOnLocationRef.current = true;
+      }
       console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
     }
   };
@@ -823,8 +833,8 @@ export default function SearchScreen() {
     setMapRegion({
       latitude: business.latitude,
       longitude: business.longitude,
-      latitudeDelta: 0.005, // Much closer zoom to break clusters and show individual marker
-      longitudeDelta: 0.005,
+      latitudeDelta: 0.002, // Even closer zoom to ensure we break clusters
+      longitudeDelta: 0.002,
     });
   };
 
@@ -839,6 +849,9 @@ export default function SearchScreen() {
       setHasLoadedInitial(true);
       return; // Don't search on initial load, let loadInitialBusinesses handle it
     }
+    
+    // User has interacted with the map (pan/zoom)
+    hasUserPannedRef.current = true;
     
     // Clear any existing debounce timer
     if (boundsDebounceRef.current) {
@@ -901,7 +914,43 @@ export default function SearchScreen() {
   // Memoize markers array to prevent infinite loop
   // Use allBusinesses for map (show all markers), not searchResults (paginated list)
   const mapMarkers = useMemo(() => {
-    return allBusinesses.map(business => ({
+    // If we have viewport bounds, filter markers to a padded viewport to reduce load
+    let filtered = allBusinesses;
+    if (viewportBounds) {
+      const { northeast, southwest } = viewportBounds;
+      const latCenter = (northeast.lat + southwest.lat) / 2;
+      const lngCenter = (northeast.lng + southwest.lng) / 2;
+      const latDelta = (northeast.lat - southwest.lat) * VIEWPORT_PADDING_FACTOR;
+      const lngDelta = (northeast.lng - southwest.lng) * VIEWPORT_PADDING_FACTOR;
+      const latMin = latCenter - latDelta / 2;
+      const latMax = latCenter + latDelta / 2;
+      const lngMin = lngCenter - lngDelta / 2;
+      const lngMax = lngCenter + lngDelta / 2;
+
+      filtered = allBusinesses.filter(b => {
+        const lat = b.latitude;
+        const lng = b.longitude;
+        return lat >= latMin && lat <= latMax && lng >= lngMin && lng <= lngMax;
+      });
+    }
+
+    // Cap the number of markers for performance
+    if (filtered.length > MAX_MARKERS) {
+      filtered = filtered.slice(0, MAX_MARKERS);
+    }
+
+    // Always include the currently selected business so its marker is present
+    if (selectedBusiness) {
+      const exists = filtered.some(b => b.id === selectedBusiness.id);
+      if (!exists) {
+        const sb = allBusinesses.find(b => b.id === selectedBusiness.id);
+        if (sb) {
+          filtered = [...filtered, sb];
+        }
+      }
+    }
+
+    return filtered.map(business => ({
       coordinate: {
         latitude: business.latitude,
         longitude: business.longitude,
@@ -911,7 +960,7 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-  }, [allBusinesses]);
+  }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, MAX_MARKERS]);
 
   return (
     <SafeAreaView style={styles.container}>
