@@ -140,13 +140,12 @@ export default function SearchScreen() {
   // Track user map interactions to avoid recentering after user pans/zooms
   const hasUserPannedRef = useRef(false);
   const hasCenteredOnLocationRef = useRef(false);
-  // Limit how many markers/clusters we render for performance
-  const MAX_MARKERS = 1200;
   const VIEWPORT_PADDING_FACTOR = 1.5; // render only markers within ~1.5x current viewport
   
   // Viewport-based search state
   const [viewportBounds, setViewportBounds] = useState(null);
   const boundsDebounceRef = useRef(null);
+  const viewportBoundsDebounceRef = useRef(null); // Separate debounce for marker updates
   const lastSearchBoundsRef = useRef(null);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
 
@@ -840,20 +839,28 @@ export default function SearchScreen() {
 
   // Handle map viewport changes for viewport-based search
   const handleMapBoundsChange = useCallback((bounds) => {
-    // Update viewport bounds state
-    setViewportBounds(bounds);
-    
     // Mark as loaded on first bounds update
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
+      // Set initial viewport bounds immediately on first load
+      setViewportBounds(bounds);
       return; // Don't search on initial load, let loadInitialBusinesses handle it
     }
     
     // User has interacted with the map (pan/zoom)
     hasUserPannedRef.current = true;
     
-    // Clear any existing debounce timer
+    // Debounce viewport bounds update to prevent marker flickering during drag
+    // Only update markers after user stops dragging for 300ms
+    if (viewportBoundsDebounceRef.current) {
+      clearTimeout(viewportBoundsDebounceRef.current);
+    }
+    viewportBoundsDebounceRef.current = setTimeout(() => {
+      setViewportBounds(bounds);
+    }, 300); // Short debounce for smooth dragging
+    
+    // Clear any existing search debounce timer
     if (boundsDebounceRef.current) {
       clearTimeout(boundsDebounceRef.current);
     }
@@ -869,11 +876,14 @@ export default function SearchScreen() {
     }, 1500); // 1.5 second debounce for better performance
   }, [searchQuery]);
   
-  // Cleanup debounce timer on unmount
+  // Cleanup debounce timers on unmount
   useEffect(() => {
     return () => {
       if (boundsDebounceRef.current) {
         clearTimeout(boundsDebounceRef.current);
+      }
+      if (viewportBoundsDebounceRef.current) {
+        clearTimeout(viewportBoundsDebounceRef.current);
       }
     };
   }, []);
@@ -934,11 +944,6 @@ export default function SearchScreen() {
       });
     }
 
-    // Cap the number of markers for performance
-    if (filtered.length > MAX_MARKERS) {
-      filtered = filtered.slice(0, MAX_MARKERS);
-    }
-
     // Always include the currently selected business so its marker is present
     if (selectedBusiness) {
       const exists = filtered.some(b => b.id === selectedBusiness.id);
@@ -960,7 +965,7 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-  }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, MAX_MARKERS]);
+  }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR]);
 
   return (
     <SafeAreaView style={styles.container}>
