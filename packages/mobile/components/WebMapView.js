@@ -60,6 +60,17 @@ const WebMapView = ({
       });
       
       if (marker) {
+        // Ensure we zoom enough to break clusters
+        const currentZoom = googleMapRef.current.getZoom();
+        if (currentZoom < 18) {
+          googleMapRef.current.setZoom(18);
+        }
+        // Center map on the marker to make sure it's visible and uncluttered
+        const pos = marker.getPosition();
+        if (pos) {
+          googleMapRef.current.setCenter(pos);
+        }
+
         // Create and open InfoWindow
         const businessData = marker.businessData || selectedBusiness;
         const address = businessData.address || selectedBusiness.address || selectedBusiness.name;
