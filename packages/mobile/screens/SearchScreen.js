@@ -977,6 +977,7 @@ export default function SearchScreen() {
           showsScale={true}
           onMarkerPress={handleMapMarkerPress}
           selectedBusiness={selectedBusiness}
+          onClearSelection={() => setSelectedBusiness(null)}
           autoFitMarkers={false}
           enableClustering={true}
           markers={mapMarkers}
