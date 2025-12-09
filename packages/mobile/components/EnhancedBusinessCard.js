@@ -1,65 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FavoriteButton from './FavoriteButton';
-
-// Helper component for tooltip on web
-const TooltipButton = ({ title, children, style, ...props }) => {
-  const touchableRef = useRef(null);
-  
-  useEffect(() => {
-    if (Platform.OS === 'web' && title && touchableRef.current) {
-      // Use a small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        try {
-          // React Native Web stores the DOM node in _nativeNode
-          const node = touchableRef.current?._nativeNode || 
-                       touchableRef.current?._internalFiberInstanceHandleDEV?.stateNode;
-          
-          if (node && node.setAttribute) {
-            node.setAttribute('title', title);
-          } else if (touchableRef.current) {
-            // Fallback: try to find the element by traversing
-            const findElement = (ref) => {
-              if (!ref) return null;
-              // Try different possible locations
-              return ref._nativeNode || 
-                     ref._internalFiberInstanceHandleDEV?.stateNode ||
-                     (typeof ref === 'object' && 'tagName' in ref ? ref : null);
-            };
-            
-            const element = findElement(touchableRef.current);
-            if (element && element.setAttribute) {
-              element.setAttribute('title', title);
-            }
-          }
-        } catch (e) {
-          // Silently fail if we can't set the title
-          console.debug('Could not set tooltip title:', e);
-        }
-      }, 10);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [title]);
-  
-  return (
-    <TouchableOpacity
-      ref={touchableRef}
-      style={style}
-      {...props}
-    >
-      {children}
-    </TouchableOpacity>
-  );
-};
 
 const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) => {
   const handleWebsitePress = (website) => {
@@ -223,35 +171,32 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
-          <TooltipButton
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={handleDirectionsPress}
             accessibilityLabel="Get directions"
-            title="Get directions"
           >
             <Ionicons name="navigate" size={16} color="#007AFF" />
-          </TooltipButton>
+          </TouchableOpacity>
           
           {business.phone && (
-            <TooltipButton
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handlePhonePress(business.phone)}
               accessibilityLabel="Call"
-              title="Call"
             >
               <Ionicons name="call" size={16} color="#007AFF" />
-            </TooltipButton>
+            </TouchableOpacity>
           )}
           
           {business.website && (
-            <TooltipButton
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleWebsitePress(business.website)}
               accessibilityLabel="Website"
-              title="Website"
             >
               <Ionicons name="globe" size={16} color="#007AFF" />
-            </TooltipButton>
+            </TouchableOpacity>
           )}
         </View>
       </View>
