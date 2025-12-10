@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -175,6 +174,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleDirectionsPress}
+            accessibilityLabel="Get directions"
           >
             <Ionicons name="navigate" size={16} color="#007AFF" />
           </TouchableOpacity>
@@ -183,6 +183,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handlePhonePress(business.phone)}
+              accessibilityLabel="Call"
             >
               <Ionicons name="call" size={16} color="#007AFF" />
             </TouchableOpacity>
@@ -192,6 +193,7 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleWebsitePress(business.website)}
+              accessibilityLabel="Website"
             >
               <Ionicons name="globe" size={16} color="#007AFF" />
             </TouchableOpacity>
