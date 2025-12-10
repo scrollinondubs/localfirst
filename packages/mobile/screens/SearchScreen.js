@@ -230,8 +230,59 @@ export default function SearchScreen() {
       setPermissionStatus(status);
       
       if (status === 'granted') {
-        // Permission granted, get location FIRST (this will set mapRegion to user location)
-        await getCurrentLocation();
+        // OPTIMIZATION: Check cached location FIRST to avoid Phoenix flash
+        // If we have a cached location, use it immediately while fresh location loads in background
+        const cachedLocation = await locationService.getCachedLocation();
+        if (cachedLocation) {
+          setUserLocation(cachedLocation);
+          setLocationStatus('granted');
+          
+          // Set map region to cached location immediately (prevents Phoenix flash)
+          const lat = cachedLocation?.coords?.latitude || cachedLocation?.latitude;
+          const lng = cachedLocation?.coords?.longitude || cachedLocation?.longitude;
+          
+          if (lat && lng) {
+            setMapRegion({
+              latitude: lat,
+              longitude: lng,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            });
+          }
+          
+          // Now try to get fresh location in background (non-blocking)
+          getCurrentLocation().catch(() => {
+            // Silently fail - we already have cached location
+          });
+        } else {
+          // No cache - try IP location first (fast), then GPS (slow)
+          const ipResult = await locationService.getIPLocation();
+          if (ipResult.success) {
+            // Got IP location quickly (~200ms), show it immediately
+            setUserLocation(ipResult.location);
+            setLocationStatus('granted');
+            
+            const lat = ipResult.location?.coords?.latitude;
+            const lng = ipResult.location?.coords?.longitude;
+            
+            if (lat && lng) {
+              setMapRegion({
+                latitude: lat,
+                longitude: lng,
+                latitudeDelta: 0.1, // Wider zoom for IP (less accurate)
+                longitudeDelta: 0.1,
+              });
+            }
+            
+            // Now get accurate GPS in background
+            getCurrentLocation().catch(() => {
+              // IP location is good enough if GPS fails
+            });
+          } else {
+            // IP failed, fall back to GPS
+            await getCurrentLocation();
+          }
+        }
       } else if (status === 'denied') {
         // Permission denied, set Phoenix as default and try to load cached location
         setMapRegion({
@@ -308,6 +359,15 @@ export default function SearchScreen() {
       console.error('Error getting current location:', error);
       setLocationError(error.message);
       setLocationStatus('unavailable');
+      
+      // Set Phoenix as fallback to prevent infinite loading screen
+      setMapRegion({
+        latitude: 33.4484,
+        longitude: -112.0740,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+      
       await loadCachedLocation();
     }
   };
@@ -573,12 +633,20 @@ export default function SearchScreen() {
         setSearchResults(firstPage);
         setDisplayedBusinesses(firstPage);
         
-        // Update map region to show loaded businesses
-        setMapRegion({
-          latitude: searchLat,
-          longitude: searchLng,
-          latitudeDelta: 0.3, // Reduced from 0.5 for better initial view
-          longitudeDelta: 0.3,
+        // Only update map region if it hasn't been set yet (to avoid overwriting user location)
+        // This prevents the Phoenix flash when location permission is already granted
+        setMapRegion(prevRegion => {
+          if (prevRegion === null) {
+            // Map region not set yet, set it now
+            return {
+              latitude: searchLat,
+              longitude: searchLng,
+              latitudeDelta: 0.3,
+              longitudeDelta: 0.3,
+            };
+          }
+          // Map region already set (by getCurrentLocation), keep it
+          return prevRegion;
         });
       }
       
