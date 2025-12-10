@@ -14,6 +14,7 @@ const WebMapView = ({
   style,
   onMarkerPress,
   selectedBusiness,
+  onClearSelection, // Callback to clear selected business when popup is closed
   markers = [], // Add direct marker data prop as backup
   autoFitMarkers = true, // New prop to control auto-fitting
   enableClustering = true // Enable marker clustering by default
@@ -60,6 +61,17 @@ const WebMapView = ({
       });
       
       if (marker) {
+        // Ensure we zoom enough to break clusters
+        const currentZoom = googleMapRef.current.getZoom();
+        if (currentZoom < 18) {
+          googleMapRef.current.setZoom(18);
+        }
+        // Center map on the marker to make sure it's visible and uncluttered
+        const pos = marker.getPosition();
+        if (pos) {
+          googleMapRef.current.setCenter(pos);
+        }
+
         // Create and open InfoWindow
         const businessData = marker.businessData || selectedBusiness;
         const address = businessData.address || selectedBusiness.address || selectedBusiness.name;
@@ -73,12 +85,13 @@ const WebMapView = ({
         // Create InfoWindow with close button on same line as title
         const infoWindow = new window.google.maps.InfoWindow();
         const closeFuncName = `closeInfoWindow_${selectedBusiness.id || 'selected'}`;
+        const selectedBusinessId = selectedBusiness.id || 'selected';
         
         const content = `
           <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
               <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${selectedBusiness.name}</strong>
-              <button onclick="window.${closeFuncName}();" 
+              <button id="closeBtn_${selectedBusinessId}" onclick="if(window.${closeFuncName}){window.${closeFuncName}();}" 
                       style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
                       title="Close">×</button>
             </div>
@@ -97,10 +110,34 @@ const WebMapView = ({
         // Store close function on window object
         window[closeFuncName] = () => {
           infoWindow.close();
-          delete window[closeFuncName];
+          // Clear selected business to prevent popup from reopening
+          if (onClearSelection) {
+            onClearSelection();
+          }
+          // Clean up function after closing
+          setTimeout(() => {
+            if (window[closeFuncName]) {
+              delete window[closeFuncName];
+            }
+          }, 100);
         };
         
         infoWindow.setContent(content);
+        
+        // Use domready event to ensure button click handler works
+        window.google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+          const closeButton = document.getElementById(`closeBtn_${selectedBusinessId}`);
+          if (closeButton) {
+            closeButton.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (window[closeFuncName]) {
+                window[closeFuncName]();
+              }
+            });
+          }
+        });
+        
         infoWindow.open(googleMapRef.current, marker);
         console.log('[MAP] ✅ Opened popup for selected business:', selectedBusiness.name);
       } else {
@@ -377,12 +414,31 @@ const WebMapView = ({
               // Create InfoWindow first
               const infoWindow = new window.google.maps.InfoWindow();
               
+              // Create close function BEFORE setting content so it's available when onclick is evaluated
+              const closeFuncName = `closeInfoWindow_${markerData.businessData?.id || 'default'}`;
+              const businessId = markerData.businessData?.id || 'default';
+              
+              // Store close function on window object
+              window[closeFuncName] = () => {
+                infoWindow.close();
+                // Clear selected business to prevent popup from reopening
+                if (onClearSelection) {
+                  onClearSelection();
+                }
+                // Clean up function after closing
+                setTimeout(() => {
+                  if (window[closeFuncName]) {
+                    delete window[closeFuncName];
+                  }
+                }, 100);
+              };
+              
               // Generate content with close button on same line as title
               const content = `
                 <div style="max-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; position: relative;">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                     <strong style="font-size: 14px; color: #1a1a1a; flex: 1; margin-right: 8px; line-height: 1.3;">${markerData.title}</strong>
-                    <button onclick="window.closeInfoWindow_${markerData.businessData?.id || 'default'}();" 
+                    <button id="closeBtn_${businessId}" onclick="if(window.closeInfoWindow_${businessId}){window.closeInfoWindow_${businessId}();}" 
                             style="background: none; border: none; color: #666; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; margin-top: -2px;" 
                             title="Close">×</button>
                   </div>
@@ -398,14 +454,22 @@ const WebMapView = ({
                 </div>
               `;
               
-              // Store close function on window object
-              const closeFuncName = `closeInfoWindow_${markerData.businessData?.id || 'default'}`;
-              window[closeFuncName] = () => {
-                infoWindow.close();
-                delete window[closeFuncName];
-              };
-              
               infoWindow.setContent(content);
+              
+              // Use domready event to ensure button click handler works
+              window.google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+                const closeButton = document.getElementById(`closeBtn_${businessId}`);
+                if (closeButton) {
+                  closeButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window[closeFuncName]) {
+                      window[closeFuncName]();
+                    }
+                  });
+                }
+              });
+              
               return infoWindow;
             }
             return null;
