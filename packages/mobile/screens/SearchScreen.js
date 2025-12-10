@@ -130,13 +130,8 @@ export default function SearchScreen() {
   const [locationError, setLocationError] = useState(null);
   const [isFirstTime, setIsFirstTime] = useState(true);
   
-  // Map-related state
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 33.4484, // Phoenix, AZ default
-    longitude: -112.0740,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
+  // Map-related state - start with null to avoid Phoenix flash for users with permission
+  const [mapRegion, setMapRegion] = useState(null);
   
   // Viewport-based search state
   const [viewportBounds, setViewportBounds] = useState(null);
@@ -235,14 +230,26 @@ export default function SearchScreen() {
       setPermissionStatus(status);
       
       if (status === 'granted') {
-        // Permission granted, get location
+        // Permission granted, get location FIRST (this will set mapRegion to user location)
         await getCurrentLocation();
       } else if (status === 'denied') {
-        // Permission denied, try to load cached location
+        // Permission denied, set Phoenix as default and try to load cached location
+        setMapRegion({
+          latitude: 33.4484,
+          longitude: -112.0740,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
         setLocationStatus('denied');
         await loadCachedLocation();
       } else {
-        // Permission not determined, show modal if first time (but skip for web)
+        // Permission not determined, set Phoenix as default
+        setMapRegion({
+          latitude: 33.4484,
+          longitude: -112.0740,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
         setLocationStatus('unavailable');
         if (!hasAskedBefore) {
           setTimeout(() => {
@@ -257,6 +264,13 @@ export default function SearchScreen() {
       console.error('Error initializing location:', error);
       setLocationError('Failed to initialize location services');
       setLocationStatus('unavailable');
+      // Set Phoenix as fallback on error
+      setMapRegion({
+        latitude: 33.4484,
+        longitude: -112.0740,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
       await loadCachedLocation();
     }
   };
@@ -917,21 +931,28 @@ export default function SearchScreen() {
     <SafeAreaView style={styles.container}>
       {/* Map Container */}
       <View style={styles.mapContainer}>
-        <WebMapView
-          style={styles.map}
-          region={mapRegion}
-          onRegionChangeComplete={null}
-          onBoundsChange={handleMapBoundsChange}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsCompass={true}
-          showsScale={true}
-          onMarkerPress={handleMapMarkerPress}
-          selectedBusiness={selectedBusiness}
-          autoFitMarkers={false}
-          enableClustering={true}
-          markers={mapMarkers}
-        >
+        {!mapRegion ? (
+          // Loading state while waiting for location
+          <View style={styles.mapLoadingContainer}>
+            <ActivityIndicator size="large" color="#3182ce" />
+            <Text style={styles.mapLoadingText}>Loading map...</Text>
+          </View>
+        ) : (
+          <WebMapView
+            style={styles.map}
+            region={mapRegion}
+            onRegionChangeComplete={null}
+            onBoundsChange={handleMapBoundsChange}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+            showsCompass={true}
+            showsScale={true}
+            onMarkerPress={handleMapMarkerPress}
+            selectedBusiness={selectedBusiness}
+            autoFitMarkers={false}
+            enableClustering={true}
+            markers={mapMarkers}
+          >
           {/* User location marker */}
           {userLocation && (() => {
             const lat = userLocation?.coords?.latitude || userLocation?.latitude;
@@ -968,7 +989,8 @@ export default function SearchScreen() {
               onPress={() => handleMapMarkerPress(business)}
             />
           ))}
-        </WebMapView>
+          </WebMapView>
+        )}
         
         {/* Location status overlay */}
         {userLocation && (
@@ -1191,6 +1213,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  mapLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  mapLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '500',
   },
   map: {
     flex: 1,
