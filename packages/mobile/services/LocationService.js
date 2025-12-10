@@ -270,6 +270,50 @@ class LocationService {
     }
   }
 
+  // Get approximate location from IP address (fast fallback)
+  async getIPLocation() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+      const response = await fetch('https://ipapi.co/json/', {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error('IP geolocation failed');
+      }
+
+      const data = await response.json();
+      
+      if (!data.latitude || !data.longitude) {
+        throw new Error('Invalid IP geolocation response');
+      }
+
+      // Format like GPS location for consistency
+      const ipLocation = {
+        coords: {
+          latitude: data.latitude,
+          longitude: data.longitude,
+          accuracy: 5000, // ~5km typical IP accuracy
+        },
+        timestamp: Date.now(),
+        fromIP: true,
+      };
+
+      console.log(`IP location: ${data.city}, ${data.region}`);
+      return { success: true, location: ipLocation, fromIP: true };
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('IP geolocation timeout');
+      } else {
+        console.error('IP geolocation error:', error.message);
+      }
+      return { success: false, error: 'IP geolocation unavailable' };
+    }
+  }
+
   // Clear cached location
   async clearCachedLocation() {
     try {
