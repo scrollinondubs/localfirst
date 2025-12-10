@@ -130,13 +130,9 @@ export default function SearchScreen() {
   const [locationError, setLocationError] = useState(null);
   const [isFirstTime, setIsFirstTime] = useState(true);
   
-  // Map-related state
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 33.4484, // Phoenix, AZ default
-    longitude: -112.0740,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
+  // Map-related state - start with null to avoid Phoenix flash for users with permission
+  const [mapRegion, setMapRegion] = useState(null);
+  
   // Track user map interactions to avoid recentering after user pans/zooms
   const hasUserPannedRef = useRef(false);
   const hasCenteredOnLocationRef = useRef(false);
@@ -240,14 +236,77 @@ export default function SearchScreen() {
       setPermissionStatus(status);
       
       if (status === 'granted') {
-        // Permission granted, get location
-        await getCurrentLocation();
+        // OPTIMIZATION: Check cached location FIRST to avoid Phoenix flash
+        // If we have a cached location, use it immediately while fresh location loads in background
+        const cachedLocation = await locationService.getCachedLocation();
+        if (cachedLocation) {
+          setUserLocation(cachedLocation);
+          setLocationStatus('granted');
+          
+          // Set map region to cached location immediately (prevents Phoenix flash)
+          const lat = cachedLocation?.coords?.latitude || cachedLocation?.latitude;
+          const lng = cachedLocation?.coords?.longitude || cachedLocation?.longitude;
+          
+          if (lat && lng) {
+            setMapRegion({
+              latitude: lat,
+              longitude: lng,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            });
+          }
+          
+          // Now try to get fresh location in background (non-blocking)
+          getCurrentLocation().catch(() => {
+            // Silently fail - we already have cached location
+          });
+        } else {
+          // No cache - try IP location first (fast), then GPS (slow)
+          const ipResult = await locationService.getIPLocation();
+          if (ipResult.success) {
+            // Got IP location quickly (~200ms), show it immediately
+            setUserLocation(ipResult.location);
+            setLocationStatus('granted');
+            
+            const lat = ipResult.location?.coords?.latitude;
+            const lng = ipResult.location?.coords?.longitude;
+            
+            if (lat && lng) {
+              setMapRegion({
+                latitude: lat,
+                longitude: lng,
+                latitudeDelta: 0.1, // Wider zoom for IP (less accurate)
+                longitudeDelta: 0.1,
+              });
+            }
+            
+            // Now get accurate GPS in background
+            getCurrentLocation().catch(() => {
+              // IP location is good enough if GPS fails
+            });
+          } else {
+            // IP failed, fall back to GPS
+            await getCurrentLocation();
+          }
+        }
       } else if (status === 'denied') {
-        // Permission denied, try to load cached location
+        // Permission denied, set Phoenix as default and try to load cached location
+        setMapRegion({
+          latitude: 33.4484,
+          longitude: -112.0740,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
         setLocationStatus('denied');
         await loadCachedLocation();
       } else {
-        // Permission not determined, show modal if first time (but skip for web)
+        // Permission not determined, set Phoenix as default
+        setMapRegion({
+          latitude: 33.4484,
+          longitude: -112.0740,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
         setLocationStatus('unavailable');
         if (!hasAskedBefore) {
           setTimeout(() => {
@@ -262,6 +321,13 @@ export default function SearchScreen() {
       console.error('Error initializing location:', error);
       setLocationError('Failed to initialize location services');
       setLocationStatus('unavailable');
+      // Set Phoenix as fallback on error
+      setMapRegion({
+        latitude: 33.4484,
+        longitude: -112.0740,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
       await loadCachedLocation();
     }
   };
@@ -299,6 +365,15 @@ export default function SearchScreen() {
       console.error('Error getting current location:', error);
       setLocationError(error.message);
       setLocationStatus('unavailable');
+      
+      // Set Phoenix as fallback to prevent infinite loading screen
+      setMapRegion({
+        latitude: 33.4484,
+        longitude: -112.0740,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+      
       await loadCachedLocation();
     }
   };
@@ -568,12 +643,20 @@ export default function SearchScreen() {
         setSearchResults(firstPage);
         setDisplayedBusinesses(firstPage);
         
-        // Update map region to show loaded businesses
-        setMapRegion({
-          latitude: searchLat,
-          longitude: searchLng,
-          latitudeDelta: 0.3, // Reduced from 0.5 for better initial view
-          longitudeDelta: 0.3,
+        // Only update map region if it hasn't been set yet (to avoid overwriting user location)
+        // This prevents the Phoenix flash when location permission is already granted
+        setMapRegion(prevRegion => {
+          if (prevRegion === null) {
+            // Map region not set yet, set it now
+            return {
+              latitude: searchLat,
+              longitude: searchLng,
+              latitudeDelta: 0.3,
+              longitudeDelta: 0.3,
+            };
+          }
+          // Map region already set (by getCurrentLocation), keep it
+          return prevRegion;
         });
       }
       
@@ -971,22 +1054,29 @@ export default function SearchScreen() {
     <SafeAreaView style={styles.container}>
       {/* Map Container */}
       <View style={styles.mapContainer}>
-        <WebMapView
-          style={styles.map}
-          region={mapRegion}
-          onRegionChangeComplete={null}
-          onBoundsChange={handleMapBoundsChange}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsCompass={true}
-          showsScale={true}
-          onMarkerPress={handleMapMarkerPress}
-          selectedBusiness={selectedBusiness}
-          onClearSelection={() => setSelectedBusiness(null)}
-          autoFitMarkers={false}
-          enableClustering={true}
-          markers={mapMarkers}
-        >
+        {!mapRegion ? (
+          // Loading state while waiting for location
+          <View style={styles.mapLoadingContainer}>
+            <ActivityIndicator size="large" color="#3182ce" />
+            <Text style={styles.mapLoadingText}>Loading map...</Text>
+          </View>
+        ) : (
+          <WebMapView
+            style={styles.map}
+            region={mapRegion}
+            onRegionChangeComplete={null}
+            onBoundsChange={handleMapBoundsChange}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+            showsCompass={true}
+            showsScale={true}
+            onMarkerPress={handleMapMarkerPress}
+            selectedBusiness={selectedBusiness}
+            onClearSelection={() => setSelectedBusiness(null)}
+            autoFitMarkers={false}
+            enableClustering={true}
+            markers={mapMarkers}
+          >
           {/* User location marker */}
           {userLocation && (() => {
             const lat = userLocation?.coords?.latitude || userLocation?.latitude;
@@ -1023,7 +1113,8 @@ export default function SearchScreen() {
               onPress={() => handleMapMarkerPress(business)}
             />
           ))}
-        </WebMapView>
+          </WebMapView>
+        )}
         
         {/* Location status overlay */}
         {userLocation && (
@@ -1246,6 +1337,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  mapLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  mapLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '500',
   },
   map: {
     flex: 1,

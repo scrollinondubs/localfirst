@@ -26,12 +26,21 @@
     "test:extension": "npm run test --workspace=packages/extension",
     "test:mobile": "npm run test --workspace=packages/mobile"
   },
-  "keywords": ["chrome-extension", "mobile-app", "local-business", "arizona", "maps", "react-native", "expo"],
+  "keywords": [
+    "chrome-extension",
+    "mobile-app",
+    "local-business",
+    "arizona",
+    "maps",
+    "react-native",
+    "expo"
+  ],
   "author": "Local First Arizona",
   "license": "MIT",
   "devDependencies": {
-    "prettier": "^3.0.0",
+    "concurrently": "^8.2.2",
     "eslint": "^8.0.0",
-    "concurrently": "^8.2.2"
+    "metro-cache-key": "^0.82.5",
+    "prettier": "^3.0.0"
   }
 }
