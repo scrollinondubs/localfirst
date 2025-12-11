@@ -229,15 +229,12 @@ const WebMapView = ({
 
     // Wait for map to be fully loaded before adding markers
     window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
-      console.log('Map is idle and ready for markers');
-      
       // Add location control if requested
       if (showsMyLocationButton && navigator.geolocation) {
         addLocationControl();
       }
 
       // Initialize markers after map is fully loaded
-      console.log('Map fully loaded, calling updateMarkers');
       updateMarkers();
       
       // Add custom zoom controls to ensure correct behavior
@@ -332,7 +329,7 @@ const WebMapView = ({
   const updateMarkers = async () => {
     // Check if markers have actually changed FIRST (before safety counter)
     const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
-    
+
     if (lastMarkersRef.current === currentMarkersKey) {
       // Markers unchanged, exit early without incrementing counter
       return;
@@ -504,7 +501,6 @@ const WebMapView = ({
       // Initialize clustering if enabled and we have markers
       if (enableClustering && markersRef.current.length > 0 && window.google && window.google.maps) {
         try {
-          console.log(`[MAP] Initializing clustering for ${markersRef.current.length} markers`);
           // Clean solid red clusters
           const renderer = {
             render: ({ count, position }) => {
@@ -534,7 +530,6 @@ const WebMapView = ({
             markers: markersRef.current,
             renderer: renderer,
           });
-          console.log('[MAP] ✅ Clustering initialized successfully');
         } catch (error) {
           console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  
