@@ -197,6 +197,7 @@ export default function SearchScreen() {
   const initialLoadRef = useRef(false); // Track if we've done initial load
   
   // No longer need separate initial load effect - handled by handleMapBoundsChange
+  const previousCategoryRef = useRef(null); // Track last category to detect clearing
 
   // Search effect for text query and category changes (not map movement)
   useEffect(() => {
@@ -208,9 +209,12 @@ export default function SearchScreen() {
     // Only trigger on category/query changes, NOT on initial load
     // (initial load handled by map bounds change)
     const hasTextQuery = searchQuery.trim().length > 0;
+    const categoryCleared = !!previousCategoryRef.current && !selectedCategory;
+    const shouldSearch = hasTextQuery || selectedCategory || categoryCleared;
     
     // Don't search if this is just initial state (no query, no category)
-    if (!hasTextQuery && !selectedCategory) {
+    if (!shouldSearch) {
+      previousCategoryRef.current = selectedCategory;
       return;
     }
     
@@ -220,6 +224,7 @@ export default function SearchScreen() {
       performSearch(searchQuery, null); // null means use viewportBounds from state
     }, debounceDelay);
 
+    previousCategoryRef.current = selectedCategory;
     return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery, hasLoadedInitial]);
 
@@ -352,12 +357,9 @@ export default function SearchScreen() {
             latitudeDelta: 0.05, // Closer zoom for better user experience
             longitudeDelta: 0.05,
           });
-          console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
         }
         
-        if (result.fromCache) {
-          console.log('Using cached location');
-        }
+        // cached location used
       } else {
         throw new Error(result.error || 'Unable to get location');
       }
@@ -383,7 +385,6 @@ export default function SearchScreen() {
       const cachedLocation = await locationService.getCachedLocation();
       if (cachedLocation) {
         setUserLocation(cachedLocation);
-        console.log('Loaded cached location');
       }
     } catch (error) {
       console.error('Error loading cached location:', error);
@@ -400,19 +401,18 @@ export default function SearchScreen() {
     const lat = location?.coords?.latitude || location?.latitude;
     const lng = location?.coords?.longitude || location?.longitude;
 
-    if (lat && lng) {
-      // Only center on location once (or until user manually pans)
-      if (!hasCenteredOnLocationRef.current && !hasUserPannedRef.current) {
-        setMapRegion({
-          latitude: lat,
-          longitude: lng,
-          latitudeDelta: 0.05, // Closer zoom for better user experience
-          longitudeDelta: 0.05,
-        });
-        hasCenteredOnLocationRef.current = true;
+      if (lat && lng) {
+        // Only center on location once (or until user manually pans)
+        if (!hasCenteredOnLocationRef.current && !hasUserPannedRef.current) {
+          setMapRegion({
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.05, // Closer zoom for better user experience
+            longitudeDelta: 0.05,
+          });
+          hasCenteredOnLocationRef.current = true;
+        }
       }
-      console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
-    }
   };
 
   const handleRequestPermission = async () => {
@@ -585,11 +585,18 @@ export default function SearchScreen() {
   const loadInitialBusinesses = async () => {
     // Prevent multiple calls
     if (initialLoadDoneRef.current) {
-      console.log('[MOBILE-SEARCH] Initial load already done, skipping');
+      // initial load already done, skipping
+      return;
+    }
+
+    // If we've already gotten viewport bounds and run a bounds-based search, skip the Phoenix fallback
+    if (lastSearchBoundsRef.current || viewportBounds) {
+      // skip initial fallback when viewport data exists
+      initialLoadDoneRef.current = true;
       return;
     }
     
-    console.log('[MOBILE-SEARCH] Loading initial businesses on app start');
+    // loading initial businesses on app start
     initialLoadDoneRef.current = true;
     
     try {
@@ -608,7 +615,6 @@ export default function SearchScreen() {
         searchLat = lat;
         searchLng = lng;
         locationSource = 'user location';
-        console.log(`[MOBILE-SEARCH] Using user location: ${lat}, ${lng}`);
       }
       
       // Build API request - get businesses within 25 miles radius (reduced for performance)
@@ -619,7 +625,6 @@ export default function SearchScreen() {
       params.append('limit', '200'); // Reduced from 500 to 200 for better performance
       
       const endpoint = `/api/businesses/nearby?${params}`;
-      console.log(`[MOBILE-SEARCH] Initial load endpoint: ${endpoint}`);
       
       const response = await apiRequest(endpoint, {
         method: 'GET',
@@ -633,7 +638,6 @@ export default function SearchScreen() {
       }
       
       const data = await response.json();
-      console.log(`[MOBILE-SEARCH] Loaded ${data.businesses?.length || 0} initial businesses`);
       
       if (data.businesses && data.businesses.length > 0) {
         // Set both allBusinesses (for map markers) and searchResults (for list)
@@ -671,7 +675,6 @@ export default function SearchScreen() {
   const performSearch = async (query, explicitBounds = null) => {
     // Use explicitly passed bounds or fall back to state
     const boundsToUse = explicitBounds || viewportBounds;
-    console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -729,15 +732,14 @@ export default function SearchScreen() {
             searchLat = lat;
             searchLng = lng;
             locationSource = `user location (near me)`;
-            console.log(`[MOBILE-SEARCH] Using user location for "near me": ${lat}, ${lng}`);
 
             // Use smaller radius for "near me" searches for more relevant results
             params.set('radius', '10'); // 10 miles instead of 25
           } else {
-            console.log(`[MOBILE-SEARCH] User location outside Arizona bounds (${lat}, ${lng}), using Phoenix fallback`);
+            // user location outside AZ bounds, fallback to Phoenix
           }
         } else {
-          console.log(`[MOBILE-SEARCH] "Near me" requested but no user location available, using Phoenix fallback`);
+          // no user location for "near me", fallback to Phoenix
 
           // Show a helpful message to user
           setLocationError('To search "near me", please enable location access in settings or use a specific city name.');
@@ -928,11 +930,16 @@ export default function SearchScreen() {
       setHasLoadedInitial(true);
       // Set initial viewport bounds immediately on first load
       setViewportBounds(bounds);
-      return; // Don't search on initial load, let loadInitialBusinesses handle it
+      // Kick off an initial fetch for whatever is in view (even with no query/category)
+      performSearch('', bounds);
+      lastSearchBoundsRef.current = bounds;
+      return;
     }
     
     // User has interacted with the map (pan/zoom)
     hasUserPannedRef.current = true;
+    // Immediately show loading state while we debounce the fetch
+    setLoading(true);
     
     // Debounce viewport bounds update to prevent marker flickering during drag
     // Only update markers after user stops dragging for 300ms
@@ -948,15 +955,13 @@ export default function SearchScreen() {
       clearTimeout(boundsDebounceRef.current);
     }
     
-    // Debounce: only search after user stops moving map for 1.5 seconds (increased for better performance)
+    // Debounce: only search after user stops moving map for ~0.7s
     boundsDebounceRef.current = setTimeout(() => {
-      // Only search if there's a query or category filter
-      if (searchQuery.trim() || selectedCategory) {
-        lastSearchBoundsRef.current = bounds;
-        // CRITICAL: Pass bounds directly to avoid React state timing issues
-        performSearch(searchQuery, bounds);
-      }
-    }, 1500); // 1.5 second debounce for better performance
+      // Always search on viewport change to load businesses in view (even with no query/category)
+      lastSearchBoundsRef.current = bounds;
+      // CRITICAL: Pass bounds directly to avoid React state timing issues
+      performSearch(searchQuery, bounds);
+    }, 700); // Faster refresh while avoiding excessive calls during pan
   }, [searchQuery]);
   
   // Cleanup debounce timers on unmount
@@ -1206,6 +1211,11 @@ export default function SearchScreen() {
             <ActivityIndicator size="large" color="#3182ce" />
             <Text style={styles.loadingText}>Finding businesses for you...</Text>
           </View>
+        ) : searchResults.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <Ionicons name="information-circle-outline" size={20} color="#718096" />
+            <Text style={styles.noResultsText}>No businesses in this area yet.</Text>
+          </View>
         ) : (
           <FlatList
             ref={businessListRef}
@@ -1239,9 +1249,7 @@ export default function SearchScreen() {
               return null;
             }}
             onScrollToIndexFailed={(error) => {
-              // Fallback if scrollToIndex fails
-              console.log('ScrollToIndex failed:', error);
-              // Try scrolling to offset instead
+              // Fallback if scrollToIndex fails; try scrolling to offset instead
               if (businessListRef.current) {
                 const itemHeight = 180; // Approximate item height
                 const offset = error.index * itemHeight;
@@ -1497,6 +1505,18 @@ const styles = StyleSheet.create({
   },
   resultsList: {
     paddingBottom: 20,
+  },
+  noResultsContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  noResultsText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
   },
   loadMoreContainer: {
     padding: 20,
