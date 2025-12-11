@@ -189,8 +189,14 @@ class LocationService {
   }
 
   // Start watching location changes
-  async startLocationWatch() {
+  async startLocationWatch(options = {}) {
     if (this.isWatching) return;
+
+    const {
+      timeInterval = 30000, // 30 seconds
+      distanceInterval = 100, // 100 meters
+      accuracy = Location.Accuracy.Balanced,
+    } = options;
 
     try {
       const permissionStatus = await this.getPermissionStatus();
@@ -201,9 +207,9 @@ class LocationService {
 
       this.watchSubscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 30000, // 30 seconds
-          distanceInterval: 100, // 100 meters
+          accuracy,
+          timeInterval,
+          distanceInterval,
         },
         (location) => {
           this.currentLocation = location;
@@ -213,6 +219,7 @@ class LocationService {
       );
 
       this.isWatching = true;
+      this.currentWatchOptions = { timeInterval, distanceInterval, accuracy };
       console.log('Started location watching');
     } catch (error) {
       console.error('Error starting location watch:', error);
@@ -231,7 +238,13 @@ class LocationService {
       this.watchSubscription = null;
     }
     this.isWatching = false;
+    this.currentWatchOptions = null;
     console.log('Stopped location watching');
+  }
+
+  async restartLocationWatch(options = {}) {
+    this.stopLocationWatch();
+    return this.startLocationWatch(options);
   }
 
   // Cache location to AsyncStorage

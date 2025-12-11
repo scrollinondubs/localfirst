@@ -7,7 +7,6 @@ const WebMapView = ({
   onRegionChangeComplete,
   onBoundsChange, // Callback when map viewport changes (for viewport-based loading)
   showsUserLocation = true,
-  showsMyLocationButton = true,
   showsCompass = true,
   showsScale = true,
   children,
@@ -17,7 +16,8 @@ const WebMapView = ({
   onClearSelection, // Callback to clear selected business when popup is closed
   markers = [], // Add direct marker data prop as backup
   autoFitMarkers = true, // New prop to control auto-fitting
-  enableClustering = true // Enable marker clustering by default
+  enableClustering = true, // Enable marker clustering by default
+  panToCoordinate = null,
 }) => {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
@@ -25,6 +25,77 @@ const WebMapView = ({
   const lastMarkersRef = useRef([]);
   const markerClustererRef = useRef(null); // For clustering
   const updateCountRef = useRef(0); // Safety counter to prevent infinite loops
+  const userMarkerRef = useRef(null);
+  const userMarkerPrevPosRef = useRef(null);
+  const userMarkerAnimRef = useRef(null);
+  // Calculate distance between two lat/lng in meters (haversine)
+  const computeDistanceMeters = (lat1, lng1, lat2, lng2) => {
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371000; // meters
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Smooth pan animation proportional to distance with clamped duration
+  const smoothPanTo = (targetLatLng) => {
+    if (!googleMapRef.current || !targetLatLng) return;
+
+    // Cancel any existing pan animation
+    if (panAnimationRef.current) {
+      cancelAnimationFrame(panAnimationRef.current);
+      panAnimationRef.current = null;
+    }
+
+    const map = googleMapRef.current;
+    const start = map.getCenter();
+    const startLat = start.lat();
+    const startLng = start.lng();
+    const targetLat = targetLatLng.lat();
+    const targetLng = targetLatLng.lng();
+
+    const distanceMeters = computeDistanceMeters(
+      startLat,
+      startLng,
+      targetLat,
+      targetLng
+    );
+
+    // Duration scales with distance, clamped for UX
+    const durationMs = Math.max(
+      500,
+      Math.min(2000, 600 + (distanceMeters / 1000) * 200)
+    ); // 0.6s base, +200ms per km, max 2s
+
+    const startTime = performance.now();
+
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / durationMs);
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+
+      const lat = startLat + (targetLat - startLat) * eased;
+      const lng = startLng + (targetLng - startLng) * eased;
+      map.setCenter(new window.google.maps.LatLng(lat, lng));
+
+      if (t < 1) {
+        panAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        panAnimationRef.current = null;
+      }
+    };
+
+    panAnimationRef.current = requestAnimationFrame(animate);
+  };
+  const panAnimationRef = useRef(null);
+  const lastPanTargetRef = useRef(null);
 
   useEffect(() => {
     if (Platform.OS === 'web' && window.google && window.google.maps) {
@@ -40,6 +111,22 @@ const WebMapView = ({
       updateMapRegion();
     }
   }, [region]);
+
+  useEffect(() => {
+    if (
+      panToCoordinate &&
+      googleMapRef.current &&
+      window.google &&
+      window.google.maps
+    ) {
+      const target = new window.google.maps.LatLng(
+        panToCoordinate.latitude,
+        panToCoordinate.longitude
+      );
+      lastPanTargetRef.current = target;
+      smoothPanTo(target);
+    }
+  }, [panToCoordinate]);
 
   useEffect(() => {
     if (googleMapRef.current) {
@@ -229,11 +316,16 @@ const WebMapView = ({
 
     // Wait for map to be fully loaded before adding markers
     window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
+<<<<<<< HEAD
       // Add location control if requested
       if (showsMyLocationButton && navigator.geolocation) {
         addLocationControl();
       }
 
+=======
+      console.log('Map is idle and ready for markers');
+      
+>>>>>>> 2bda2cc (added a re-center button and fixed animation)
       // Initialize markers after map is fully loaded
       updateMarkers();
       
@@ -271,50 +363,20 @@ const WebMapView = ({
     });
   };
 
-  const addLocationControl = () => {
-    const locationButton = document.createElement('button');
-    locationButton.textContent = '📍';
-    locationButton.classList.add('map-location-button');
-    locationButton.style.cssText = `
-      background-color: #fff;
-      border: 2px solid #fff;
-      border-radius: 3px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.3);
-      cursor: pointer;
-      font-size: 18px;
-      margin: 8px;
-      padding: 8px;
-      position: absolute;
-      right: 0;
-      top: 0;
-    `;
-    
-    locationButton.addEventListener('click', () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            googleMapRef.current.setCenter(pos);
-            googleMapRef.current.setZoom(15);
-          },
-          () => {
-            console.log('Error: The Geolocation service failed.');
-          }
-        );
-      }
-    });
-
-    googleMapRef.current.controls[window.google.maps.ControlPosition.RIGHT_TOP].push(locationButton);
-  };
-
   const updateMapRegion = () => {
     if (googleMapRef.current && region) {
       console.log('Updating map region:', region);
       const center = new window.google.maps.LatLng(region.latitude, region.longitude);
-      googleMapRef.current.setCenter(center);
+      
+      // Avoid snapping the center if this region matches the last animated pan target
+      const shouldSkipCenterSnap =
+        lastPanTargetRef.current &&
+        Math.abs(lastPanTargetRef.current.lat() - center.lat()) < 1e-6 &&
+        Math.abs(lastPanTargetRef.current.lng() - center.lng()) < 1e-6;
+
+      if (!shouldSkipCenterSnap) {
+        googleMapRef.current.setCenter(center);
+      }
       
       // Calculate zoom level based on latitudeDelta
       if (region.latitudeDelta) {
@@ -359,6 +421,37 @@ const WebMapView = ({
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
+    const cancelUserAnimation = () => {
+      if (userMarkerAnimRef.current) {
+        cancelAnimationFrame(userMarkerAnimRef.current);
+        userMarkerAnimRef.current = null;
+      }
+    };
+
+    const animateUserMarker = (marker, fromPos, toPos, duration = 600) => {
+      cancelUserAnimation();
+      const start = performance.now();
+      const fromLat = fromPos.lat();
+      const fromLng = fromPos.lng();
+      const toLat = toPos.lat();
+      const toLng = toPos.lng();
+
+      const step = (ts) => {
+        const elapsed = ts - start;
+        const t = Math.min(1, elapsed / duration);
+        const lat = fromLat + (toLat - fromLat) * t;
+        const lng = fromLng + (toLng - fromLng) * t;
+        marker.setPosition(new window.google.maps.LatLng(lat, lng));
+        if (t < 1) {
+          userMarkerAnimRef.current = requestAnimationFrame(step);
+        } else {
+          userMarkerAnimRef.current = null;
+        }
+      };
+
+      userMarkerAnimRef.current = requestAnimationFrame(step);
+    };
+
     // Process markers from direct markers prop (preferred method)
     if (markers && markers.length > 0) {
       const userMarkersData = markers.filter(m => m.isUserLocation);
@@ -368,27 +461,43 @@ const WebMapView = ({
       // Render user location markers directly (never clustered)
       userMarkersData.forEach(markerData => {
         if (markerData && markerData.coordinate) {
-          const marker = new window.google.maps.Marker({
-            position: {
-              lat: markerData.coordinate.latitude,
-              lng: markerData.coordinate.longitude,
-            },
-            map: googleMapRef.current,
-            title: markerData.title || 'Your location',
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              fillColor: '#4285f4',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 3,
-              scale: 10,
-            },
-            zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + 1000,
-          });
+          const targetPos = new window.google.maps.LatLng(markerData.coordinate.latitude, markerData.coordinate.longitude);
 
-          markersRef.current.push(marker);
+          // Update existing marker smoothly
+          if (userMarkerRef.current) {
+            const prevPos = userMarkerRef.current.getPosition();
+            if (prevPos) {
+              animateUserMarker(userMarkerRef.current, prevPos, targetPos);
+            } else {
+              userMarkerRef.current.setPosition(targetPos);
+            }
+          } else {
+            // Create new user marker
+            const marker = new window.google.maps.Marker({
+              position: targetPos,
+              map: googleMapRef.current,
+              title: markerData.title || 'Your location',
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                fillColor: '#4285f4',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 3,
+                scale: 10,
+              },
+              zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + 1000,
+            });
+            userMarkerRef.current = marker;
+          }
         }
       });
+
+      // Remove user marker if no user data
+      if (userMarkersData.length === 0 && userMarkerRef.current) {
+        cancelUserAnimation();
+        userMarkerRef.current.setMap(null);
+        userMarkerRef.current = null;
+      }
 
       // Render business markers (clustered by default)
       businessMarkersData.forEach((markerData, index) => {
@@ -563,13 +672,7 @@ const WebMapView = ({
         } catch (error) {
           console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  
-          markersRef.current.forEach(marker => {
-            if (!marker.businessData) {
-              marker.setMap(googleMapRef.current);
-              return;
-            }
-            marker.setMap(googleMapRef.current);
-          });
+          businessMarkerInstances.forEach(marker => marker.setMap(googleMapRef.current));
         }
       } else if (!enableClustering && businessMarkerInstances.length > 0) {
         // No clustering - show markers directly
