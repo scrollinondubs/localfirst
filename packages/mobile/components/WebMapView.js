@@ -7,6 +7,7 @@ const WebMapView = ({
   onRegionChangeComplete,
   onBoundsChange, // Callback when map viewport changes (for viewport-based loading)
   showsUserLocation = true,
+  showsMyLocationButton = true,
   showsCompass = true,
   showsScale = true,
   children,
@@ -28,6 +29,8 @@ const WebMapView = ({
   const userMarkerRef = useRef(null);
   const userMarkerPrevPosRef = useRef(null);
   const userMarkerAnimRef = useRef(null);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  const onRegionChangeCompleteRef = useRef(onRegionChangeComplete);
   // Calculate distance between two lat/lng in meters (haversine)
   const computeDistanceMeters = (lat1, lng1, lat2, lng2) => {
     const toRad = (v) => (v * Math.PI) / 180;
@@ -96,6 +99,14 @@ const WebMapView = ({
   };
   const panAnimationRef = useRef(null);
   const lastPanTargetRef = useRef(null);
+
+  useEffect(() => {
+    onBoundsChangeRef.current = onBoundsChange;
+  }, [onBoundsChange]);
+
+  useEffect(() => {
+    onRegionChangeCompleteRef.current = onRegionChangeComplete;
+  }, [onRegionChangeComplete]);
 
   useEffect(() => {
     if (Platform.OS === 'web' && window.google && window.google.maps) {
@@ -316,16 +327,13 @@ const WebMapView = ({
 
     // Wait for map to be fully loaded before adding markers
     window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
-<<<<<<< HEAD
+      console.log('Map is idle and ready for markers');
+      
       // Add location control if requested
       if (showsMyLocationButton && navigator.geolocation) {
         addLocationControl();
       }
 
-=======
-      console.log('Map is idle and ready for markers');
-      
->>>>>>> 2bda2cc (added a re-center button and fixed animation)
       // Initialize markers after map is fully loaded
       updateMarkers();
       
@@ -343,8 +351,8 @@ const WebMapView = ({
       const center = googleMapRef.current.getCenter();
       
       // Call the new onBoundsChange callback for viewport-based loading
-      if (onBoundsChange) {
-        onBoundsChange({
+      if (onBoundsChangeRef.current) {
+        onBoundsChangeRef.current({
           northeast: { lat: ne.lat(), lng: ne.lng() },
           southwest: { lat: sw.lat(), lng: sw.lng() },
           center: { lat: center.lat(), lng: center.lng() }
@@ -352,8 +360,8 @@ const WebMapView = ({
       }
       
       // Keep the old callback for backward compatibility
-      if (onRegionChangeComplete) {
-        onRegionChangeComplete({
+      if (onRegionChangeCompleteRef.current) {
+        onRegionChangeCompleteRef.current({
           latitude: center.lat(),
           longitude: center.lng(),
           latitudeDelta: Math.abs(ne.lat() - sw.lat()),
