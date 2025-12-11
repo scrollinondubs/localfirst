@@ -14,7 +14,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import WebMapView from '../components/WebMapView';
-import WebMarker from '../components/WebMarker';
 import locationService from '../services/LocationService';
 import voiceService from '../services/VoiceService';
 import LocationPermissionModal from '../components/LocationPermissionModal';
@@ -429,9 +428,12 @@ export default function SearchScreen() {
           setLocationStatus('denied');
         }
       }
+
+      return result;
     } catch (error) {
       console.error('Error requesting permission:', error);
       setLocationError('Failed to request location permission');
+      return null;
     }
   };
 
@@ -1007,6 +1009,24 @@ export default function SearchScreen() {
   // Memoize markers array to prevent infinite loop
   // Use allBusinesses for map (show all markers), not searchResults (paginated list)
   const mapMarkers = useMemo(() => {
+    const markers = [];
+
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+
+    if (userLat && userLng) {
+      markers.push({
+        coordinate: {
+          latitude: userLat,
+          longitude: userLng,
+        },
+        title: 'Your Location',
+        description: locationStatus === 'granted' ? 'Current location' : 'Manual location',
+        pinColor: '#4285f4',
+        isUserLocation: true,
+      });
+    }
+
     // If we have viewport bounds, filter markers to a padded viewport to reduce load
     let filtered = allBusinesses;
     if (viewportBounds) {
@@ -1038,7 +1058,7 @@ export default function SearchScreen() {
       }
     }
 
-    return filtered.map(business => ({
+    const businessMarkers = filtered.map(business => ({
       coordinate: {
         latitude: business.latitude,
         longitude: business.longitude,
@@ -1048,7 +1068,16 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-  }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR]);
+
+    return [...markers, ...businessMarkers];
+  }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, userLocation, locationStatus, selectedBusiness]);
+
+  const handleEnableLocationPress = async () => {
+    const result = await handleRequestPermission();
+    if (!result || !result.success) {
+      setShowPermissionModal(true);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1077,42 +1106,6 @@ export default function SearchScreen() {
             enableClustering={true}
             markers={mapMarkers}
           >
-          {/* User location marker */}
-          {userLocation && (() => {
-            const lat = userLocation?.coords?.latitude || userLocation?.latitude;
-            const lng = userLocation?.coords?.longitude || userLocation?.longitude;
-
-            if (lat && lng) {
-              return (
-                <WebMarker
-                  coordinate={{
-                    latitude: lat,
-                    longitude: lng,
-                  }}
-                  title="Your Location"
-                  description={locationStatus === 'granted' ? 'Current location' : 'Manual location'}
-                  pinColor="blue"
-                />
-              );
-            }
-            return null;
-          })()}
-          
-          {/* Search result markers */}
-          {searchResults.map((business, index) => (
-            <WebMarker
-              key={`business-${business.id}-${index}`}
-              coordinate={{
-                latitude: business.latitude,
-                longitude: business.longitude,
-              }}
-              title={business.name}
-              description={`${business.category} • ${business.distance || 'Distance unknown'}`}
-              pinColor={business.lfa_member ? '#3182ce' : '#ef4444'}
-              businessData={business}
-              onPress={() => handleMapMarkerPress(business)}
-            />
-          ))}
           </WebMapView>
         )}
         
@@ -1132,6 +1125,19 @@ export default function SearchScreen() {
               <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 6 }} />
               <Text style={styles.searchAreaButtonText}>Searching area...</Text>
             </View>
+          </View>
+        )}
+
+        {/* Enable location button (shown when location unavailable) */}
+        {!userLocation && (
+          <View style={styles.enableLocationContainer}>
+            <TouchableOpacity
+              style={styles.enableLocationButton}
+              onPress={handleEnableLocationPress}
+            >
+              <Ionicons name="locate" size={18} color="#ffffff" />
+              <Text style={styles.enableLocationText}>Enable location</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -1395,6 +1401,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  enableLocationContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    zIndex: 5,
+  },
+  enableLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3182ce',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  enableLocationText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   searchContainer: {
     flexDirection: 'row',
