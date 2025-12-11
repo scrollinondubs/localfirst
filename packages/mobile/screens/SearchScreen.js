@@ -143,6 +143,8 @@ export default function SearchScreen() {
   const viewportBoundsDebounceRef = useRef(null); // Separate debounce for marker updates
   const lastSearchBoundsRef = useRef(null);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
+  const [currentMapCenter, setCurrentMapCenter] = useState(null); // Track current map center for button state
+  const [panToUserCoordinate, setPanToUserCoordinate] = useState(null);
 
   // Initialize location and voice services when component mounts
   useEffect(() => {
@@ -922,6 +924,23 @@ export default function SearchScreen() {
     });
   };
 
+  const recenterToUserLocation = () => {
+    const lat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+    if (lat && lng) {
+      // Reset zoom to the same level as initial load and pan to user
+      setMapRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+      setPanToUserCoordinate({ latitude: lat, longitude: lng });
+    } else {
+      handleEnableLocationPress();
+    }
+  };
+
   // Handle map viewport changes for viewport-based search
   const handleMapBoundsChange = useCallback((bounds) => {
     // Mark as loaded on first bounds update
@@ -930,8 +949,12 @@ export default function SearchScreen() {
       setHasLoadedInitial(true);
       // Set initial viewport bounds immediately on first load
       setViewportBounds(bounds);
+      setCurrentMapCenter(bounds.center);
       return; // Don't search on initial load, let loadInitialBusinesses handle it
     }
+    
+    // Track current map center for button state calculation
+    setCurrentMapCenter(bounds.center);
     
     // User has interacted with the map (pan/zoom)
     hasUserPannedRef.current = true;
@@ -1072,10 +1095,30 @@ export default function SearchScreen() {
     return [...markers, ...businessMarkers];
   }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, userLocation, locationStatus, selectedBusiness]);
 
+  // Compute if map is currently centered on user location (within ~200m tolerance)
+  const isCenteredOnUser = useMemo(() => {
+    if (!userLocation || !currentMapCenter) return false;
+    
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+    
+    if (!userLat || !userLng) return false;
+    
+    const distance = locationService.calculateDistance(
+      userLat, userLng,
+      currentMapCenter.lat, currentMapCenter.lng
+    );
+    
+    return distance < 0.15; // ~240m tolerance (accounts for map drag inertia)
+  }, [userLocation, currentMapCenter]);
+
   const handleEnableLocationPress = async () => {
     const result = await handleRequestPermission();
     if (!result || !result.success) {
       setShowPermissionModal(true);
+    }
+    if (result?.success && userLocation) {
+      recenterToUserLocation();
     }
   };
 
@@ -1096,7 +1139,6 @@ export default function SearchScreen() {
             onRegionChangeComplete={null}
             onBoundsChange={handleMapBoundsChange}
             showsUserLocation={true}
-            showsMyLocationButton={true}
             showsCompass={true}
             showsScale={true}
             onMarkerPress={handleMapMarkerPress}
@@ -1105,18 +1147,11 @@ export default function SearchScreen() {
             autoFitMarkers={false}
             enableClustering={true}
             markers={mapMarkers}
+            panToCoordinate={panToUserCoordinate}
           >
           </WebMapView>
         )}
         
-        {/* Location status overlay */}
-        {userLocation && (
-          <View style={styles.locationStatusOverlay}>
-            <Text style={styles.locationStatusText}>
-              {locationStatus === 'granted' ? '📍 Current location' : '📍 Manual location'}
-            </Text>
-          </View>
-        )}
         
         {/* Loading indicator for viewport-based search */}
         {loading && hasLoadedInitial && (
@@ -1128,18 +1163,31 @@ export default function SearchScreen() {
           </View>
         )}
 
-        {/* Enable location button (shown when location unavailable) */}
-        {!userLocation && (
-          <View style={styles.enableLocationContainer}>
-            <TouchableOpacity
-              style={styles.enableLocationButton}
-              onPress={handleEnableLocationPress}
+        {/* Enable / Re-center button (bottom-left) */}
+        <View style={styles.enableLocationContainer}>
+          <TouchableOpacity
+            style={[
+              styles.enableLocationButton,
+              isCenteredOnUser && styles.enableLocationButtonDisabled,
+            ]}
+            onPress={userLocation ? recenterToUserLocation : handleEnableLocationPress}
+            disabled={isCenteredOnUser}
+          >
+            <Ionicons
+              name="locate"
+              size={16}
+              color={isCenteredOnUser ? '#3182ce' : '#ffffff'}
+            />
+            <Text
+              style={[
+                styles.enableLocationText,
+                isCenteredOnUser && styles.enableLocationTextDisabled,
+              ]}
             >
-              <Ionicons name="locate" size={18} color="#ffffff" />
-              <Text style={styles.enableLocationText}>Enable location</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              {userLocation ? 'Re-center' : 'Enable location'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Input */}
@@ -1361,22 +1409,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  locationStatusOverlay: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  locationStatusText: {
-    fontSize: 12,
-    color: '#3182ce',
-    fontWeight: '500',
-  },
   searchAreaButtonContainer: {
     position: 'absolute',
     top: 50,
@@ -1405,27 +1437,36 @@ const styles = StyleSheet.create({
   enableLocationContainer: {
     position: 'absolute',
     bottom: 12,
-    right: 12,
+    left: 12,
     zIndex: 5,
   },
   enableLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3182ce',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: 'rgba(49, 130, 206, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
   },
   enableLocationText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 6,
+  },
+  enableLocationButtonDisabled: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#3182ce',
+    opacity: 0.5,
+  },
+  enableLocationTextDisabled: {
+    color: '#3182ce',
   },
   searchContainer: {
     flexDirection: 'row',
