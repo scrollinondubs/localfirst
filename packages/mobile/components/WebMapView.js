@@ -361,8 +361,37 @@ const WebMapView = ({
 
     // Process markers from direct markers prop (preferred method)
     if (markers && markers.length > 0) {
-      
-      markers.forEach((markerData, index) => {
+      const userMarkersData = markers.filter(m => m.isUserLocation);
+      const businessMarkersData = markers.filter(m => !m.isUserLocation);
+      const businessMarkerInstances = [];
+
+      // Render user location markers directly (never clustered)
+      userMarkersData.forEach(markerData => {
+        if (markerData && markerData.coordinate) {
+          const marker = new window.google.maps.Marker({
+            position: {
+              lat: markerData.coordinate.latitude,
+              lng: markerData.coordinate.longitude,
+            },
+            map: googleMapRef.current,
+            title: markerData.title || 'Your location',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              fillColor: '#4285f4',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 3,
+              scale: 10,
+            },
+            zIndex: Number(window.google.maps.Marker.MAX_ZINDEX) + 1000,
+          });
+
+          markersRef.current.push(marker);
+        }
+      });
+
+      // Render business markers (clustered by default)
+      businessMarkersData.forEach((markerData, index) => {
         if (markerData && markerData.coordinate) {
           const isSelected = selectedBusiness && 
             markerData.businessData && 
@@ -495,11 +524,12 @@ const WebMapView = ({
           }
 
           markersRef.current.push(marker);
+          businessMarkerInstances.push(marker);
         }
       });
       
-      // Initialize clustering if enabled and we have markers
-      if (enableClustering && markersRef.current.length > 0 && window.google && window.google.maps) {
+      // Initialize clustering if enabled and we have markers (business markers only)
+      if (enableClustering && businessMarkerInstances.length > 0 && window.google && window.google.maps) {
         try {
           // Clean solid red clusters
           const renderer = {
@@ -527,17 +557,23 @@ const WebMapView = ({
 
           markerClustererRef.current = new MarkerClusterer({
             map: googleMapRef.current,
-            markers: markersRef.current,
+            markers: businessMarkerInstances,
             renderer: renderer,
           });
         } catch (error) {
           console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  
-          markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+          markersRef.current.forEach(marker => {
+            if (!marker.businessData) {
+              marker.setMap(googleMapRef.current);
+              return;
+            }
+            marker.setMap(googleMapRef.current);
+          });
         }
-      } else if (!enableClustering && markersRef.current.length > 0) {
+      } else if (!enableClustering && businessMarkerInstances.length > 0) {
         // No clustering - show markers directly
-        markersRef.current.forEach(marker => marker.setMap(googleMapRef.current));
+        businessMarkerInstances.forEach(marker => marker.setMap(googleMapRef.current));
       }
     }
     
