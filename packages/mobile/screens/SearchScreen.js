@@ -109,6 +109,7 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
+  // Removed results overlay; keep markers simple for now
   
   // Infinite scroll state
   const [allBusinesses, setAllBusinesses] = useState([]); // Store all fetched businesses
@@ -199,6 +200,7 @@ export default function SearchScreen() {
   
   // No longer need separate initial load effect - handled by handleMapBoundsChange
   const previousCategoryRef = useRef(null); // Track last category to detect clearing
+  const previousSearchQueryRef = useRef(''); // Track last search query for clear detection
 
   // Search effect for text query and category changes (not map movement)
   useEffect(() => {
@@ -228,6 +230,26 @@ export default function SearchScreen() {
     previousCategoryRef.current = selectedCategory;
     return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery, hasLoadedInitial]);
+
+  // When search input is cleared via keyboard, reset results (same as clear button)
+  useEffect(() => {
+    if (!hasLoadedInitial) {
+      previousSearchQueryRef.current = searchQuery;
+      return;
+    }
+    const prev = previousSearchQueryRef.current;
+    const prevHadText = prev && prev.trim().length > 0;
+    const nowEmpty = searchQuery.trim().length === 0;
+    if (prevHadText && nowEmpty) {
+      setSelectedBusiness(null);
+      setSearchResults([]);
+      setDisplayedBusinesses([]);
+      setSearchMetadata(null);
+      setSearchError(null);
+      performSearch('', viewportBounds);
+    }
+    previousSearchQueryRef.current = searchQuery;
+  }, [searchQuery, hasLoadedInitial, viewportBounds]);
 
   const initializeLocation = async () => {
     try {
@@ -679,6 +701,7 @@ export default function SearchScreen() {
   const performSearch = async (query, explicitBounds = null) => {
     // Use explicitly passed bounds or fall back to state
     const boundsToUse = explicitBounds || viewportBounds;
+    const hasTextQuery = query && query.trim().length > 0;
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -696,8 +719,13 @@ export default function SearchScreen() {
         params.append('category_filter', selectedCategory);
       }
       
-      // Add viewport bounds if available (for viewport-based search)
-      if (boundsToUse) {
+      // For text searches, remove radius constraint and use a global-ish bounding box
+      if (hasTextQuery) {
+        params.append('ne_lat', 90);
+        params.append('ne_lng', 180);
+        params.append('sw_lat', -90);
+        params.append('sw_lng', -180);
+      } else if (boundsToUse) {
         params.append('ne_lat', boundsToUse.northeast.lat);
         params.append('ne_lng', boundsToUse.northeast.lng);
         params.append('sw_lat', boundsToUse.southwest.lat);
@@ -712,7 +740,7 @@ export default function SearchScreen() {
       let locationSource = 'fallback (Phoenix, AZ)';
       
       // PRIORITY 1: Use viewport center if available (viewport-based search)
-      if (boundsToUse && boundsToUse.center) {
+      if (!hasTextQuery && boundsToUse && boundsToUse.center) {
         searchLat = boundsToUse.center.lat;
         searchLng = boundsToUse.center.lng;
         locationSource = `viewport center (map area)`;
@@ -816,7 +844,7 @@ export default function SearchScreen() {
         console.error(`[MOBILE-SEARCH] Full response data:`, data);
         businesses = [];
       }
-      
+
       // Store all businesses and show first page
       setAllBusinesses(businesses);
       setCurrentPage(1);
@@ -904,6 +932,8 @@ export default function SearchScreen() {
     }
   };
 
+  // Removed fitMapToResults; auto-center handled via first result when applicable
+
   // Manual search (bypasses debounce for immediate results)
   const handleTextSearch = () => {
     if (searchQuery.trim() || selectedCategory) {
@@ -961,6 +991,11 @@ export default function SearchScreen() {
     // Track current map center for button state calculation
     setCurrentMapCenter(bounds.center);
     
+    // If a text search is active, don't reset results on pan/zoom; just track bounds
+    if (searchQuery.trim().length > 0) {
+      setViewportBounds(bounds);
+      return;
+    }
     // User has interacted with the map (pan/zoom)
     hasUserPannedRef.current = true;
     // Immediately show loading state while we debounce the fetch
@@ -1032,6 +1067,17 @@ export default function SearchScreen() {
     );
   };
 
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSelectedBusiness(null);
+    setSearchResults([]);
+    setDisplayedBusinesses([]);
+    setSearchMetadata(null);
+    setSearchError(null);
+    // Re-run browse fetch for current viewport if available
+    performSearch('', viewportBounds);
+  };
+
   // Debug logging for render
 
   // Memoize markers array to prevent infinite loop
@@ -1096,7 +1142,7 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-
+    
     return [...markers, ...businessMarkers];
   }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, userLocation, locationStatus, selectedBusiness]);
 
@@ -1156,7 +1202,14 @@ export default function SearchScreen() {
           >
           </WebMapView>
         )}
-        
+        {/* Location status overlay */}
+        {userLocation && (
+          <View style={styles.locationStatusOverlay}>
+            <Text style={styles.locationStatusText}>
+              {locationStatus === 'granted' ? '📍 Current location' : '📍 Manual location'}
+            </Text>
+          </View>
+        )}
         
         {/* Loading indicator for viewport-based search */}
         {loading && hasLoadedInitial && (
@@ -1204,7 +1257,15 @@ export default function SearchScreen() {
           onChangeText={setSearchQuery}
           onSubmitEditing={handleTextSearch}
         />
-        
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearSearch}
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons name="close-circle" size={20} color="#9ca3af" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.searchButton}
           onPress={handleTextSearch}
@@ -1492,6 +1553,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     marginRight: 8,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 60,
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   searchButton: {
     backgroundColor: '#3182ce',
