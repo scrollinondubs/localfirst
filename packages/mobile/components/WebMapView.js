@@ -99,7 +99,7 @@ const WebMapView = ({
   };
   const panAnimationRef = useRef(null);
   const lastPanTargetRef = useRef(null);
-
+  // Keep callbacks fresh for map listeners created once
   useEffect(() => {
     onBoundsChangeRef.current = onBoundsChange;
   }, [onBoundsChange]);
