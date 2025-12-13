@@ -48,6 +48,53 @@ const ARIZONA_CITIES = {
   'oro valley': { lat: 32.3909, lng: -110.9665, city: 'Oro Valley' }
 };
 
+const PHOENIX_COORDS = { lat: 33.4484, lng: -112.0740 };
+const ARIZONA_BOUNDS = { minLat: 31, maxLat: 37, minLng: -115, maxLng: -109 };
+const AZ_PROXIMITY_MILES = 10; // Use user location when within 10 miles of AZ
+const INITIAL_RADIUS_MILES = 25; // Default search radius in miles
+
+// Calculate haversine distance in miles
+function haversineDistanceMiles(lat1, lng1, lat2, lng2) {
+  if (
+    typeof lat1 !== 'number' ||
+    typeof lng1 !== 'number' ||
+    typeof lat2 !== 'number' ||
+    typeof lng2 !== 'number'
+  ) {
+    return null;
+  }
+  
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R_KM = 6371; // Earth radius in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distanceKm = R_KM * c;
+  return distanceKm * 0.621371;
+}
+
+// Distance from a point to the Arizona bounding box (approx) in miles
+function distanceToArizonaBoundsMiles(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  
+  const clampedLat = Math.max(ARIZONA_BOUNDS.minLat, Math.min(ARIZONA_BOUNDS.maxLat, lat));
+  const clampedLng = Math.max(ARIZONA_BOUNDS.minLng, Math.min(ARIZONA_BOUNDS.maxLng, lng));
+  
+  return haversineDistanceMiles(lat, lng, clampedLat, clampedLng);
+}
+
+function isNearArizona(lat, lng, proximityMiles = AZ_PROXIMITY_MILES) {
+  const distance = distanceToArizonaBoundsMiles(lat, lng);
+  if (distance === null) return false;
+  return distance <= proximityMiles;
+}
+
 // Format distance from kilometers to miles with 1 decimal place
 function formatDistance(distanceKm) {
   if (!distanceKm) return 'Distance unknown';
@@ -629,25 +676,26 @@ export default function SearchScreen() {
       setLoading(true);
       
       // Default to Phoenix coordinates for initial load
-      let searchLat = 33.4484;
-      let searchLng = -112.0740;
+      let searchLat = PHOENIX_COORDS.lat;
+      let searchLng = PHOENIX_COORDS.lng;
       let locationSource = 'Phoenix default';
       
-      // If user location is available and in Arizona, use it instead
+      // If user location is available and near Arizona, use it instead
       const lat = userLocation?.coords?.latitude || userLocation?.latitude;
       const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+      const userNearArizona = isNearArizona(lat, lng);
       
-      if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+      if (userNearArizona) {
         searchLat = lat;
         searchLng = lng;
-        locationSource = 'user location';
+        locationSource = 'user location (within AZ proximity)';
       }
-      
-      // Build API request - get businesses within 25 miles radius (reduced for performance)
+
+      // Build API request - get businesses within configured radius
       const params = new URLSearchParams();
       params.append('lat', searchLat);
       params.append('lng', searchLng);
-      params.append('radius', '25'); // Reduced from 50 to 25 miles
+      params.append('radius', INITIAL_RADIUS_MILES.toString()); // Reduced from 50 to 25 miles
       params.append('limit', '200'); // Reduced from 500 to 200 for better performance
       
       const endpoint = `/api/businesses/nearby?${params}`;
@@ -676,17 +724,19 @@ export default function SearchScreen() {
         // Only update map region if it hasn't been set yet (to avoid overwriting user location)
         // This prevents the Phoenix flash when location permission is already granted
         setMapRegion(prevRegion => {
-          if (prevRegion === null) {
-            // Map region not set yet, set it now
+          if (prevRegion !== null) {
+            return prevRegion;
+          }
+          if (userNearArizona && lat && lng) {
             return {
-              latitude: searchLat,
-              longitude: searchLng,
+              latitude: lat,
+              longitude: lng,
               latitudeDelta: 0.3,
               longitudeDelta: 0.3,
             };
           }
-          // Map region already set (by getCurrentLocation), keep it
-          return prevRegion;
+          // Keep existing (likely user) region; do not force Phoenix recenter
+          return prevRegion; // remains null so map stays where user is
         });
       }
       
@@ -701,7 +751,12 @@ export default function SearchScreen() {
   const performSearch = async (query, explicitBounds = null) => {
     // Use explicitly passed bounds or fall back to state
     const boundsToUse = explicitBounds || viewportBounds;
-    const hasTextQuery = query && query.trim().length > 0;
+    const safeQuery = query || '';
+    const normalizedQuery = safeQuery.toLowerCase();
+    const hasTextQuery = safeQuery.trim().length > 0;
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+    const userNearArizona = isNearArizona(userLat, userLng);
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -710,7 +765,7 @@ export default function SearchScreen() {
     try {
       // Build query parameters for enhanced search API
       const params = new URLSearchParams({
-        query: query,
+        query: safeQuery,
         limit: 500 // Reduced from 5000 to 500 for better performance
       });
 
@@ -731,12 +786,12 @@ export default function SearchScreen() {
         params.append('sw_lat', boundsToUse.southwest.lat);
         params.append('sw_lng', boundsToUse.southwest.lng);
       } else {
-        params.append('radius', '25');
+        params.append('radius', INITIAL_RADIUS_MILES.toString());
       }
 
       // Intelligent location detection from search query
-      let searchLat = 33.4484; // Phoenix, AZ latitude (default)
-      let searchLng = -112.0740; // Phoenix, AZ longitude (default)
+      let searchLat = PHOENIX_COORDS.lat; // Phoenix, AZ latitude (default)
+      let searchLng = PHOENIX_COORDS.lng; // Phoenix, AZ longitude (default)
       let locationSource = 'fallback (Phoenix, AZ)';
       
       // PRIORITY 1: Use viewport center if available (viewport-based search)
@@ -746,45 +801,43 @@ export default function SearchScreen() {
         locationSource = `viewport center (map area)`;
       }
       // PRIORITY 2: Parse query for city names or location indicators
-      else if (parseLocationFromQuery(query)) {
-        const cityCoords = parseLocationFromQuery(query);
+      else if (parseLocationFromQuery(safeQuery)) {
+        const cityCoords = parseLocationFromQuery(safeQuery);
         searchLat = cityCoords.lat;
         searchLng = cityCoords.lng;
         locationSource = `parsed city (${cityCoords.city})`;
       } 
       // PRIORITY 3: "Near me" searches
-      else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
+      else if (normalizedQuery.includes('near me') || normalizedQuery.includes('nearby')) {
         // User wants results near their current location
-        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
-        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
-
-        if (lat && lng) {
-          // Arizona rough bounds: lat 31-37, lng -115 to -109
-          if (lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
-            searchLat = lat;
-            searchLng = lng;
-            locationSource = `user location (near me)`;
-
-            // Use smaller radius for "near me" searches for more relevant results
-            params.set('radius', '10'); // 10 miles instead of 25
+        if (userLat && userLng) {
+          if (userNearArizona) {
+            searchLat = userLat;
+            searchLng = userLng;
+            locationSource = `user location (near me within AZ proximity)`;
           } else {
-            // user location outside AZ bounds, fallback to Phoenix
+            // Outside proximity; keep Phoenix fallback but still use radius search
+            locationSource = 'phoenix fallback (near me outside AZ proximity)';
           }
+          
+          // Ensure radius-based search for "near me" and remove any global bounds
+          params.delete('ne_lat');
+          params.delete('ne_lng');
+          params.delete('sw_lat');
+          params.delete('sw_lng');
+          params.set('radius', INITIAL_RADIUS_MILES.toString());
         } else {
           // no user location for "near me", fallback to Phoenix
-
           // Show a helpful message to user
           setLocationError('To search "near me", please enable location access in settings or use a specific city name.');
         }
       } 
       // PRIORITY 4: User location (if available)
       else if (userLocation) {
-        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
-        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
-        if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
-          searchLat = lat;
-          searchLng = lng;
-          locationSource = `user location`;
+        if (userLat && userLng && userNearArizona) {
+          searchLat = userLat;
+          searchLng = userLng;
+          locationSource = `user location (within AZ proximity)`;
         }
       }
       
@@ -843,6 +896,39 @@ export default function SearchScreen() {
         console.error(`[MOBILE-SEARCH] No businesses found in response, data structure:`, Object.keys(data));
         console.error(`[MOBILE-SEARCH] Full response data:`, data);
         businesses = [];
+      }
+
+      const boundsCenterLat = boundsToUse?.center?.lat;
+      const boundsCenterLng = boundsToUse?.center?.lng;
+      const boundsNearArizona = isNearArizona(boundsCenterLat, boundsCenterLng, 150);
+
+      // If we’re outside AZ and outside the expanded AZ proximity and got zero results on a browse search, keep existing Phoenix results
+      if (!userNearArizona && !boundsNearArizona && !hasTextQuery && businesses.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      // If this was a text search (global) and not a viewport-driven search, fit map to all results
+      const shouldFitAllResults = hasTextQuery && businesses.length > 0 && !explicitBounds;
+      if (shouldFitAllResults) {
+        const lats = businesses.map(b => b.latitude).filter(v => typeof v === 'number');
+        const lngs = businesses.map(b => b.longitude).filter(v => typeof v === 'number');
+        if (lats.length > 0 && lngs.length > 0) {
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const minLng = Math.min(...lngs);
+          const maxLng = Math.max(...lngs);
+          const centerLat = (minLat + maxLat) / 2;
+          const centerLng = (minLng + maxLng) / 2;
+          const latDelta = Math.max((maxLat - minLat) * 1.2, 0.3);
+          const lngDelta = Math.max((maxLng - minLng) * 1.2, 0.3);
+          setMapRegion({
+            latitude: centerLat,
+            longitude: centerLng,
+            latitudeDelta: latDelta,
+            longitudeDelta: lngDelta,
+          });
+        }
       }
 
       // Store all businesses and show first page
@@ -975,16 +1061,34 @@ export default function SearchScreen() {
 
   // Handle map viewport changes for viewport-based search
   const handleMapBoundsChange = useCallback((bounds) => {
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+    const userNearArizona = isNearArizona(userLat, userLng);
+    const boundsCenterLat = bounds?.center?.lat;
+    const boundsCenterLng = bounds?.center?.lng;
+    const boundsNearArizona = isNearArizona(boundsCenterLat, boundsCenterLng, 150);
+    const willSkip = false; // allow viewport searches; we’ll guard empty-result replacement in performSearch
+    
     // Mark as loaded on first bounds update
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
-      // Set initial viewport bounds immediately on first load
-      setViewportBounds(bounds);
-      setCurrentMapCenter(bounds.center);
-      // Kick off an initial fetch for whatever is in view (even with no query/category)
-      performSearch('', bounds);
-      lastSearchBoundsRef.current = bounds;
+      
+      if (userNearArizona) {
+        // Set initial viewport bounds immediately on first load (user is near AZ)
+        setViewportBounds(bounds);
+        setCurrentMapCenter(bounds.center);
+        // Kick off an initial fetch for whatever is in view (even with no query/category)
+        performSearch('', bounds);
+        lastSearchBoundsRef.current = bounds;
+      } else {
+        // Outside AZ proximity: force Phoenix fallback on initial load
+        initialLoadDoneRef.current = true; // Prevent duplicate initial loads
+        lastSearchBoundsRef.current = null;
+        setViewportBounds(null);
+        setCurrentMapCenter(bounds.center); // keep user viewport center
+        performSearch('', null); // Use Phoenix fallback with radius
+      }
       return;
     }
     
@@ -1022,7 +1126,7 @@ export default function SearchScreen() {
       // CRITICAL: Pass bounds directly to avoid React state timing issues
       performSearch(searchQuery, bounds);
     }, 700); // Faster refresh while avoiding excessive calls during pan
-  }, [searchQuery]);
+  }, [searchQuery, userLocation]);
   
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -1070,12 +1174,18 @@ export default function SearchScreen() {
   const handleClearSearch = () => {
     setSearchQuery('');
     setSelectedBusiness(null);
-    setSearchResults([]);
-    setDisplayedBusinesses([]);
+    // Restore previous browse results instead of clearing everything
+    if (allBusinesses && allBusinesses.length > 0) {
+      const firstPage = allBusinesses.slice(0, PAGE_SIZE);
+      setSearchResults(firstPage);
+      setDisplayedBusinesses(firstPage);
+      setCurrentPage(1);
+    } else {
+      // If nothing cached, refetch browse results
+      performSearch('', viewportBounds);
+    }
     setSearchMetadata(null);
     setSearchError(null);
-    // Re-run browse fetch for current viewport if available
-    performSearch('', viewportBounds);
   };
 
   // Debug logging for render
