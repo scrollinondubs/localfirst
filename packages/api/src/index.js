@@ -11,6 +11,7 @@ import enhancedSearchRoutes from './routes/enhanced-search.js';
 import { interview as interviewRoutes } from './routes/interview.js';
 import { concierge as conciergeRoutes } from './routes/concierge.js';
 import { conciergeCron as conciergeCronRoutes } from './routes/concierge-cron.js';
+import supportRoutes from './routes/support.js';
 
 const app = new Hono();
 
@@ -62,6 +63,7 @@ app.route('/api/enhanced-search', enhancedSearchRoutes);
 app.route('/api/interview', interviewRoutes);
 app.route('/api/concierge', conciergeRoutes);
 app.route('/api/concierge', conciergeCronRoutes);
+app.route('/api/support', supportRoutes);
 
 // 404 handler
 app.notFound((c) => {

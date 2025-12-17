@@ -7,7 +7,6 @@ const WebMapView = ({
   onRegionChangeComplete,
   onBoundsChange, // Callback when map viewport changes (for viewport-based loading)
   showsUserLocation = true,
-  showsMyLocationButton = true,
   showsCompass = true,
   showsScale = true,
   children,
@@ -329,11 +328,6 @@ const WebMapView = ({
     window.google.maps.event.addListenerOnce(googleMapRef.current, 'idle', () => {
       console.log('Map is idle and ready for markers');
       
-      // Add location control if requested
-      if (showsMyLocationButton && navigator.geolocation) {
-        addLocationControl();
-      }
-
       // Initialize markers after map is fully loaded
       updateMarkers();
       
@@ -648,6 +642,7 @@ const WebMapView = ({
       // Initialize clustering if enabled and we have markers (business markers only)
       if (enableClustering && businessMarkerInstances.length > 0 && window.google && window.google.maps) {
         try {
+          console.log(`[MAP] Initializing clustering for ${businessMarkerInstances.length} markers`);
           // Clean solid red clusters
           const renderer = {
             render: ({ count, position }) => {
