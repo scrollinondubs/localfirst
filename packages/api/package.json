@@ -30,6 +30,8 @@
     "db:verify": "node scripts/verify-database.js",
     "db:fix-coordinates": "node scripts/fix-coordinates.js",
     "db:reset": "rm -f local.db && npm run db:setup && npm run db:seed",
+    "support:check": "node scripts/check-support-tickets.js",
+    "support:count": "node scripts/check-support-tickets.js --count",
     "test": "vitest"
   },
   "dependencies": {
