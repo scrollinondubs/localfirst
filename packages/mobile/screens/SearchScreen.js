@@ -22,6 +22,7 @@ import DebugInfo from '../components/DebugInfo';
 import FavoriteButton from '../components/FavoriteButton';
 import EnhancedBusinessCard from '../components/EnhancedBusinessCard';
 import CategoryFilter from '../components/CategoryFilter';
+import SupportChat from '../components/SupportChat';
 import { apiRequest, API_CONFIG } from '../config/api';
 
 // Arizona cities and their coordinates for intelligent search parsing
@@ -157,6 +158,7 @@ export default function SearchScreen() {
   const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
   // Removed results overlay; keep markers simple for now
+  const [supportChatVisible, setSupportChatVisible] = useState(false);
   
   // Infinite scroll state
   const [allBusinesses, setAllBusinesses] = useState([]); // Store all fetched businesses
@@ -1073,23 +1075,10 @@ export default function SearchScreen() {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
-      
-      if (userNearArizona) {
-        // Set initial viewport bounds immediately on first load (user is near AZ)
-        setViewportBounds(bounds);
-        setCurrentMapCenter(bounds.center);
-        // Kick off an initial fetch for whatever is in view (even with no query/category)
-        performSearch('', bounds);
-        lastSearchBoundsRef.current = bounds;
-      } else {
-        // Outside AZ proximity: force Phoenix fallback on initial load
-        initialLoadDoneRef.current = true; // Prevent duplicate initial loads
-        lastSearchBoundsRef.current = null;
-        setViewportBounds(null);
-        setCurrentMapCenter(bounds.center); // keep user viewport center
-        performSearch('', null); // Use Phoenix fallback with radius
-      }
-      return;
+      // Set initial viewport bounds immediately on first load
+      setViewportBounds(bounds);
+      setCurrentMapCenter(bounds.center);
+      return; // Don't search on initial load, let loadInitialBusinesses handle it
     }
     
     // Track current map center for button state calculation
@@ -1252,7 +1241,7 @@ export default function SearchScreen() {
       pinColor: business.lfa_member ? '#3182ce' : '#ef4444',
       businessData: business
     }));
-    
+
     return [...markers, ...businessMarkers];
   }, [allBusinesses, viewportBounds, VIEWPORT_PADDING_FACTOR, userLocation, locationStatus, selectedBusiness]);
 
@@ -1312,6 +1301,7 @@ export default function SearchScreen() {
           >
           </WebMapView>
         )}
+<<<<<<< HEAD
         {/* Location status overlay */}
         {userLocation && (
           <View style={styles.locationStatusOverlay}>
@@ -1320,6 +1310,7 @@ export default function SearchScreen() {
             </Text>
           </View>
         )}
+        
         
         {/* Loading indicator for viewport-based search */}
         {loading && hasLoadedInitial && (
@@ -1499,7 +1490,7 @@ export default function SearchScreen() {
         >
           <Ionicons 
             name={isRecording ? "stop" : "mic"} 
-            size={20} 
+            size={28} 
             color={!isVoiceAvailable ? "#a0aec0" : "#ffffff"} 
           />
         </TouchableOpacity>
@@ -1532,6 +1523,27 @@ export default function SearchScreen() {
           </Text>
         </View>
       )}
+
+      {/* Help/Support Button - Fixed at Bottom, below voice button */}
+      <TouchableOpacity
+        style={styles.helpButton}
+        onPress={() => setSupportChatVisible(prev => !prev)}
+        accessibilityLabel="Help and Support"
+      >
+        <View style={styles.helpIconContainer}>
+          <Ionicons 
+            name="information-circle" 
+            size={28} 
+            color="#ffffff" 
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* Support Chat Modal */}
+      <SupportChat
+        visible={supportChatVisible}
+        onClose={() => setSupportChatVisible(false)}
+      />
 
       {/* Location Permission Modal */}
       <LocationPermissionModal
@@ -1866,26 +1878,63 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#3182ce', // Fully opaque blue button
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    backgroundColor: '#3182ce', // Blue button matching template
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     zIndex: 1000,
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   voiceButtonMinimizedActive: {
-    backgroundColor: '#dc2626', // Fully opaque red button
+    backgroundColor: '#dc2626', // Red button when recording
     transform: [{ scale: 1.1 }],
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   voiceButtonMinimizedDisabled: {
-    backgroundColor: '#e2e8f0', // Fully opaque gray button
+    backgroundColor: '#e2e8f0', // Gray button when disabled
     elevation: 0,
     shadowOpacity: 0,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  helpButton: {
+    position: 'absolute',
+    bottom: 86, // Position below voice button (20px bottom + 56px height + 10px gap)
+    right: 20,
+    backgroundColor: '#3182ce', // Blue button matching template and voice button
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    zIndex: 1000,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  helpIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
 });
