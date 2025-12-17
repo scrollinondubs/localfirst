@@ -8,6 +8,7 @@ config();
 const port = 8787;
 
 // Mock environment object for development
+// Database path: file:./local.db points to packages/api/local.db (where the database exists)
 const mockEnv = {
   NODE_ENV: 'development',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,

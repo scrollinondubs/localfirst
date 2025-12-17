@@ -15,6 +15,7 @@ function createDatabase(env = {}) {
   }
   
   // Otherwise, use libsql client for local development
+  // From packages/api/src/db/, go up two levels to packages/api/ where local.db exists
   const client = createClient({
     url: env.DATABASE_URL || 'file:../../local.db',
     authToken: env.DATABASE_AUTH_TOKEN
