@@ -1,7 +1,63 @@
+/**
+ * ============================================================================
+ * DATABASE SCHEMA DEFINITION
+ * ============================================================================
+ * 
+ * This file defines all database tables for the Local First Arizona application.
+ * 
+ * NAMING CONVENTIONS:
+ * - Table names: snake_case (e.g., 'businesses', 'user_favorites')
+ * - Column names: snake_case (e.g., 'created_at', 'user_id')
+ * - Foreign keys: {referenced_table}_id (e.g., 'user_id', 'business_id')
+ * 
+ * DATA TYPES:
+ * - text: Strings, JSON data, UUIDs, timestamps (ISO 8601 format)
+ * - integer: Counts, scores, booleans (use { mode: 'boolean' } for booleans)
+ * - real: Decimal numbers (coordinates, scores, costs)
+ * 
+ * TIMESTAMPS:
+ * - All tables include 'created_at' (auto-set to CURRENT_TIMESTAMP)
+ * - Most tables include 'updated_at' (should be updated on modification)
+ * - Timestamps stored as ISO 8601 strings
+ * 
+ * FOREIGN KEYS:
+ * - All foreign keys use onDelete: 'cascade' for data integrity
+ * - This ensures related records are deleted when parent is deleted
+ * 
+ * JSON FIELDS:
+ * - Many tables use JSON fields for flexible data storage
+ * - Always validate JSON structure in application code
+ * - Document JSON schemas in code comments
+ * 
+ * DOCUMENTATION:
+ * - See /docs/DATABASE_SCHEMA.md for comprehensive documentation
+ * - Each table has inline comments explaining purpose and key fields
+ * 
+ * ============================================================================
+ */
+
 import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, real, unique } from 'drizzle-orm/sqlite-core';
 
-// Businesses table
+/**
+ * ============================================================================
+ * CORE BUSINESS TABLES
+ * ============================================================================
+ */
+
+/**
+ * businesses
+ * 
+ * Purpose: Stores all Local First Arizona member businesses and their information.
+ * 
+ * Key Relationships:
+ * - Referenced by: user_favorites, enrichment_logs, failed_enrichments, concierge_recommendations
+ * 
+ * Important Notes:
+ * - The 'category' field is legacy - use 'primary_category' and 'subcategory' instead
+ * - JSON fields (business_attributes, hours_of_operation, etc.) should be validated on insert/update
+ * - Coordinates (latitude/longitude) are required for map display
+ */
 export const businesses = sqliteTable('businesses', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -34,7 +90,16 @@ export const businesses = sqliteTable('businesses', {
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
-// Chain businesses blocklist
+/**
+ * chain_businesses
+ * 
+ * Purpose: Stores chain business patterns for filtering out non-local businesses.
+ * Used by the Chrome extension to identify and filter chain stores.
+ * 
+ * Key Fields:
+ * - patterns: JSON array of name patterns to match against business names
+ * - confidence_score: Matching confidence level (0-100)
+ */
 export const chainBusinesses = sqliteTable('chain_businesses', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -45,7 +110,20 @@ export const chainBusinesses = sqliteTable('chain_businesses', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
-// Analytics events
+/**
+ * ============================================================================
+ * ANALYTICS & TRACKING TABLES
+ * ============================================================================
+ */
+
+/**
+ * analytics_events
+ * 
+ * Purpose: Tracks user interaction events for analytics.
+ * Uses anonymous extension_id for privacy-friendly tracking.
+ * 
+ * Event Types: 'view', 'click', 'filter_toggle', etc.
+ */
 export const analyticsEvents = sqliteTable('analytics_events', {
   id: text('id').primaryKey(),
   extensionId: text('extension_id'), // anonymous extension identifier
@@ -79,7 +157,26 @@ export const syncLogs = sqliteTable('sync_logs', {
   completedAt: text('completed_at')
 });
 
-// Users table (for mobile app authentication)
+/**
+ * ============================================================================
+ * USER & AUTHENTICATION TABLES
+ * ============================================================================
+ */
+
+/**
+ * users
+ * 
+ * Purpose: Stores user accounts for the mobile app authentication system.
+ * 
+ * Security Notes:
+ * - password_hash: Never store plain text passwords, always hash
+ * - reset_token: Used for password reset functionality
+ * - is_active: Use for soft deletes (don't hard delete user accounts)
+ * 
+ * Relationships:
+ * - Referenced by: consumer_profiles, user_favorites, conversation_sessions, 
+ *   user_preferences, concierge_recommendations
+ */
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -119,7 +216,19 @@ export const consumerProfiles = sqliteTable('consumer_profiles', {
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
 
-// User favorites table (replaces JSON approach in consumer_profiles for better performance)
+/**
+ * user_favorites
+ * 
+ * Purpose: Stores user's favorite businesses.
+ * Replaces the JSON approach in consumer_profiles for better query performance.
+ * 
+ * Relationships:
+ * - References: users, businesses
+ * 
+ * Constraints:
+ * - Unique constraint on (user_id, business_id) prevents duplicate favorites
+ * - Cascade delete: favorites are deleted when user or business is deleted
+ */
 export const userFavorites = sqliteTable('user_favorites', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -131,7 +240,26 @@ export const userFavorites = sqliteTable('user_favorites', {
   uniqueUserBusiness: unique().on(table.userId, table.businessId)
 }));
 
-// Business Categories table for taxonomy management
+/**
+ * ============================================================================
+ * CATEGORY & TAXONOMY TABLES
+ * ============================================================================
+ */
+
+/**
+ * business_categories
+ * 
+ * Purpose: Manages the business category taxonomy system.
+ * Supports hierarchical categories via parent_category_id.
+ * 
+ * Key Features:
+ * - Hierarchical structure (parent/child categories)
+ * - UI customization (icon_name, color_code)
+ * - Sort ordering for display
+ * - Active/inactive status for soft deletes
+ * 
+ * Usage: Used for filtering and organizing businesses by category.
+ */
 export const businessCategories = sqliteTable('business_categories', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
@@ -282,4 +410,54 @@ export const recommendationLogs = sqliteTable('recommendation_logs', {
   startedAt: text('started_at').default(sql`CURRENT_TIMESTAMP`),
   completedAt: text('completed_at'),
   status: text('status').default('running') // running, completed, failed
+});
+
+/**
+ * ============================================================================
+ * SUPPORT & FEEDBACK TABLES
+ * ============================================================================
+ */
+
+/**
+ * support_tickets
+ * 
+ * Purpose: Stores user bug reports and feedback submissions.
+ * 
+ * Ticket Types:
+ * - 'bug-report': User-reported bugs/issues (includes 6-digit ticket_number)
+ * - 'general-feedback': User suggestions and feedback (ticket_number format: FB-{timestamp})
+ * 
+ * Status Flow:
+ * - 'open' → 'in-progress' → 'resolved' → 'closed'
+ * 
+ * Email Integration:
+ * - Confirmation emails are sent when tickets are created
+ * - Email addresses are required for bug reports, optional for feedback
+ * 
+ * Admin Workflow:
+ * - Admin can respond via admin_response field
+ * - responded_at tracks when admin responded
+ * 
+ * Key Fields:
+ * - ticket_number: Unique identifier (6-digit for bugs, FB-{timestamp} for feedback)
+ * - email: User email (required, used for confirmation emails)
+ * - user_id: Optional foreign key to users table (if user is logged in)
+ * - description: Full description of issue or feedback
+ * 
+ * Relationships:
+ * - References: users (optional, for logged-in users)
+ */
+export const supportTickets = sqliteTable('support_tickets', {
+  id: text('id').primaryKey(),
+  ticketNumber: text('ticket_number').notNull().unique(), // 6-digit ticket number for bug reports, FB-{timestamp} for feedback
+  type: text('type').notNull(), // 'bug-report' or 'general-feedback'
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }), // Optional: links to user account if logged in
+  email: text('email').notNull(), // Required for email confirmations
+  subject: text('subject'), // Optional subject line (primarily for bug reports)
+  description: text('description').notNull(), // Full description of issue or feedback
+  status: text('status').default('open'), // 'open', 'in-progress', 'resolved', 'closed'
+  adminResponse: text('admin_response'), // Admin's response to the ticket
+  respondedAt: text('responded_at'), // Timestamp when admin responded
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`)
 });
