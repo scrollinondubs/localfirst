@@ -244,7 +244,8 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 2,
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   
   categoryIconContainer: {
@@ -259,18 +260,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
-    lineHeight: 22,
   },
   
   favoriteButton: {
     marginLeft: 8,
+    marginTop: -4,
   },
   
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginLeft: 28, // Align with business name
+    marginLeft: 28,
+    marginTop: -20, // Pull closer to business name
   },
   
   category: {
@@ -333,7 +335,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
   
   contactInfo: {
