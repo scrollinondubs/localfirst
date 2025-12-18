@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { useAuth } from '../components/AuthContext';
 
 export default function RegisterScreen({ navigation }) {
@@ -191,11 +192,28 @@ export default function RegisterScreen({ navigation }) {
         setSuccessMessage(`Welcome to Local First Arizona, ${result.user.name}! Your account has been created successfully.`);
         
         // Navigate to onboarding after a brief delay to show success message
+        // We need to navigate up to the root navigator (RootStack) to access Onboarding
+        // Navigation hierarchy: RegisterScreen (ProfileStack) -> MainTabs -> RootStack
         setTimeout(() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Onboarding' }],
-          });
+          // Get the root navigator by going up the navigation hierarchy
+          // navigation = ProfileStack, getParent() = MainTabs, getParent() = RootStack
+          const rootNavigation = navigation.getParent()?.getParent();
+          
+          if (rootNavigation) {
+            // Reset navigation at root level to show Onboarding
+            rootNavigation.reset({
+              index: 0,
+              routes: [{ name: 'Onboarding' }],
+            });
+          } else {
+            // Fallback: use CommonActions to reset from root level
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Onboarding' }],
+              })
+            );
+          }
         }, 2000);
       }
     } catch (error) {
