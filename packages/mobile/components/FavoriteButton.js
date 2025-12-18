@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   TouchableOpacity,
   Animated,
@@ -25,19 +25,9 @@ const FavoriteButton = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Don't show favorite button for unauthenticated users
-  if (!isAuthenticated()) {
-    return null;
-  }
-
   // Initialize favorite status from API
-  useEffect(() => {
-    if (businessId && !hasInitialized) {
-      fetchFavoriteStatus();
-    }
-  }, [businessId, hasInitialized]);
-
-  const fetchFavoriteStatus = async () => {
+  // IMPORTANT: All hooks must be called before any conditional returns
+  const fetchFavoriteStatus = useCallback(async () => {
     try {
       const response = await apiRequest(`/api/favorites/status/${businessId}`, {
         headers: getAuthHeaders()
@@ -54,7 +44,20 @@ const FavoriteButton = ({
     } finally {
       setHasInitialized(true);
     }
-  };
+  }, [businessId, getAuthHeaders, initialFavorited]);
+
+  useEffect(() => {
+    // Only fetch if authenticated and not yet initialized
+    if (isAuthenticated() && businessId && !hasInitialized) {
+      fetchFavoriteStatus();
+    }
+  }, [businessId, hasInitialized, isAuthenticated, fetchFavoriteStatus]);
+
+  // Don't show favorite button for unauthenticated users
+  // This check must come AFTER all hooks
+  if (!isAuthenticated()) {
+    return null;
+  }
 
   const triggerHapticFeedback = () => {
     if (Platform.OS !== 'web') {
