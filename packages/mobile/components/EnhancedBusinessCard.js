@@ -126,9 +126,6 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         
         <View style={styles.categoryRow}>
           <Text style={styles.category}>{getCategoryDisplay()}</Text>
-          {business.distance && business.distance !== '0' && business.distance !== '0.0' && parseFloat(business.distance) > 0 && (
-            <Text style={styles.distance}>{business.distance} mi</Text>
-          )}
         </View>
       </View>
 
@@ -171,38 +168,43 @@ const EnhancedBusinessCard = ({ business, onPress, style, isSelected = false }) 
         </View>
         
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleDirectionsPress}
-            accessibilityLabel="Get directions"
-          >
-            <Ionicons name="navigate" size={16} color="#007AFF" />
-          </TouchableOpacity>
-          
-          {business.phone && (
+          {business.distance != null && (
+            <Text style={styles.distance}>{business.distance} mi</Text>
+          )}
+          <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => handlePhonePress(business.phone)}
-              accessibilityLabel="Call"
+              onPress={handleDirectionsPress}
+              accessibilityLabel="Get directions"
             >
-              <Ionicons name="call" size={16} color="#007AFF" />
+              <Ionicons name="navigate" size={16} color="#007AFF" />
             </TouchableOpacity>
-          )}
-          
-          {business.website && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleWebsitePress(business.website)}
-              accessibilityLabel="Website"
-            >
-              <Ionicons name="globe" size={16} color="#007AFF" />
-            </TouchableOpacity>
-          )}
+            
+            {business.phone && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handlePhonePress(business.phone)}
+                accessibilityLabel="Call"
+              >
+                <Ionicons name="call" size={16} color="#007AFF" />
+              </TouchableOpacity>
+            )}
+            
+            {business.website && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleWebsitePress(business.website)}
+                accessibilityLabel="Website"
+              >
+                <Ionicons name="globe" size={16} color="#007AFF" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
       {/* Search metadata (for debugging) */}
-      {business.relevanceScore && __DEV__ && (
+      {business.relevanceScore != null && business.relevanceScore !== 0 && __DEV__ && (
         <View style={styles.debugInfo}>
           <Text style={styles.debugText}>
             Score: {business.relevanceScore} | Combined: {business.combinedScore}
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
   },
   
   header: {
-    marginBottom: 12,
+    marginBottom: 4,
   },
   
   titleRow: {
@@ -281,6 +283,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontWeight: '400',
+    textAlign: 'right',
+    marginBottom: 2,
   },
   
   description: {
@@ -329,7 +333,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   
   contactInfo: {
@@ -342,6 +346,11 @@ const styles = StyleSheet.create({
   },
   
   actions: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
+  
+  actionButtonsRow: {
     flexDirection: 'row',
   },
   
