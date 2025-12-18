@@ -98,7 +98,7 @@ function isNearArizona(lat, lng, proximityMiles = AZ_PROXIMITY_MILES) {
 
 // Format distance from kilometers to miles with 1 decimal place
 function formatDistance(distanceKm) {
-  if (!distanceKm) return 'Distance unknown';
+  if (distanceKm == null) return 'Distance unknown';
   
   // Convert km to miles (1 km = 0.621371 miles)
   const distanceMiles = distanceKm * 0.621371;
@@ -692,7 +692,7 @@ export default function SearchScreen() {
         searchLng = lng;
         locationSource = 'user location (within AZ proximity)';
       }
-
+      
       // Build API request - get businesses within configured radius
       const params = new URLSearchParams();
       params.append('lat', searchLat);
@@ -922,8 +922,32 @@ export default function SearchScreen() {
           const maxLng = Math.max(...lngs);
           const centerLat = (minLat + maxLat) / 2;
           const centerLng = (minLng + maxLng) / 2;
-          const latDelta = Math.max((maxLat - minLat) * 1.2, 0.3);
-          const lngDelta = Math.max((maxLng - minLng) * 1.2, 0.3);
+          
+          // Calculate the actual span of markers
+          const latSpan = maxLat - minLat;
+          const lngSpan = maxLng - minLng;
+          
+          // Add padding (1.3x) to ensure all markers are visible with some margin
+          const paddingFactor = 1.3;
+          let latDelta = latSpan * paddingFactor;
+          let lngDelta = lngSpan * paddingFactor;
+          
+          // Set minimum delta to allow zooming in when markers are close together
+          // Use a smaller minimum (0.01) to allow tight zoom when markers are clustered
+          const minDelta = 0.01;
+          latDelta = Math.max(latDelta, minDelta);
+          lngDelta = Math.max(lngDelta, minDelta);
+          
+          // Set maximum delta to state level (Arizona bounds: ~6 degrees lat, ~6 degrees lng)
+          // Only apply this maximum when markers are actually spread out
+          const maxDelta = 6.0; // State level zoom
+          // Only cap at state level if the calculated delta exceeds it (markers are spread out)
+          if (latDelta > maxDelta || lngDelta > maxDelta) {
+            // If markers span beyond state level, use state level bounds
+            latDelta = Math.min(latDelta, maxDelta);
+            lngDelta = Math.min(lngDelta, maxDelta);
+          }
+          
           setMapRegion({
             latitude: centerLat,
             longitude: centerLng,
@@ -1075,10 +1099,23 @@ export default function SearchScreen() {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
-      // Set initial viewport bounds immediately on first load
-      setViewportBounds(bounds);
-      setCurrentMapCenter(bounds.center);
-      return; // Don't search on initial load, let loadInitialBusinesses handle it
+      
+      if (userNearArizona) {
+        // Set initial viewport bounds immediately on first load (user is near AZ)
+        setViewportBounds(bounds);
+        setCurrentMapCenter(bounds.center);
+        // Kick off an initial fetch for whatever is in view (even with no query/category)
+        performSearch('', bounds);
+        lastSearchBoundsRef.current = bounds;
+      } else {
+        // Outside AZ proximity: force Phoenix fallback on initial load
+        initialLoadDoneRef.current = true; // Prevent duplicate initial loads
+        lastSearchBoundsRef.current = null;
+        setViewportBounds(null);
+        setCurrentMapCenter(bounds.center); // keep user viewport center
+        performSearch('', null); // Use Phoenix fallback with radius
+      }
+      return;
     }
     
     // Track current map center for button state calculation
@@ -1146,9 +1183,16 @@ export default function SearchScreen() {
 
   const renderSearchResult = ({ item }) => {
     // Add distance formatting for enhanced business card
+    // Always include distance, even when it's 0
+    let formattedDistance = null;
+    if (item.distance != null) {
+      const distanceStr = formatDistance(item.distance).replace(' mi', '');
+      formattedDistance = distanceStr;
+    }
+    
     const businessWithDistance = {
       ...item,
-      distance: item.distance ? formatDistance(item.distance).replace(' mi', '') : null
+      distance: formattedDistance
     };
     
     return (
@@ -1300,15 +1344,6 @@ export default function SearchScreen() {
             panToCoordinate={panToUserCoordinate}
           >
           </WebMapView>
-        )}
-<<<<<<< HEAD
-        {/* Location status overlay */}
-        {userLocation && (
-          <View style={styles.locationStatusOverlay}>
-            <Text style={styles.locationStatusText}>
-              {locationStatus === 'granted' ? '📍 Current location' : '📍 Manual location'}
-            </Text>
-          </View>
         )}
         
         
