@@ -238,13 +238,13 @@ const styles = StyleSheet.create({
   },
   
   header: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   
   categoryIconContainer: {
