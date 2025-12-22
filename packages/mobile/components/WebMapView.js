@@ -28,6 +28,8 @@ const WebMapView = ({
   const userMarkerRef = useRef(null);
   const userMarkerPrevPosRef = useRef(null);
   const userMarkerAnimRef = useRef(null);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  const onRegionChangeCompleteRef = useRef(onRegionChangeComplete);
   // Calculate distance between two lat/lng in meters (haversine)
   const computeDistanceMeters = (lat1, lng1, lat2, lng2) => {
     const toRad = (v) => (v * Math.PI) / 180;
@@ -96,6 +98,14 @@ const WebMapView = ({
   };
   const panAnimationRef = useRef(null);
   const lastPanTargetRef = useRef(null);
+  // Keep callbacks fresh for map listeners created once
+  useEffect(() => {
+    onBoundsChangeRef.current = onBoundsChange;
+  }, [onBoundsChange]);
+
+  useEffect(() => {
+    onRegionChangeCompleteRef.current = onRegionChangeComplete;
+  }, [onRegionChangeComplete]);
 
   useEffect(() => {
     if (Platform.OS === 'web' && window.google && window.google.maps) {
@@ -319,7 +329,6 @@ const WebMapView = ({
       console.log('Map is idle and ready for markers');
       
       // Initialize markers after map is fully loaded
-      console.log('Map fully loaded, calling updateMarkers');
       updateMarkers();
       
       // Add custom zoom controls to ensure correct behavior
@@ -336,8 +345,8 @@ const WebMapView = ({
       const center = googleMapRef.current.getCenter();
       
       // Call the new onBoundsChange callback for viewport-based loading
-      if (onBoundsChange) {
-        onBoundsChange({
+      if (onBoundsChangeRef.current) {
+        onBoundsChangeRef.current({
           northeast: { lat: ne.lat(), lng: ne.lng() },
           southwest: { lat: sw.lat(), lng: sw.lng() },
           center: { lat: center.lat(), lng: center.lng() }
@@ -345,8 +354,8 @@ const WebMapView = ({
       }
       
       // Keep the old callback for backward compatibility
-      if (onRegionChangeComplete) {
-        onRegionChangeComplete({
+      if (onRegionChangeCompleteRef.current) {
+        onRegionChangeCompleteRef.current({
           latitude: center.lat(),
           longitude: center.lng(),
           latitudeDelta: Math.abs(ne.lat() - sw.lat()),
@@ -384,7 +393,7 @@ const WebMapView = ({
   const updateMarkers = async () => {
     // Check if markers have actually changed FIRST (before safety counter)
     const currentMarkersKey = `${markers.length}-${selectedBusiness?.id || 'none'}`;
-    
+
     if (lastMarkersRef.current === currentMarkersKey) {
       // Markers unchanged, exit early without incrementing counter
       return;
@@ -663,7 +672,6 @@ const WebMapView = ({
             markers: businessMarkerInstances,
             renderer: renderer,
           });
-          console.log('[MAP] ✅ Clustering initialized successfully');
         } catch (error) {
           console.error('[MAP] ❌ Clustering error:', error);
           // Fall back to showing all markers without clustering  

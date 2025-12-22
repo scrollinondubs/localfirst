@@ -49,9 +49,56 @@ const ARIZONA_CITIES = {
   'oro valley': { lat: 32.3909, lng: -110.9665, city: 'Oro Valley' }
 };
 
+const PHOENIX_COORDS = { lat: 33.4484, lng: -112.0740 };
+const ARIZONA_BOUNDS = { minLat: 31, maxLat: 37, minLng: -115, maxLng: -109 };
+const AZ_PROXIMITY_MILES = 10; // Use user location when within 10 miles of AZ
+const INITIAL_RADIUS_MILES = 25; // Default search radius in miles
+
+// Calculate haversine distance in miles
+function haversineDistanceMiles(lat1, lng1, lat2, lng2) {
+  if (
+    typeof lat1 !== 'number' ||
+    typeof lng1 !== 'number' ||
+    typeof lat2 !== 'number' ||
+    typeof lng2 !== 'number'
+  ) {
+    return null;
+  }
+  
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R_KM = 6371; // Earth radius in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distanceKm = R_KM * c;
+  return distanceKm * 0.621371;
+}
+
+// Distance from a point to the Arizona bounding box (approx) in miles
+function distanceToArizonaBoundsMiles(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  
+  const clampedLat = Math.max(ARIZONA_BOUNDS.minLat, Math.min(ARIZONA_BOUNDS.maxLat, lat));
+  const clampedLng = Math.max(ARIZONA_BOUNDS.minLng, Math.min(ARIZONA_BOUNDS.maxLng, lng));
+  
+  return haversineDistanceMiles(lat, lng, clampedLat, clampedLng);
+}
+
+function isNearArizona(lat, lng, proximityMiles = AZ_PROXIMITY_MILES) {
+  const distance = distanceToArizonaBoundsMiles(lat, lng);
+  if (distance === null) return false;
+  return distance <= proximityMiles;
+}
+
 // Format distance from kilometers to miles with 1 decimal place
 function formatDistance(distanceKm) {
-  if (!distanceKm) return 'Distance unknown';
+  if (distanceKm == null) return 'Distance unknown';
   
   // Convert km to miles (1 km = 0.621371 miles)
   const distanceMiles = distanceKm * 0.621371;
@@ -110,6 +157,7 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchMetadata, setSearchMetadata] = useState(null);
   const [voiceButtonMinimized, setVoiceButtonMinimized] = useState(false);
+  // Removed results overlay; keep markers simple for now
   const [supportChatVisible, setSupportChatVisible] = useState(false);
   
   // Infinite scroll state
@@ -200,6 +248,8 @@ export default function SearchScreen() {
   const initialLoadRef = useRef(false); // Track if we've done initial load
   
   // No longer need separate initial load effect - handled by handleMapBoundsChange
+  const previousCategoryRef = useRef(null); // Track last category to detect clearing
+  const previousSearchQueryRef = useRef(''); // Track last search query for clear detection
 
   // Search effect for text query and category changes (not map movement)
   useEffect(() => {
@@ -211,9 +261,12 @@ export default function SearchScreen() {
     // Only trigger on category/query changes, NOT on initial load
     // (initial load handled by map bounds change)
     const hasTextQuery = searchQuery.trim().length > 0;
+    const categoryCleared = !!previousCategoryRef.current && !selectedCategory;
+    const shouldSearch = hasTextQuery || selectedCategory || categoryCleared;
     
     // Don't search if this is just initial state (no query, no category)
-    if (!hasTextQuery && !selectedCategory) {
+    if (!shouldSearch) {
+      previousCategoryRef.current = selectedCategory;
       return;
     }
     
@@ -223,8 +276,29 @@ export default function SearchScreen() {
       performSearch(searchQuery, null); // null means use viewportBounds from state
     }, debounceDelay);
 
+    previousCategoryRef.current = selectedCategory;
     return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery, hasLoadedInitial]);
+
+  // When search input is cleared via keyboard, reset results (same as clear button)
+  useEffect(() => {
+    if (!hasLoadedInitial) {
+      previousSearchQueryRef.current = searchQuery;
+      return;
+    }
+    const prev = previousSearchQueryRef.current;
+    const prevHadText = prev && prev.trim().length > 0;
+    const nowEmpty = searchQuery.trim().length === 0;
+    if (prevHadText && nowEmpty) {
+      setSelectedBusiness(null);
+      setSearchResults([]);
+      setDisplayedBusinesses([]);
+      setSearchMetadata(null);
+      setSearchError(null);
+      performSearch('', viewportBounds);
+    }
+    previousSearchQueryRef.current = searchQuery;
+  }, [searchQuery, hasLoadedInitial, viewportBounds]);
 
   const initializeLocation = async () => {
     try {
@@ -355,12 +429,9 @@ export default function SearchScreen() {
             latitudeDelta: 0.05, // Closer zoom for better user experience
             longitudeDelta: 0.05,
           });
-          console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
         }
         
-        if (result.fromCache) {
-          console.log('Using cached location');
-        }
+        // cached location used
       } else {
         throw new Error(result.error || 'Unable to get location');
       }
@@ -386,7 +457,6 @@ export default function SearchScreen() {
       const cachedLocation = await locationService.getCachedLocation();
       if (cachedLocation) {
         setUserLocation(cachedLocation);
-        console.log('Loaded cached location');
       }
     } catch (error) {
       console.error('Error loading cached location:', error);
@@ -403,19 +473,18 @@ export default function SearchScreen() {
     const lat = location?.coords?.latitude || location?.latitude;
     const lng = location?.coords?.longitude || location?.longitude;
 
-    if (lat && lng) {
-      // Only center on location once (or until user manually pans)
-      if (!hasCenteredOnLocationRef.current && !hasUserPannedRef.current) {
-        setMapRegion({
-          latitude: lat,
-          longitude: lng,
-          latitudeDelta: 0.05, // Closer zoom for better user experience
-          longitudeDelta: 0.05,
-        });
-        hasCenteredOnLocationRef.current = true;
+      if (lat && lng) {
+        // Only center on location once (or until user manually pans)
+        if (!hasCenteredOnLocationRef.current && !hasUserPannedRef.current) {
+          setMapRegion({
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.05, // Closer zoom for better user experience
+            longitudeDelta: 0.05,
+          });
+          hasCenteredOnLocationRef.current = true;
+        }
       }
-      console.log(`[LOCATION] Map centered on user location: ${lat}, ${lng}`);
-    }
   };
 
   const handleRequestPermission = async () => {
@@ -591,41 +660,47 @@ export default function SearchScreen() {
   const loadInitialBusinesses = async () => {
     // Prevent multiple calls
     if (initialLoadDoneRef.current) {
-      console.log('[MOBILE-SEARCH] Initial load already done, skipping');
+      // initial load already done, skipping
+      return;
+    }
+
+    // If we've already gotten viewport bounds and run a bounds-based search, skip the Phoenix fallback
+    if (lastSearchBoundsRef.current || viewportBounds) {
+      // skip initial fallback when viewport data exists
+      initialLoadDoneRef.current = true;
       return;
     }
     
-    console.log('[MOBILE-SEARCH] Loading initial businesses on app start');
+    // loading initial businesses on app start
     initialLoadDoneRef.current = true;
     
     try {
       setLoading(true);
       
       // Default to Phoenix coordinates for initial load
-      let searchLat = 33.4484;
-      let searchLng = -112.0740;
+      let searchLat = PHOENIX_COORDS.lat;
+      let searchLng = PHOENIX_COORDS.lng;
       let locationSource = 'Phoenix default';
       
-      // If user location is available and in Arizona, use it instead
+      // If user location is available and near Arizona, use it instead
       const lat = userLocation?.coords?.latitude || userLocation?.latitude;
       const lng = userLocation?.coords?.longitude || userLocation?.longitude;
+      const userNearArizona = isNearArizona(lat, lng);
       
-      if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
+      if (userNearArizona) {
         searchLat = lat;
         searchLng = lng;
-        locationSource = 'user location';
-        console.log(`[MOBILE-SEARCH] Using user location: ${lat}, ${lng}`);
+        locationSource = 'user location (within AZ proximity)';
       }
       
-      // Build API request - get businesses within 25 miles radius (reduced for performance)
+      // Build API request - get businesses within configured radius
       const params = new URLSearchParams();
       params.append('lat', searchLat);
       params.append('lng', searchLng);
-      params.append('radius', '25'); // Reduced from 50 to 25 miles
+      params.append('radius', INITIAL_RADIUS_MILES.toString()); // Reduced from 50 to 25 miles
       params.append('limit', '200'); // Reduced from 500 to 200 for better performance
       
       const endpoint = `/api/businesses/nearby?${params}`;
-      console.log(`[MOBILE-SEARCH] Initial load endpoint: ${endpoint}`);
       
       const response = await apiRequest(endpoint, {
         method: 'GET',
@@ -639,7 +714,6 @@ export default function SearchScreen() {
       }
       
       const data = await response.json();
-      console.log(`[MOBILE-SEARCH] Loaded ${data.businesses?.length || 0} initial businesses`);
       
       if (data.businesses && data.businesses.length > 0) {
         // Set both allBusinesses (for map markers) and searchResults (for list)
@@ -652,17 +726,19 @@ export default function SearchScreen() {
         // Only update map region if it hasn't been set yet (to avoid overwriting user location)
         // This prevents the Phoenix flash when location permission is already granted
         setMapRegion(prevRegion => {
-          if (prevRegion === null) {
-            // Map region not set yet, set it now
+          if (prevRegion !== null) {
+            return prevRegion;
+          }
+          if (userNearArizona && lat && lng) {
             return {
-              latitude: searchLat,
-              longitude: searchLng,
+              latitude: lat,
+              longitude: lng,
               latitudeDelta: 0.3,
               longitudeDelta: 0.3,
             };
           }
-          // Map region already set (by getCurrentLocation), keep it
-          return prevRegion;
+          // Keep existing (likely user) region; do not force Phoenix recenter
+          return prevRegion; // remains null so map stays where user is
         });
       }
       
@@ -677,7 +753,12 @@ export default function SearchScreen() {
   const performSearch = async (query, explicitBounds = null) => {
     // Use explicitly passed bounds or fall back to state
     const boundsToUse = explicitBounds || viewportBounds;
-    console.log(`[MOBILE-SEARCH] Starting search for: "${query}"`);
+    const safeQuery = query || '';
+    const normalizedQuery = safeQuery.toLowerCase();
+    const hasTextQuery = safeQuery.trim().length > 0;
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+    const userNearArizona = isNearArizona(userLat, userLng);
     
     // Allow empty query to show all nearby businesses (initial load or browsing)
     setLoading(true);
@@ -686,7 +767,7 @@ export default function SearchScreen() {
     try {
       // Build query parameters for enhanced search API
       const params = new URLSearchParams({
-        query: query,
+        query: safeQuery,
         limit: 500 // Reduced from 5000 to 500 for better performance
       });
 
@@ -695,68 +776,70 @@ export default function SearchScreen() {
         params.append('category_filter', selectedCategory);
       }
       
-      // Add viewport bounds if available (for viewport-based search)
-      if (boundsToUse) {
+      // For text searches, remove radius constraint and use a global-ish bounding box
+      if (hasTextQuery) {
+        params.append('ne_lat', 90);
+        params.append('ne_lng', 180);
+        params.append('sw_lat', -90);
+        params.append('sw_lng', -180);
+      } else if (boundsToUse) {
         params.append('ne_lat', boundsToUse.northeast.lat);
         params.append('ne_lng', boundsToUse.northeast.lng);
         params.append('sw_lat', boundsToUse.southwest.lat);
         params.append('sw_lng', boundsToUse.southwest.lng);
       } else {
-        params.append('radius', '25');
+        params.append('radius', INITIAL_RADIUS_MILES.toString());
       }
 
       // Intelligent location detection from search query
-      let searchLat = 33.4484; // Phoenix, AZ latitude (default)
-      let searchLng = -112.0740; // Phoenix, AZ longitude (default)
+      let searchLat = PHOENIX_COORDS.lat; // Phoenix, AZ latitude (default)
+      let searchLng = PHOENIX_COORDS.lng; // Phoenix, AZ longitude (default)
       let locationSource = 'fallback (Phoenix, AZ)';
       
       // PRIORITY 1: Use viewport center if available (viewport-based search)
-      if (boundsToUse && boundsToUse.center) {
+      if (!hasTextQuery && boundsToUse && boundsToUse.center) {
         searchLat = boundsToUse.center.lat;
         searchLng = boundsToUse.center.lng;
         locationSource = `viewport center (map area)`;
       }
       // PRIORITY 2: Parse query for city names or location indicators
-      else if (parseLocationFromQuery(query)) {
-        const cityCoords = parseLocationFromQuery(query);
+      else if (parseLocationFromQuery(safeQuery)) {
+        const cityCoords = parseLocationFromQuery(safeQuery);
         searchLat = cityCoords.lat;
         searchLng = cityCoords.lng;
         locationSource = `parsed city (${cityCoords.city})`;
       } 
       // PRIORITY 3: "Near me" searches
-      else if (query.toLowerCase().includes('near me') || query.toLowerCase().includes('nearby')) {
+      else if (normalizedQuery.includes('near me') || normalizedQuery.includes('nearby')) {
         // User wants results near their current location
-        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
-        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
-
-        if (lat && lng) {
-          // Arizona rough bounds: lat 31-37, lng -115 to -109
-          if (lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
-            searchLat = lat;
-            searchLng = lng;
-            locationSource = `user location (near me)`;
-            console.log(`[MOBILE-SEARCH] Using user location for "near me": ${lat}, ${lng}`);
-
-            // Use smaller radius for "near me" searches for more relevant results
-            params.set('radius', '10'); // 10 miles instead of 25
+        if (userLat && userLng) {
+          if (userNearArizona) {
+            searchLat = userLat;
+            searchLng = userLng;
+            locationSource = `user location (near me within AZ proximity)`;
           } else {
-            console.log(`[MOBILE-SEARCH] User location outside Arizona bounds (${lat}, ${lng}), using Phoenix fallback`);
+            // Outside proximity; keep Phoenix fallback but still use radius search
+            locationSource = 'phoenix fallback (near me outside AZ proximity)';
           }
+          
+          // Ensure radius-based search for "near me" and remove any global bounds
+          params.delete('ne_lat');
+          params.delete('ne_lng');
+          params.delete('sw_lat');
+          params.delete('sw_lng');
+          params.set('radius', INITIAL_RADIUS_MILES.toString());
         } else {
-          console.log(`[MOBILE-SEARCH] "Near me" requested but no user location available, using Phoenix fallback`);
-
+          // no user location for "near me", fallback to Phoenix
           // Show a helpful message to user
           setLocationError('To search "near me", please enable location access in settings or use a specific city name.');
         }
       } 
       // PRIORITY 4: User location (if available)
       else if (userLocation) {
-        const lat = userLocation?.coords?.latitude || userLocation?.latitude;
-        const lng = userLocation?.coords?.longitude || userLocation?.longitude;
-        if (lat && lng && lat >= 31 && lat <= 37 && lng >= -115 && lng <= -109) {
-          searchLat = lat;
-          searchLng = lng;
-          locationSource = `user location`;
+        if (userLat && userLng && userNearArizona) {
+          searchLat = userLat;
+          searchLng = userLng;
+          locationSource = `user location (within AZ proximity)`;
         }
       }
       
@@ -816,7 +899,64 @@ export default function SearchScreen() {
         console.error(`[MOBILE-SEARCH] Full response data:`, data);
         businesses = [];
       }
-      
+
+      const boundsCenterLat = boundsToUse?.center?.lat;
+      const boundsCenterLng = boundsToUse?.center?.lng;
+      const boundsNearArizona = isNearArizona(boundsCenterLat, boundsCenterLng, 150);
+
+      // If we’re outside AZ and outside the expanded AZ proximity and got zero results on a browse search, keep existing Phoenix results
+      if (!userNearArizona && !boundsNearArizona && !hasTextQuery && businesses.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      // If this was a text search (global) and not a viewport-driven search, fit map to all results
+      const shouldFitAllResults = hasTextQuery && businesses.length > 0 && !explicitBounds;
+      if (shouldFitAllResults) {
+        const lats = businesses.map(b => b.latitude).filter(v => typeof v === 'number');
+        const lngs = businesses.map(b => b.longitude).filter(v => typeof v === 'number');
+        if (lats.length > 0 && lngs.length > 0) {
+          const minLat = Math.min(...lats);
+          const maxLat = Math.max(...lats);
+          const minLng = Math.min(...lngs);
+          const maxLng = Math.max(...lngs);
+          const centerLat = (minLat + maxLat) / 2;
+          const centerLng = (minLng + maxLng) / 2;
+          
+          // Calculate the actual span of markers
+          const latSpan = maxLat - minLat;
+          const lngSpan = maxLng - minLng;
+          
+          // Add padding (1.3x) to ensure all markers are visible with some margin
+          const paddingFactor = 1.3;
+          let latDelta = latSpan * paddingFactor;
+          let lngDelta = lngSpan * paddingFactor;
+          
+          // Set minimum delta to allow zooming in when markers are close together
+          // Use a smaller minimum (0.01) to allow tight zoom when markers are clustered
+          const minDelta = 0.01;
+          latDelta = Math.max(latDelta, minDelta);
+          lngDelta = Math.max(lngDelta, minDelta);
+          
+          // Set maximum delta to state level (Arizona bounds: ~6 degrees lat, ~6 degrees lng)
+          // Only apply this maximum when markers are actually spread out
+          const maxDelta = 6.0; // State level zoom
+          // Only cap at state level if the calculated delta exceeds it (markers are spread out)
+          if (latDelta > maxDelta || lngDelta > maxDelta) {
+            // If markers span beyond state level, use state level bounds
+            latDelta = Math.min(latDelta, maxDelta);
+            lngDelta = Math.min(lngDelta, maxDelta);
+          }
+          
+          setMapRegion({
+            latitude: centerLat,
+            longitude: centerLng,
+            latitudeDelta: latDelta,
+            longitudeDelta: lngDelta,
+          });
+        }
+      }
+
       // Store all businesses and show first page
       setAllBusinesses(businesses);
       setCurrentPage(1);
@@ -904,6 +1044,8 @@ export default function SearchScreen() {
     }
   };
 
+  // Removed fitMapToResults; auto-center handled via first result when applicable
+
   // Manual search (bypasses debounce for immediate results)
   const handleTextSearch = () => {
     if (searchQuery.trim() || selectedCategory) {
@@ -945,21 +1087,49 @@ export default function SearchScreen() {
 
   // Handle map viewport changes for viewport-based search
   const handleMapBoundsChange = useCallback((bounds) => {
+    const userLat = userLocation?.coords?.latitude || userLocation?.latitude;
+    const userLng = userLocation?.coords?.longitude || userLocation?.longitude;
+    const userNearArizona = isNearArizona(userLat, userLng);
+    const boundsCenterLat = bounds?.center?.lat;
+    const boundsCenterLng = bounds?.center?.lng;
+    const boundsNearArizona = isNearArizona(boundsCenterLat, boundsCenterLng, 150);
+    const willSkip = false; // allow viewport searches; we’ll guard empty-result replacement in performSearch
+    
     // Mark as loaded on first bounds update
     if (!initialLoadRef.current) {
       initialLoadRef.current = true;
       setHasLoadedInitial(true);
-      // Set initial viewport bounds immediately on first load
-      setViewportBounds(bounds);
-      setCurrentMapCenter(bounds.center);
-      return; // Don't search on initial load, let loadInitialBusinesses handle it
+      
+      if (userNearArizona) {
+        // Set initial viewport bounds immediately on first load (user is near AZ)
+        setViewportBounds(bounds);
+        setCurrentMapCenter(bounds.center);
+        // Kick off an initial fetch for whatever is in view (even with no query/category)
+        performSearch('', bounds);
+        lastSearchBoundsRef.current = bounds;
+      } else {
+        // Outside AZ proximity: force Phoenix fallback on initial load
+        initialLoadDoneRef.current = true; // Prevent duplicate initial loads
+        lastSearchBoundsRef.current = null;
+        setViewportBounds(null);
+        setCurrentMapCenter(bounds.center); // keep user viewport center
+        performSearch('', null); // Use Phoenix fallback with radius
+      }
+      return;
     }
     
     // Track current map center for button state calculation
     setCurrentMapCenter(bounds.center);
     
+    // If a text search is active, don't reset results on pan/zoom; just track bounds
+    if (searchQuery.trim().length > 0) {
+      setViewportBounds(bounds);
+      return;
+    }
     // User has interacted with the map (pan/zoom)
     hasUserPannedRef.current = true;
+    // Immediately show loading state while we debounce the fetch
+    setLoading(true);
     
     // Debounce viewport bounds update to prevent marker flickering during drag
     // Only update markers after user stops dragging for 300ms
@@ -975,16 +1145,14 @@ export default function SearchScreen() {
       clearTimeout(boundsDebounceRef.current);
     }
     
-    // Debounce: only search after user stops moving map for 1.5 seconds (increased for better performance)
+    // Debounce: only search after user stops moving map for ~0.7s
     boundsDebounceRef.current = setTimeout(() => {
-      // Only search if there's a query or category filter
-      if (searchQuery.trim() || selectedCategory) {
-        lastSearchBoundsRef.current = bounds;
-        // CRITICAL: Pass bounds directly to avoid React state timing issues
-        performSearch(searchQuery, bounds);
-      }
-    }, 1500); // 1.5 second debounce for better performance
-  }, [searchQuery]);
+      // Always search on viewport change to load businesses in view (even with no query/category)
+      lastSearchBoundsRef.current = bounds;
+      // CRITICAL: Pass bounds directly to avoid React state timing issues
+      performSearch(searchQuery, bounds);
+    }, 700); // Faster refresh while avoiding excessive calls during pan
+  }, [searchQuery, userLocation]);
   
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -1015,9 +1183,16 @@ export default function SearchScreen() {
 
   const renderSearchResult = ({ item }) => {
     // Add distance formatting for enhanced business card
+    // Always include distance, even when it's 0
+    let formattedDistance = null;
+    if (item.distance != null) {
+      const distanceStr = formatDistance(item.distance).replace(' mi', '');
+      formattedDistance = distanceStr;
+    }
+    
     const businessWithDistance = {
       ...item,
-      distance: item.distance ? formatDistance(item.distance).replace(' mi', '') : null
+      distance: formattedDistance
     };
     
     return (
@@ -1027,6 +1202,23 @@ export default function SearchScreen() {
         isSelected={selectedBusiness && selectedBusiness.id === item.id}
       />
     );
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSelectedBusiness(null);
+    // Restore previous browse results instead of clearing everything
+    if (allBusinesses && allBusinesses.length > 0) {
+      const firstPage = allBusinesses.slice(0, PAGE_SIZE);
+      setSearchResults(firstPage);
+      setDisplayedBusinesses(firstPage);
+      setCurrentPage(1);
+    } else {
+      // If nothing cached, refetch browse results
+      performSearch('', viewportBounds);
+    }
+    setSearchMetadata(null);
+    setSearchError(null);
   };
 
   // Debug logging for render
@@ -1201,7 +1393,15 @@ export default function SearchScreen() {
           onChangeText={setSearchQuery}
           onSubmitEditing={handleTextSearch}
         />
-        
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearSearch}
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons name="close-circle" size={20} color="#9ca3af" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.searchButton}
           onPress={handleTextSearch}
@@ -1262,6 +1462,11 @@ export default function SearchScreen() {
             <ActivityIndicator size="large" color="#3182ce" />
             <Text style={styles.loadingText}>Finding businesses for you...</Text>
           </View>
+        ) : searchResults.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <Ionicons name="information-circle-outline" size={20} color="#718096" />
+            <Text style={styles.noResultsText}>No businesses in this area yet.</Text>
+          </View>
         ) : (
           <FlatList
             ref={businessListRef}
@@ -1295,9 +1500,7 @@ export default function SearchScreen() {
               return null;
             }}
             onScrollToIndexFailed={(error) => {
-              // Fallback if scrollToIndex fails
-              console.log('ScrollToIndex failed:', error);
-              // Try scrolling to offset instead
+              // Fallback if scrollToIndex fails; try scrolling to offset instead
               if (businessListRef.current) {
                 const itemHeight = 180; // Approximate item height
                 const offset = error.index * itemHeight;
@@ -1508,6 +1711,13 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     marginRight: 8,
   },
+  clearButton: {
+    position: 'absolute',
+    right: 60,
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
   searchButton: {
     backgroundColor: '#3182ce',
     borderRadius: 8,
@@ -1592,6 +1802,18 @@ const styles = StyleSheet.create({
   },
   resultsList: {
     paddingBottom: 20,
+  },
+  noResultsContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  noResultsText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#718096',
+    textAlign: 'center',
   },
   loadMoreContainer: {
     padding: 20,
