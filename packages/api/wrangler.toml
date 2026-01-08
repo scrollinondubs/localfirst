@@ -19,13 +19,13 @@ NODE_ENV = "production"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "localfirst-prod"
-database_id = "D1_DATABASE_ID_PLACEHOLDER_PRODUCTION"
+database_id = "b27b33e0-b044-4a61-b265-939717be9fd4"
 migrations_dir = "migrations"
 
 [[env.development.d1_databases]]
 binding = "DB"  
 database_name = "localfirst-dev"
-database_id = "D1_DATABASE_ID_PLACEHOLDER_DEVELOPMENT"
+database_id = "1c691acc-43d9-4841-ab53-e1920ae07716"
 migrations_dir = "migrations"
 
 # Custom domain routing
