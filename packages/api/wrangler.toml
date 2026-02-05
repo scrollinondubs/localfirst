@@ -15,7 +15,7 @@ CORS_ORIGIN = "http://localhost:3000"
 [env.production.vars]
 NODE_ENV = "production"
 
-# D1 Database configuration (will be populated with actual database ID)
+# D1 Database configuration (use real IDs via env or Cloudflare dashboard)
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "localfirst-prod"
@@ -23,7 +23,7 @@ database_id = "D1_DATABASE_ID_PLACEHOLDER_PRODUCTION"
 migrations_dir = "migrations"
 
 [[env.development.d1_databases]]
-binding = "DB"  
+binding = "DB"
 database_name = "localfirst-dev"
 database_id = "D1_DATABASE_ID_PLACEHOLDER_DEVELOPMENT"
 migrations_dir = "migrations"
