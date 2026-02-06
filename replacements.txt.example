@@ -1,0 +1,14 @@
+# Issue #12: Replacements for BFG (DO NOT commit a file named replacements.txt with real values)
+# Copy this to replacements.txt in your mirror clone and fill in the actual secrets to scrub.
+# Format: literal_text_to_find==>replacement
+
+# Cloudflare (from .claude/settings.local.json)
+# PASTE_YOUR_CLOUDFLARE_API_TOKEN==>CLOUDFLARE_API_TOKEN_PLACEHOLDER
+# PASTE_YOUR_CLOUDFLARE_ACCOUNT_ID==>CLOUDFLARE_ACCOUNT_ID_PLACEHOLDER
+
+# D1 Database IDs (from wrangler.toml - these were in repo)
+D1_DATABASE_ID_PLACEHOLDER_PRODUCTION==>D1_DATABASE_ID_PLACEHOLDER_PRODUCTION
+D1_DATABASE_ID_PLACEHOLDER_DEVELOPMENT==>D1_DATABASE_ID_PLACEHOLDER_DEVELOPMENT
+
+# OpenAI (from packages/api/.env if ever committed)
+# PASTE_YOUR_OPENAI_API_KEY==>OPENAI_API_KEY_PLACEHOLDER

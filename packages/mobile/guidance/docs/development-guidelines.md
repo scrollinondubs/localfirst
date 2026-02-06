@@ -503,7 +503,7 @@ if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.length > 0) {
 
 ### Expo CLI Access Configuration
 
-**Authentication Token:** `T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV`
+**Authentication Token:** Set `EXPO_TOKEN` in your environment (get from [Expo dashboard](https://expo.dev) or run `npx expo login` and use the token from your shell).
 
 **Agents with Expo CLI Access:**
 - **cto:** Full access for architectural oversight and troubleshooting  
@@ -511,21 +511,22 @@ if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.length > 0) {
 - **frontend-engineer:** Development, building, deployment coordination
 - **devops-engineer:** Production deployments, infrastructure management
 
-**Common Expo CLI Commands:**
+**Common Expo CLI Commands:**  
+*(Set `EXPO_TOKEN` from your Expo account or use `npx expo login` and export the token from your shell.)*
 ```bash
 # Authentication (done globally)
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx @expo/cli whoami
+EXPO_TOKEN=your-expo-token npx @expo/cli whoami
 
 # Development
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo start
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo start --web
+EXPO_TOKEN=your-expo-token npx expo start
+EXPO_TOKEN=your-expo-token npx expo start --web
 
 # Building & Deployment  
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo build:ios
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo build:android
+EXPO_TOKEN=your-expo-token npx expo build:ios
+EXPO_TOKEN=your-expo-token npx expo build:android
 
 # Install dependencies
-EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo install [packages]
+EXPO_TOKEN=your-expo-token npx expo install [packages]
 ```
 
 ### Database Access Protocol
@@ -536,7 +537,7 @@ EXPO_TOKEN=T0HvqMetlSLpt9lZIMcRCzmJPGz9JTd2oenbbLJV npx expo install [packages]
 - **API Layer:** Hono with D1 bindings
 
 **Database Locations:**
-- **Local:** `/Users/aiden/NodeJSprojs/localfirst/local.db`  
+- **Local:** `local.db` at repo root (or set `DATABASE_URL`, e.g. `file:../../local.db` when running from `packages/api`)
 - **Production:** Cloudflare D1 instance (managed via wrangler)
 
 **Common Database Commands:**
@@ -546,7 +547,7 @@ cd packages/api
 DATABASE_URL="file:../../local.db" node dev-server.js
 
 # Query local data
-sqlite3 /Users/aiden/NodeJSprojs/localfirst/local.db "SELECT * FROM businesses;"
+sqlite3 ../../local.db "SELECT * FROM businesses;"   # from packages/api
 
 # Production D1 operations
 wrangler d1 execute localfirst-prod --command "SELECT * FROM businesses LIMIT 10"
