@@ -68,7 +68,7 @@ const categorizeDirectory = (businessName) => {
 const importBusinesses = async () => {
   console.log('🚀 Starting business directory import...');
   
-  //const csvPath = '/Users/sean/NodeJSprojs/localfirst/temp/Local First - All Directory Businesses.csv';
+  //const csvPath = 'path/to/temp/Local First - All Directory Businesses.csv';
   // Newly added for local development by Divya
   const csvPath = path.join(process.cwd(), '..', '..', 'temp', 'Local First - All Directory Businesses.csv');
 

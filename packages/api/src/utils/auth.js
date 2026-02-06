@@ -5,7 +5,8 @@ import { z } from 'zod';
 
 // JWT configuration
 const JWT_EXPIRES_IN = '24h';
-const DEFAULT_JWT_SECRET = 'local-first-arizona-dev-secret-key';
+// Dev-only fallback; production must set JWT_SECRET in environment
+const DEFAULT_JWT_SECRET = 'change-me-set-JWT_SECRET-in-production';
 
 // Helper function to get JWT secret from environment
 const getJwtSecret = (env) => {

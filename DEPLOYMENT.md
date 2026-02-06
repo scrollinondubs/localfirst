@@ -484,7 +484,7 @@ wrangler d1 execute localfirst-prod --file insert-all-data.sql --remote
 ```
 
 #### Fixed Implementation
-- Local database at `/Users/aiden/NodeJSprojs/localfirst/local.db` is authoritative source
+- Local database (e.g. `local.db` at repo root or `DATABASE_URL`) is authoritative source
 - Production database schema must match local exactly
 - Use complete dumps instead of incremental migrations when schema drift occurs
 
