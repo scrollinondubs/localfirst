@@ -40,7 +40,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>GMSApiKey</key>
-    <string>AIzaSyD9Na8epdXboFBw1BSEonX_fg7m35uh9ao</string>
+    <string>YOUR_GOOGLE_MAPS_API_KEY</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
