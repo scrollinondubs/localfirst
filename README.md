@@ -77,6 +77,8 @@ npm run web
 npm run ios
 ```
 
+**Mobile app (maps):** Set `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` in your environment or a `.env` in `packages/mobile` so the map loads. Get a key from [Google Cloud Console](https://console.cloud.google.com/) (Maps JavaScript API / Android / iOS as needed).
+
 ### Available Commands
 
 ```bash

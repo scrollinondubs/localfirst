@@ -259,8 +259,11 @@ const WebMapView = ({
       return;
     }
 
+    const googleMapsKey = typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+      ? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+      : 'YOUR_GOOGLE_MAPS_API_KEY';
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyD9Na8epdXboFBw1BSEonX_fg7m35uh9ao&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsKey}&callback=initMap`;
     script.async = true;
     
     window.initMap = () => {

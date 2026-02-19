@@ -20,7 +20,7 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyD9Na8epdXboFBw1BSEonX_fg7m35uh9ao"
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
       },
       "bundleIdentifier": "com.anonymous.local-first-arizona"
     },
@@ -37,7 +37,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyD9Na8epdXboFBw1BSEonX_fg7m35uh9ao"
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
         }
       }
     },
